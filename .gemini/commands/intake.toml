@@ -1,0 +1,2 @@
+description = "Starts intake and inventory for the requested scope."
+prompt = "Read GEMINI.md and begin intake + inventory. Focus scope: {{args}}. Update reports/current/runtime-manifest.md, intake.md, inventory.md and evidence-register.md."

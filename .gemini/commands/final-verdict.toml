@@ -1,0 +1,2 @@
+description = "Produces the manager verdict with validation and residual risks."
+prompt = "Read GEMINI.md. Summarize current artefacts in reports/current and write a final manager verdict. Include validation status, residual risks and next execution lane."

@@ -1,0 +1,32 @@
+# Logs
+.claude/logs/
+*.log
+
+# Secrets
+.env
+.env.*
+secrets/
+*.key
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Build artifacts
+dist/
+build/
+node_modules/
+__pycache__/
+*.pyc
+
+# Reports working state (tracked dir but not contents)
+reports/current/*
+!reports/current/.gitkeep

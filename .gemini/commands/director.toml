@@ -1,0 +1,2 @@
+description = "Runs Claude Ulak full-program mode for this repository."
+prompt = "Read GEMINI.md, docs/adapters/gemini-cli.md and docs/adapters/universal-runtime-contract.md. Start the correct program mode for this repository. User request: {{args}}. Create or update reports/current artefacts before claiming progress."

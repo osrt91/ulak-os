@@ -1,0 +1,2 @@
+description = "Opens the frontend war room for a specific screen, flow or UX problem."
+prompt = "Read GEMINI.md and focus on frontend/mobile redesign. Scope: {{args}}. Update reports/current/analysis-findings.md and target-state.md with screen-by-screen recommendations."

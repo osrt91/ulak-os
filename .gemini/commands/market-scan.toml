@@ -1,0 +1,2 @@
+description = "Runs market and category scan for the requested segment."
+prompt = "Read GEMINI.md and docs/adapters/universal-runtime-contract.md. Run market scan for: {{args}}. Update reports/current/research-notes.md and mention pricing, positioning, locale and architecture relevance."
