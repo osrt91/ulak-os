@@ -67,13 +67,23 @@ The first command output begins writing the artefact chain under `reports/curren
 
 ## MCP connectors (optional)
 
-The `.mcp.json` file contains MCP connector definitions for GitHub, Jira, and Figma. To enable them, set the environment variables:
+The `.mcp.json` file ships with 3 MCP connector definitions: **GitHub** (official server, pre-configured), Jira and Figma (placeholder).
+
+### GitHub MCP (official, easiest)
+
+GitHub's official MCP server `https://api.githubcopilot.com/mcp/` is already wired up in `.mcp.json`. You only need to set your GitHub Personal Access Token:
 
 ```bash
-# GitHub
-export GITHUB_MCP_URL="https://your-github-mcp-endpoint"
-export GITHUB_TOKEN="ghp_your_token_here"
+# GitHub Personal Access Token
+# Create one at https://github.com/settings/tokens
+export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_your_token_here"
+```
 
+When Ulak OS starts, Claude Code connects automatically and gives you direct access to issues, PRs, repository search, code review, and the full GitHub API.
+
+### Jira and Figma (optional, your own endpoint)
+
+```bash
 # Jira (optional)
 export JIRA_MCP_URL="https://your-jira-mcp-endpoint"
 export JIRA_TOKEN="your_jira_token"

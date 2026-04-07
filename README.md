@@ -67,13 +67,23 @@ $ claude
 
 ## MCP connector'ları (opsiyonel)
 
-`.mcp.json` dosyası GitHub, Jira ve Figma için MCP connector tanımları içerir. Bunları etkinleştirmek için ortam değişkenlerini set et:
+`.mcp.json` dosyası 3 MCP connector tanımı içerir: **GitHub** (resmi server, hazır kurulu), Jira ve Figma (placeholder).
+
+### GitHub MCP (resmi, en kolay)
+
+GitHub'ın resmi MCP server'ı `https://api.githubcopilot.com/mcp/` zaten `.mcp.json`'da yapılı. Sadece GitHub Personal Access Token'ı ortam değişkenine koyman yeterli:
 
 ```bash
-# GitHub
-export GITHUB_MCP_URL="https://your-github-mcp-endpoint"
-export GITHUB_TOKEN="ghp_your_token_here"
+# GitHub Personal Access Token
+# https://github.com/settings/tokens üzerinden oluştur
+export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_your_token_here"
+```
 
+Ulak OS açıldığında Claude Code otomatik bağlanır; issue/PR/repo arama, code review, GitHub API'sinin tüm fonksiyonları doğrudan kullanılabilir.
+
+### Jira ve Figma (opsiyonel, kendi endpoint'in)
+
+```bash
 # Jira (opsiyonel)
 export JIRA_MCP_URL="https://your-jira-mcp-endpoint"
 export JIRA_TOKEN="your_jira_token"
