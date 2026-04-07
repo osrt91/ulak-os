@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.0.0] — 2026-04-07
+
+### Added — First Stable Public Release (Ulak OS brand)
+
+- Vendor-neutral brand: Claude Ulak → **Ulak OS**
+- Three-adapter parity (Claude Code, Codex/Copilot, Gemini CLI) sharing one core contract
+- Cross-platform bootstrap scripts: 6 files (`init-{claude,codex,gemini}.{sh,ps1}`)
+- CI validation infrastructure: schema validation, @import chain check, brand consistency, gitleaks secret scan
+- Public skill integration: `docs/skills-integration/superpowers-mapping.md` + `/ulak-intake` PoC wrapper
+- awesome-design-md integration: fetch script + `/ulak-design-ref` wrapper + integration doc (TR + EN)
+- Multi-language: TR (primary) + EN (parallel) for README, adapters, core contract, samples, skill integration docs
+- Sample artifacts: filled `intake`, `inventory`, `manager-verdict` in TR + EN
+- Ecosystem related-work doc covering superpowers, anthropics/skills, gsd-2, awesome-design-md, akin-ozer/devops-skills-plugin (TR + EN)
+- Structured ROADMAP with v1.1 candidates (plugin marketplace publication priority)
+- LICENSE: MIT, Copyright (c) 2026 Oğuzhan Sert <info@oguzhansert.dev>
+
+### Changed
+
+- Core contract file: `claude-ulak-core-contract-1.9.0.md` → `ulak-os-core-contract-1.0.0.md`
+- AGENTS.md required artefacts list aligned with core contract: 8 → 12 entries
+- Version reset: 1.9.1 → 1.0.0 (intentional, per first stable public release semantics)
+
+### Documentation
+
+- README troubleshooting section
+- README MCP environment variable documentation
+- version-lineage.md brand transition note explaining the version reset
+
+The pre-1.0.0 entries below document the internal "Claude Ulak" development series.
+
 Tüm yayınlar **public release** sürümleriyle kaydedilir. İç kod adları parantez içinde tutulur.
 
 ## 1.0.0 — Equalized Version Distribution

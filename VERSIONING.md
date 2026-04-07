@@ -1,5 +1,16 @@
 # Versioning
 
+## Ulak OS — Public release line
+
+- **1.0.0** — First Stable Public Release (2026-04-07)
+  - Brand transition Claude Ulak → Ulak OS
+  - Three-vendor adapter parity
+  - CI quality gates + cross-platform bootstrap scripts
+  - Multi-language: TR + EN parallel
+  - awesome-design-md integration + ecosystem related-work doc
+
+The pre-1.0.0 internal "Claude Ulak" development series is documented below for historical reference.
+
 Bu projede iki katmanlı sürümleme kullanılır:
 
 ## 1) Public release line

@@ -25,13 +25,18 @@ jobs:
       - name: Validate @import chains
         run: bash scripts/validate-imports.sh
 
-      - name: Brand consistency (Claude Ulak must not appear)
+      - name: Brand consistency (Claude Ulak must not appear outside historical files)
         run: |
-          if grep -rn "Claude Ulak" --include="*.md" .; then
-            echo "::error::'Claude Ulak' string found — rebrand incomplete."
+          # Historical references are allowed in lineage/release/migration documents.
+          # Find any "Claude Ulak" that is NOT in the approved historical file allowlist.
+          ALLOWED='docs/history/version-lineage\.md|VERSION_DISTRIBUTION_MATRIX\.md|RELEASE_NOTES_1\.0\.0\.md|ROADMAP\.md|docs/ecosystem/related-work\.md|docs/ecosystem/related-work\.en\.md|README\.md|README\.en\.md|releases/1\.9\.1/|CHANGELOG\.md|VERSIONING\.md'
+          OFFENDERS=$(grep -rn "Claude Ulak" --include="*.md" . | grep -vE "($ALLOWED)" || true)
+          if [[ -n "$OFFENDERS" ]]; then
+            echo "::error::'Claude Ulak' string found outside approved historical files:"
+            echo "$OFFENDERS"
             exit 1
           fi
-          echo "OK: No 'Claude Ulak' brand residue"
+          echo "OK: No 'Claude Ulak' brand residue outside approved historical files"
 
       - name: Verify required artefact chain in AGENTS.md
         run: |
