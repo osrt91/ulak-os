@@ -10,4 +10,4 @@
 - 1.9.1 patch release for distribution only
 
         ## Dağıtım notu
-        Bu sürüm, Claude Ulak eşit dağıtım politikasında standart release klasör yapısıyla taşınır.
+        Bu sürüm, Ulak OS eşit dağıtım politikasında standart release klasör yapısıyla taşınır.

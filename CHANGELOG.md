@@ -2,14 +2,14 @@
 
 Tüm yayınlar **public release** sürümleriyle kaydedilir. İç kod adları parantez içinde tutulur.
 
-## 1.9.1 — Equalized Version Distribution
+## 1.0.0 — Equalized Version Distribution
 - Tüm public sürümler için `releases/<version>/` klasörleri eklendi.
 - Kişisel arşiv ve GitHub repo tarafı aynı sürüm yapısına getirildi.
 - Exact artifact olmayan erken sürümler `reconstructed` olarak işaretlendi.
 - Bu sürüm çekirdeği değil, dağıtım düzenini günceller.
 
 
-## 1.9.0 — Claude Ulak Distribution Candidate
+## 1.9.0 — Ulak OS Distribution Candidate
 - GitHub’a koyulabilir açıklayıcı repo yapısı hazırlandı.
 - Claude Code, Codex/Copilot ve Gemini CLI için ayrı adaptör dosyaları eklendi.
 - Tek sürüm hattı `1.x` altında birleştirildi.

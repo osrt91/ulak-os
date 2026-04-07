@@ -1,6 +1,6 @@
-# Claude Ulak — Gemini Adapter
+# Ulak OS — Gemini Adapter
 
-@prompts/core/claude-ulak-core-contract-1.9.0.md
+@prompts/core/ulak-os-core-contract-1.0.0.md
 @docs/adapters/universal-runtime-contract.md
 @docs/adapters/gemini-cli.md
 @docs/history/version-lineage.md

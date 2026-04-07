@@ -1,6 +1,6 @@
 # Manifest — 1.0.0
 
-- Product: Claude Ulak
+- Product: Ulak OS
 - Public version: 1.0.0
 - Internal mapping: master core
 - Status: source-backed reconstruction

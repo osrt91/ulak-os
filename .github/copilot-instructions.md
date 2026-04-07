@@ -1,4 +1,4 @@
-# Claude Ulak repository instructions
+# Ulak OS repository instructions
 
 This repository hosts a cross-platform prompt operating system.
 

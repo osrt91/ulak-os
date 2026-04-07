@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-@prompts/core/claude-ulak-core-contract-1.9.0.md
+@prompts/core/ulak-os-core-contract-1.0.0.md
 @docs/adapters/universal-runtime-contract.md
 @docs/history/version-lineage.md
 @docs/adapters/claude-code.md
@@ -8,7 +8,7 @@
 @docs/governance/rule-collision-matrix.md
 
 ## Project identity
-- Product: Claude Ulak
+- Product: Ulak OS
 - Purpose: cross-platform prompt operating system and repo runtime
 - Platforms: claude code | codex/copilot | gemini cli
 - State: hybrid

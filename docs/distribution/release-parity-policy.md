@@ -1,6 +1,6 @@
 # Release Parity Policy
 
-Claude Ulak için bundan sonra şu kural geçerli kabul edilir:
+Ulak OS için bundan sonra şu kural geçerli kabul edilir:
 
 1. Kullanıcıya gösterilen sürüm ile GitHub repo sürümü aynıdır.
 2. Her public sürüm aşağıdaki eşit yapıyla dağıtılır:

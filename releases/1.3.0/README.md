@@ -1,4 +1,4 @@
-        # Claude Ulak 1.3.0 — V6.6 Execution Pack
+        # Ulak OS 1.3.0 — V6.6 Execution Pack
 
         ## Durum
         - Public version: `1.3.0`

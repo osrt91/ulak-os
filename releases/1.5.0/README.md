@@ -1,4 +1,4 @@
-        # Claude Ulak 1.5.0 — Language / Market / Architecture Hardening
+        # Ulak OS 1.5.0 — Language / Market / Architecture Hardening
 
         ## Durum
         - Public version: `1.5.0`

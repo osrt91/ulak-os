@@ -1,6 +1,6 @@
 # Manifest — 1.9.1
 
-- Product: Claude Ulak
+- Product: Ulak OS
 - Public version: 1.9.1
 - Internal mapping: distribution parity patch
 - Status: exact artifact available

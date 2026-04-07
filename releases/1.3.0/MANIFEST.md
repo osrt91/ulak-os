@@ -1,6 +1,6 @@
 # Manifest — 1.3.0
 
-- Product: Claude Ulak
+- Product: Ulak OS
 - Public version: 1.3.0
 - Internal mapping: V6.6 execution pack
 - Status: reconstructed from conversation content

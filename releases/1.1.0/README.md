@@ -1,4 +1,4 @@
-        # Claude Ulak 1.1.0 — Frontend Modernization Baseline
+        # Ulak OS 1.1.0 — Frontend Modernization Baseline
 
         ## Durum
         - Public version: `1.1.0`

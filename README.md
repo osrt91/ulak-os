@@ -1,76 +1,149 @@
-# Claude Ulak
+# Ulak OS
 
-**Claude Ulak 1.9.1**; çok büyük yazılım projelerini tek noktadan yöneten, gerektiğinde hibrit ajan ofisi açan, repo bağlamını okuyup artefakt üreten, güvenlik/UX/operasyon/dağıtım katmanlarını birlikte ele alan bir **Prompt Operating System + repo dağıtım paketi**dir.
+> **Vendor-neutral prompt operating system** — Claude Code, Codex/Copilot ve Gemini CLI için tek çekirdekli, üç adaptörlü, çözüme odaklı runtime.
 
-Bu repo, tek bir dev prompt dosyasından fazlasıdır. Amaç:
-- sıfırdan proje kurmak,
-- mevcut projeye ortadan veya final aşamasından girmek,
-- audit, research, context write, plan, pack, validation ve signoff zincirini tek sistemde toplamak,
-- Claude Code, Codex/Copilot ve Gemini CLI için ayrı adaptör yüzeyleri sağlamak.
+**Sürüm:** 1.0.0 (First Stable Public Release)
+**Geliştirici:** [Oğuzhan Sert](https://github.com/osrt91)
+**Lisans:** MIT
 
-## Bu sürüm neden önemli?
-Bu repo, önceki iç sürümlerde oluşan V8/V9/V10.* evrimini tek bir **yayınlanabilir** çizgiye indirger. Dışarıya gösterilen sürüm serisi artık `1.x` olarak tutulur. İç kod adları ve eski dosyalar `docs/archive/internal-releases/` altında korunur.
+[English version](README.en.md)
 
-## Hızlı başlangıç
+---
 
-### Claude Code
-1. Bu repoyu aç.
-2. Claude Code içinde `/memory` ile `CLAUDE.md` dosyasının yüklendiğini doğrula.
-3. İhtiyaca göre şu komutlardan biriyle başla:
-   - `/director komple`
-   - `/intake <hedef>`
-   - `/frontend-war-room <ekran veya akış>`
-   - `/pack-gap-audit`
-   - `/final-verdict`
+## Ulak OS nedir?
 
-### Codex / Copilot / OpenAI Codex entegrasyonları
-1. Repoyu git altında tut.
-2. Kök dizindeki `AGENTS.md` dosyasını ana agent talimatı olarak kullan.
-3. GitHub/Copilot ortamlarında ek repo talimatları için `.github/copilot-instructions.md` dosyası da hazır.
-4. İlk istekte agent’a şunu söyle:
-   - `Read AGENTS.md, CLAUDE.md, docs/adapters/codex-cli.md and docs/adapters/universal-runtime-contract.md, then run the appropriate program mode.`
+Ulak OS, büyük yazılım projelerini **istediğin noktadan** ele alıp doğrulanmış sonuçlara götüren bir prompt operating system'dir:
 
-### Gemini CLI
-1. Repoyu aç.
-2. `/memory reload` çalıştır.
-3. `/commands reload` ile `.gemini/commands/*.toml` komutlarını yükle.
-4. Başlangıç komutları:
-   - `/director komple`
-   - `/market-scan kategori veya rakip`
-   - `/frontend:war-room belirli ekran`
-   - `/final-verdict`
+- 🟢 **Sıfırdan kuruyorsan** → `CREATE` modu, intake → roadmap → validation
+- 🟡 **Yarım bıraktığını devralıyorsan** → `RESCUE` modu, evidence-register'dan başla
+- 🔴 **Finale yakınsa** → `REPACKAGE` modu, validation ve manager-verdict odaklı
+
+Aynı artefakt zinciri her durumda çalışır; **doğrulama olmadan "bitti" demez.**
+
+## Üç vendor, tek çekirdek
+
+| Vendor | Adapter dosyası | İlk komut |
+|---|---|---|
+| Claude Code | `CLAUDE.md` | `/director komple` |
+| Codex / Copilot | `AGENTS.md` | "Read AGENTS.md, run program mode" |
+| Gemini CLI | `GEMINI.md` | `/director komple` |
+
+Hepsi `prompts/core/ulak-os-core-contract-1.0.0.md` çekirdek sözleşmesini paylaşır.
+
+## Hızlı başlangıç (5 dakika)
+
+### 1. Klonla
+
+```bash
+git clone https://github.com/osrt91/ulak-os
+cd ulak-os
+```
+
+### 2. Vendor'una göre init script'i çalıştır
+
+**macOS / Linux:**
+```bash
+bash scripts/init-claude.sh    # Claude Code
+bash scripts/init-codex.sh     # Codex/Copilot
+bash scripts/init-gemini.sh    # Gemini CLI
+```
+
+**Windows:**
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\init-claude.ps1
+powershell -ExecutionPolicy Bypass -File scripts\init-codex.ps1
+powershell -ExecutionPolicy Bypass -File scripts\init-gemini.ps1
+```
+
+### 3. Vendor CLI'yi başlat ve ilk komutu çalıştır
+
+```
+$ claude
+> /memory          # CLAUDE.md yüklü mü doğrula
+> /director komple  # Ulak OS programa girer
+```
+
+İlk komut çıktısı `reports/current/` altına artefakt zincirini yazmaya başlar.
+
+## MCP connector'ları (opsiyonel)
+
+`.mcp.json` dosyası GitHub, Jira ve Figma için MCP connector tanımları içerir. Bunları etkinleştirmek için ortam değişkenlerini set et:
+
+```bash
+# GitHub
+export GITHUB_MCP_URL="https://your-github-mcp-endpoint"
+export GITHUB_TOKEN="ghp_your_token_here"
+
+# Jira (opsiyonel)
+export JIRA_MCP_URL="https://your-jira-mcp-endpoint"
+export JIRA_TOKEN="your_jira_token"
+
+# Figma (opsiyonel)
+export FIGMA_MCP_URL="https://your-figma-mcp-endpoint"
+export FIGMA_TOKEN="your_figma_token"
+```
+
+**Not:** Hiçbiri set edilmezse Ulak OS yine çalışır; sadece MCP tool'ları devre dışı kalır.
+
+## Sorun giderme
+
+| Sorun | Çözüm |
+|---|---|
+| `/memory` CLAUDE.md'yi göstermiyor | Claude Code'u repo **kökünden** aç |
+| `@import` hatası | `bash scripts/validate-imports.sh` ile hangi dosya bulunamadığını gör |
+| MCP bağlantı hatası | Yukarıdaki env var'ları set et veya MCP'yi devre dışı kabul et |
+| Windows `.ps1` "execution policy" hatası | `-ExecutionPolicy Bypass -File` parametresini kullan |
+| `reports/current/` yok | `bash scripts/init-<vendor>.sh` script'ini tekrar çalıştır |
+| `Claude Ulak` kalıntısı görüyorum | Bu bir bug — issue aç |
 
 ## Repo içeriği
-- `CLAUDE.md` → Claude Code adaptörü
-- `AGENTS.md` → Codex/Copilot uyumlu agent talimatları
-- `GEMINI.md` → Gemini CLI proje bağlamı
-- `.claude/` → Claude Code komutları, ajanları, skill’leri, ayarlar
-- `.gemini/commands/` → Gemini CLI özel komutları
-- `docs/adapters/` → platforma özel kullanım kılavuzları
-- `docs/history/` → sürüm soyağacı ve dış/iç sürüm eşlemesi
-- `docs/archive/internal-releases/` → eski iç sürümlerin kanonik kopyaları
-- `prompts/core/` → vendor-agnostic çekirdek sözleşme
-- `reports/current/` → runtime sırasında doldurulan artefaktlar
-- `evals/` → golden prompt ve assertion taslakları
 
-## Dağıtım görüşü
-Bu sistemin **ayrı ayrı kopyalanmış üç prompt** olarak yaşaması doğru değil. Doğru model:
-- **tek çekirdek sözleşme**,
-- **ayrı vendor adaptörleri**,
-- **aynı sürüm numarası**,
-- **tek changelog**,
-- **tek release notu**.
+```
+ulak-os/
+├── CLAUDE.md / AGENTS.md / GEMINI.md      # 3 adaptör başlangıç dosyası
+├── prompts/core/                           # vendor-agnostic çekirdek sözleşme
+├── docs/
+│   ├── adapters/                           # platform-spesifik kullanım rehberleri
+│   ├── governance/                         # rule collision matrix, plugin/skill kararları
+│   ├── history/                            # version lineage
+│   ├── examples/                           # dolu artefakt örnekleri
+│   ├── ecosystem/                          # related-work + ekosistem referansları
+│   └── skills-integration/                 # superpowers + awesome-design-md mapping
+├── scripts/                                # init + validation scriptleri (sh + ps1)
+├── .claude/                                # 20 subagent + 6 komut + 4 native skill
+├── .gemini/                                # Gemini CLI özel komutları
+├── .github/workflows/                      # CI validation + secret scan
+├── reports/current/                        # runtime artefakt yazılır
+└── releases/                               # versiyon geçmişi
+```
 
-## Ne zaman 2.0.0?
-Bu repo için öneri: `2.0.0` ancak aşağıdakiler gerçek projelerde doğrulandıktan sonra çıksın:
-- en az 3 ayrı repoda pilot koşu,
-- Claude/Codex/Gemini üzerinde adapter doğrulaması,
-- eval regresyon seti,
-- GitHub dağıtım akışı ve yayın notları,
-- minimum bir CI/validation standardı.
+## Çoklu dil
 
-Şu anki doğru yayın etiketi: **1.9.1 — Claude Ulak Distribution Parity Patch**.
+Ulak OS v1.0.0'da:
+- 🇹🇷 **Türkçe** (birincil) — `*.md`
+- 🇬🇧 **English** (paralel) — `*.en.md`
 
+v1.1+ planlanıyor: 🇫🇷 FR, 🇩🇪 DE, 🇪🇸 ES, 🇸🇦 AR, 🇯🇵 JA, 🇨🇳 ZH
 
-## Eşit sürüm dağıtımı
-`releases/` dizini altında 1.0.0–1.9.1 arasındaki tüm public sürümler aynı klasör yapısıyla taşınır.
+## Ekosistem
+
+Ulak OS izole bir ürün değil, bir ekosistemin parçası. Beraber kullanılabilir, ilham aldığı veya tamamlayıcı olarak değerlendirdiği public projelerin listesi: [`docs/ecosystem/related-work.md`](docs/ecosystem/related-work.md).
+
+Öne çıkanlar:
+- **[obra/superpowers](https://github.com/obra/superpowers)** — Agentic skill çerçevesi (Ulak ile mapping: [`docs/skills-integration/superpowers-mapping.md`](docs/skills-integration/superpowers-mapping.md))
+- **[anthropics/skills](https://github.com/anthropics/skills)** — Anthropic resmi Agent Skills repo'su
+- **[VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md)** — 58+ marka için DESIGN.md (Ulak ile entegre: `/ulak-design-ref` komutu)
+- **[gsd-build/gsd-2](https://github.com/gsd-build/gsd-2)** — Spec-driven development sistemi (felsefi akrabalık)
+- **[hesreallyhim/awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code)** — Claude Code skill curated listesi
+
+## Versiyon geçmişi
+
+Bu sürüm, "Claude Ulak" iç kod adıyla geliştirilen 1.0.0–1.9.1 serisinin **public stable** halefidir. Detaylar: [`docs/history/version-lineage.md`](docs/history/version-lineage.md)
+
+## Katkı
+
+Pull request'ler hoşgörülür. Önce [`CONTRIBUTING.md`](CONTRIBUTING.md) ve [`docs/governance/rule-collision-matrix.md`](docs/governance/rule-collision-matrix.md) dosyalarını oku.
+
+## Lisans
+
+MIT — [`LICENSE`](LICENSE)

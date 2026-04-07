@@ -1,6 +1,6 @@
 # Manifest — 1.7.0
 
-- Product: Claude Ulak
+- Product: Ulak OS
 - Public version: 1.7.0
 - Internal mapping: V10.2
 - Status: exact artifact available

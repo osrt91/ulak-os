@@ -1,0 +1,51 @@
+name: ci-validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate Ulak OS repo health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate JSON/TOML schemas
+        run: bash scripts/validate-schemas.sh
+
+      - name: Validate @import chains
+        run: bash scripts/validate-imports.sh
+
+      - name: Brand consistency (Claude Ulak must not appear)
+        run: |
+          if grep -rn "Claude Ulak" --include="*.md" .; then
+            echo "::error::'Claude Ulak' string found — rebrand incomplete."
+            exit 1
+          fi
+          echo "OK: No 'Claude Ulak' brand residue"
+
+      - name: Verify required artefact chain in AGENTS.md
+        run: |
+          count=$(grep -c "reports/current/" AGENTS.md)
+          if [[ "$count" -lt 12 ]]; then
+            echo "::error::AGENTS.md required artefact list has $count entries, expected 12."
+            exit 1
+          fi
+          echo "OK: AGENTS.md artefact chain has $count entries"
+
+      - name: Verify version-lineage includes 1.0.0
+        run: |
+          if ! grep -q "1\.0\.0.*Ulak OS" docs/history/version-lineage.md; then
+            echo "::error::version-lineage.md missing 1.0.0 Ulak OS entry"
+            exit 1
+          fi
+          echo "OK: version-lineage.md contains 1.0.0 entry"

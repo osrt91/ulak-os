@@ -1,6 +1,6 @@
 # Equalized Version Distribution
 
-1.9.1 ile birlikte Claude Ulak public sürüm hattı 1.0.0–1.9.1 aralığında eşit dağıtım şemasına alındı.
+1.0.0 ile birlikte Ulak OS public sürüm hattı 1.0.0–1.0.0 aralığında eşit dağıtım şemasına alındı.
 
 Amaç:
 - kullanıcıya aynı sürüm dilini göstermek

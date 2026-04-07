@@ -9,4 +9,4 @@
 - master_v7_comparison_report.md
 
         ## Dağıtım notu
-        Bu sürüm, Claude Ulak eşit dağıtım politikasında standart release klasör yapısıyla taşınır.
+        Bu sürüm, Ulak OS eşit dağıtım politikasında standart release klasör yapısıyla taşınır.

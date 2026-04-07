@@ -1,4 +1,4 @@
-        # Claude Ulak 1.7.0 — Hybrid Office Front OS
+        # Ulak OS 1.7.0 — Hybrid Office Front OS
 
         ## Durum
         - Public version: `1.7.0`

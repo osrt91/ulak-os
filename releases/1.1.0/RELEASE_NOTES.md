@@ -9,4 +9,4 @@
 - Component, spacing, typography ve state disiplininin sertleştirilmesi.
 
         ## Dağıtım notu
-        Bu sürüm, Claude Ulak eşit dağıtım politikasında standart release klasör yapısıyla taşınır.
+        Bu sürüm, Ulak OS eşit dağıtım politikasında standart release klasör yapısıyla taşınır.

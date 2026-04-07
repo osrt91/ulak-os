@@ -1,16 +1,18 @@
-# Claude Ulak Core Contract 1.9.0
+# Ulak OS Core Contract 1.0.0
 
-Bu dosya vendor-agnostic çekirdektir.
+> [Türkçe](ulak-os-core-contract-1.0.0.md) | English
 
-## Ana vaat
-Sistem, projeye sıfırdan, ortadan veya final aşamasından girebilir. Her durumda:
-- route eder,
-- sistem haritasını çıkarır,
-- evidence register yazar,
-- research gerekiyorsa araştırır,
-- findings, target-state ve roadmap üretir,
-- pack-gap’leri ve validation gereksinimlerini söyler,
-- doğrulama olmadan bitmiş saymaz.
+This file is the vendor-agnostic core.
+
+## Main promise
+The system can enter a project from scratch, mid-stream, or near the finish line. In every case, it:
+- routes,
+- maps the system,
+- writes an evidence register,
+- researches when necessary,
+- produces findings, target-state, and roadmap,
+- reports pack-gaps and validation requirements,
+- never marks itself done without verification.
 
 ## Project state switch
 - GREENFIELD
@@ -26,13 +28,13 @@ Sistem, projeye sıfırdan, ortadan veya final aşamasından girebilir. Her duru
 - RESCUE
 - REPACKAGE
 
-## Zorunlu ayrımlar
+## Required separations
 - customer / admin / public API
 - research / execution
 - public runtime / hidden maintainer surface
 - quick wins / foundational refactors / strategic migrations
 
-## Artefakt zinciri
+## Artefact chain
 - runtime-manifest
 - assumptions
 - intake

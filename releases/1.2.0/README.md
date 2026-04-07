@@ -1,4 +1,4 @@
-        # Claude Ulak 1.2.0 — V6 Prompt Operating System
+        # Ulak OS 1.2.0 — V6 Prompt Operating System
 
         ## Durum
         - Public version: `1.2.0`

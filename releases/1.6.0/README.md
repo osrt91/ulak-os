@@ -1,4 +1,4 @@
-        # Claude Ulak 1.6.0 — Adaptive Runtime Router
+        # Ulak OS 1.6.0 — Adaptive Runtime Router
 
         ## Durum
         - Public version: `1.6.0`

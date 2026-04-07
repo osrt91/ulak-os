@@ -1,4 +1,4 @@
-        # Claude Ulak 1.9.1 — Equalized Version Distribution
+        # Ulak OS 1.9.1 — Equalized Version Distribution
 
         ## Durum
         - Public version: `1.9.1`

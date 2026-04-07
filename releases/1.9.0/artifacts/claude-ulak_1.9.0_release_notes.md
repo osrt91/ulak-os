@@ -1,4 +1,4 @@
-# Claude Ulak 1.9.0 — Release notes
+# Ulak OS 1.9.0 — Release notes
 
 ## Bu yayında
 - İç sürüm kaosu tek `1.x` çizgisine toplandı.
@@ -9,5 +9,5 @@
 
 ## Etiket
 Public release: **1.9.0**
-Product name: **Claude Ulak**
+Product name: **Ulak OS**
 Channel: **Distribution Candidate**

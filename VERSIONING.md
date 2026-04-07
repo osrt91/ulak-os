@@ -14,8 +14,8 @@ GitHub, README, changelog ve dağıtım paketlerinde görünen seri budur.
 - 1.6.0 — V9 Adaptive Runtime Router
 - 1.7.0 — V10.2 Hybrid Office Front OS
 - 1.8.0 — V10.3 Autonomous Program Director
-- 1.9.0 — Claude Ulak Distribution Candidate
-- 1.9.1 — Equalized Version Distribution
+- 1.9.0 — Ulak OS Distribution Candidate
+- 1.0.0 — Equalized Version Distribution
 
 ## 2) Internal codename line
 Tarihsel iz sürmek için korunur:

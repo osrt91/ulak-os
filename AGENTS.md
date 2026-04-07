@@ -1,4 +1,4 @@
-# Claude Ulak Agent Instructions
+# Ulak OS Agent Instructions
 
 Bu depo, büyük yazılım projelerini audit etmek, yeniden yapılandırmak, pack üretmek ve kontrollü icra planı çıkarmak için tasarlanmış bir operating system deposudur.
 
@@ -17,14 +17,18 @@ Bu depo, büyük yazılım projelerini audit etmek, yeniden yapılandırmak, pac
 - Quick win ile strategic migration’ı karıştırma.
 - Validation ve residual risk yazmadan işi bitmiş sayma.
 
-## Required artefacts
+## Required artefacts (full chain — aligned with core contract)
 - reports/current/runtime-manifest.md
+- reports/current/assumptions.md
 - reports/current/intake.md
 - reports/current/inventory.md
 - reports/current/evidence-register.md
+- reports/current/research-notes.md
 - reports/current/analysis-findings.md
+- reports/current/target-state.md
 - reports/current/execution-roadmap.md
 - reports/current/validation-plan.md
+- reports/current/pack-gap-register.md
 - reports/current/manager-verdict.md
 
 ## Adapter note

@@ -1,4 +1,4 @@
-        # Claude Ulak 1.8.0 — Autonomous Program Director
+        # Ulak OS 1.8.0 — Autonomous Program Director
 
         ## Durum
         - Public version: `1.8.0`

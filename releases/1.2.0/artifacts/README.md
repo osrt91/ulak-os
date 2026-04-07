@@ -10,4 +10,4 @@ En baskın temalar:
 - supply chain, SBOM, SLSA, ADR ve distribution gerçekleri
 - frontend/mobile redesign ile teknik mimariyi tek çekirdekte birleştirme
 
-Bu nedenle 1.2.0, Claude Ulak soyağacında gerçek bir eşik sürümdür; ancak bu paket içinde **reconstructed release dossier** olarak taşınır.
+Bu nedenle 1.2.0, Ulak OS soyağacında gerçek bir eşik sürümdür; ancak bu paket içinde **reconstructed release dossier** olarak taşınır.

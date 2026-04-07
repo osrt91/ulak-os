@@ -1,4 +1,4 @@
-        # Claude Ulak 1.4.0 — V7 Consolidation
+        # Ulak OS 1.4.0 — V7 Consolidation
 
         ## Durum
         - Public version: `1.4.0`

@@ -1,4 +1,4 @@
-        # Claude Ulak 1.0.0 — Master Core Baseline
+        # Ulak OS 1.0.0 — Master Core Baseline
 
         ## Durum
         - Public version: `1.0.0`

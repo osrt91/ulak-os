@@ -1,6 +1,6 @@
 # Releases
 
-Bu dizin, Claude Ulak public sürüm hattındaki tüm sürümleri aynı klasör yapısıyla taşır.
+Bu dizin, Ulak OS public sürüm hattındaki tüm sürümleri aynı klasör yapısıyla taşır.
 
 Her sürüm klasöründe aynı dosyalar bulunur:
 - README.md

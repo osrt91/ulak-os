@@ -1,6 +1,6 @@
 # Manifest — 1.1.0
 
-- Product: Claude Ulak
+- Product: Ulak OS
 - Public version: 1.1.0
 - Internal mapping: frontend redesign brief
 - Status: source-backed reconstruction
