@@ -33,7 +33,7 @@ The pre-1.0.0 entries below document the internal "Claude Ulak" development seri
 Tüm yayınlar **public release** sürümleriyle kaydedilir. İç kod adları parantez içinde tutulur.
 
 ## 1.0.0 — Equalized Version Distribution
-- Tüm public sürümler için `releases/<version>/` klasörleri eklendi.
+- Tüm internal sürümler için `releases/<version>/` klasörleri oluşturuldu (sonradan Ulak OS 1.0.0 final cleanup'ta kaldırıldı; arşiv `claude-ulak_1.9.1_equalized_github_repo/` workspace backup'ında korunmaktadır).
 - Kişisel arşiv ve GitHub repo tarafı aynı sürüm yapısına getirildi.
 - Exact artifact olmayan erken sürümler `reconstructed` olarak işaretlendi.
 - Bu sürüm çekirdeği değil, dağıtım düzenini günceller.

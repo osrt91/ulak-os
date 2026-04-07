@@ -113,8 +113,7 @@ ulak-os/
 ├── .claude/                                # 20 subagents + 6 commands + 4 native skills
 ├── .gemini/                                # Gemini CLI custom commands
 ├── .github/workflows/                      # CI validation + secret scan
-├── reports/current/                        # runtime artefacts written here
-└── releases/                               # version history
+└── reports/current/                        # runtime artefacts written here
 ```
 
 ## Multi-language

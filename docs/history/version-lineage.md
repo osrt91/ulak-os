@@ -29,6 +29,6 @@
 
 ### Brand transition note
 
-The "Claude Ulak" name was used internally during the 1.0.0–1.9.1 development series. With version 1.0.0 of the **Ulak OS** brand, the project enters its first stable public release phase. The core contract logic is unchanged from Claude Ulak 1.9.0/1.9.1; only the brand, packaging, CI infrastructure, and i18n layer differ. Pre-1.0.0 artifacts are preserved under `releases/` for historical reference.
+The "Claude Ulak" name was used internally during the 1.0.0–1.9.1 development series. With version 1.0.0 of the **Ulak OS** brand, the project enters its first stable public release phase. The core contract logic is unchanged from Claude Ulak 1.9.0/1.9.1; only the brand, packaging, CI infrastructure, and i18n layer differ. Pre-1.0.0 artifacts are documented above for historical reference; they are preserved in the original `claude-ulak_1.9.1_equalized_github_repo/` workspace backup and are not shipped with the public Ulak OS 1.0.0 release.
 
 The version number reset (1.9.1 → 1.0.0) is **intentional** and follows semver semantics for a first stable major release under a new brand identity. It is not a regression or downgrade.

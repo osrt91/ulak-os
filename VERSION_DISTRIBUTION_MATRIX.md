@@ -20,4 +20,4 @@
 | 1.9.0 | Claude Ulak Distribution Candidate | exact artifact available | distribution candidate |
 | 1.9.1 | Equalized Version Distribution | exact artifact available | distribution parity patch |
 
-The internal `Claude Ulak 1.x` series is preserved in `releases/` for historical reference. Public versioning continues from `1.0.0` under the `Ulak OS` brand.
+The internal `Claude Ulak 1.x` series is documented above for historical reference. Pre-1.0.0 release artifacts are not shipped with the public Ulak OS 1.0.0 release; they are preserved in the original `claude-ulak_1.9.1_equalized_github_repo/` workspace backup. Public versioning continues from `1.0.0` under the `Ulak OS` brand.
