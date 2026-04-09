@@ -1,0 +1,27 @@
+{
+  "name": "ulak-os",
+  "version": "2.0.0",
+  "description": "Vendor-neutral prompt operating system",
+  "core": "core/ulak-os-core-contract-2.0.0.md",
+  "agents": 20,
+  "commands": 7,
+  "skills": 4,
+  "artefacts": [
+    "runtime-manifest",
+    "assumptions",
+    "intake",
+    "inventory",
+    "evidence-register",
+    "research-notes",
+    "analysis-findings",
+    "target-state",
+    "execution-roadmap",
+    "validation-plan",
+    "pack-gap-register",
+    "manager-verdict"
+  ],
+  "compatibility": {
+    "cli": ">=2.0.0",
+    "vendors": ["claude", "codex", "gemini"]
+  }
+}
