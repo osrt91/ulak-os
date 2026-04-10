@@ -28,7 +28,7 @@ The same artefact chain runs in every case; **never says "done" without validati
 | Codex / Copilot | `AGENTS.md` | "Read AGENTS.md, run program mode" |
 | Gemini CLI | `GEMINI.md` | `/director komple` |
 
-All share the `prompts/core/ulak-os-core-contract-1.0.0.md` core contract.
+All share the `prompts/core/ulak-os-core-contract-2.0.0.md` core contract.
 
 ## Quick start (5 minutes)
 

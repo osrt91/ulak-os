@@ -28,7 +28,7 @@ Aynı artefakt zinciri her durumda çalışır; **doğrulama olmadan "bitti" dem
 | Codex / Copilot | `AGENTS.md` | "Read AGENTS.md, run program mode" |
 | Gemini CLI | `GEMINI.md` | `/director komple` |
 
-Hepsi `prompts/core/ulak-os-core-contract-1.0.0.md` çekirdek sözleşmesini paylaşır.
+Hepsi `prompts/core/ulak-os-core-contract-2.0.0.md` çekirdek sözleşmesini paylaşır.
 
 ## Hızlı başlangıç (5 dakika)
 
