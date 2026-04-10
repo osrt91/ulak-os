@@ -21,7 +21,7 @@ echo "✓ gemini binary found: $(command -v gemini)"
 # 2. Required files check
 REQUIRED_FILES=(
   "GEMINI.md"
-  "prompts/core/ulak-os-core-contract-1.0.0.md"
+  "prompts/core/ulak-os-core-contract-2.0.0.md"
   "docs/adapters/gemini-cli.md"
 )
 for f in "${REQUIRED_FILES[@]}"; do

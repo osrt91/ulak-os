@@ -22,7 +22,7 @@ echo "✓ claude binary found: $(command -v claude)"
 # 2. Required files check
 REQUIRED_FILES=(
   "CLAUDE.md"
-  "prompts/core/ulak-os-core-contract-1.0.0.md"
+  "prompts/core/ulak-os-core-contract-2.0.0.md"
   ".claude/settings.json"
 )
 for f in "${REQUIRED_FILES[@]}"; do

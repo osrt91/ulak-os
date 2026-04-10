@@ -21,7 +21,7 @@ Write-Host "[OK] claude binary found: $($claudeCmd.Source)"
 # 2. Required files check
 $RequiredFiles = @(
     "CLAUDE.md",
-    "prompts/core/ulak-os-core-contract-1.0.0.md",
+    "prompts/core/ulak-os-core-contract-2.0.0.md",
     ".claude/settings.json"
 )
 foreach ($f in $RequiredFiles) {
