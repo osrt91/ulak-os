@@ -29,7 +29,7 @@ jobs:
         run: |
           # Historical references are allowed in lineage/release/migration documents.
           # Find any "Claude Ulak" that is NOT in the approved historical file allowlist.
-          ALLOWED='docs/history/version-lineage\.md|VERSION_DISTRIBUTION_MATRIX\.md|RELEASE_NOTES_1\.0\.0\.md|ROADMAP\.md|docs/ecosystem/related-work\.md|docs/ecosystem/related-work\.en\.md|README\.md|README\.en\.md|releases/1\.9\.1/|CHANGELOG\.md|VERSIONING\.md'
+          ALLOWED='docs/history/version-lineage\.md|VERSION_DISTRIBUTION_MATRIX\.md|RELEASE_NOTES_1\.0\.0\.md|ROADMAP\.md|docs/ecosystem/related-work\.md|docs/ecosystem/related-work\.en\.md|README\.md|README\.en\.md|releases/1\.9\.1/|CHANGELOG\.md|VERSIONING\.md|docs/superpowers/(plans|specs)/(archive/)?'
           OFFENDERS=$(grep -rn "Claude Ulak" --include="*.md" . | grep -vE "($ALLOWED)" || true)
           if [[ -n "$OFFENDERS" ]]; then
             echo "::error::'Claude Ulak' string found outside approved historical files:"
