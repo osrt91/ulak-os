@@ -2,7 +2,7 @@
 
 > **Vendor-neutral prompt operating system** — Claude Code, Codex/Copilot ve Gemini CLI için tek çekirdekli, üç adaptörlü, çözüme odaklı runtime.
 
-**Sürüm:** 1.0.0 (First Stable Public Release)
+**Sürüm:** 2.0.0 (CLI Console + Memory + Vendor Adapters)
 **Geliştirici:** [Oğuzhan Sert](https://github.com/osrt91)
 **Lisans:** MIT
 
@@ -120,7 +120,7 @@ ulak-os/
 │   ├── ecosystem/                          # related-work + ekosistem referansları
 │   └── skills-integration/                 # superpowers + awesome-design-md mapping
 ├── scripts/                                # init + validation scriptleri (sh + ps1)
-├── .claude/                                # 20 subagent + 6 komut + 4 native skill
+├── .claude/                                # 20 subagent + 8 komut + 4 native skill
 ├── .gemini/                                # Gemini CLI özel komutları
 ├── .github/workflows/                      # CI validation + secret scan
 └── reports/current/                        # runtime artefakt yazılır
@@ -128,11 +128,11 @@ ulak-os/
 
 ## Çoklu dil
 
-Ulak OS v1.0.0'da:
+Ulak OS v2.0.0'da:
 - 🇹🇷 **Türkçe** (birincil) — `*.md`
 - 🇬🇧 **English** (paralel) — `*.en.md`
 
-v1.1+ planlanıyor: 🇫🇷 FR, 🇩🇪 DE, 🇪🇸 ES, 🇸🇦 AR, 🇯🇵 JA, 🇨🇳 ZH
+v2.1+ planlanıyor: 🇫🇷 FR, 🇩🇪 DE, 🇪🇸 ES, 🇸🇦 AR, 🇯🇵 JA, 🇨🇳 ZH
 
 ## Ekosistem
 

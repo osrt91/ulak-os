@@ -1,5 +1,18 @@
 # Ulak OS Roadmap
 
+## v2.0.0 (2026-04-09) — CLI Console + Memory + Vendor Adapters
+
+**Status:** ✅ Released
+
+- CLI orchestration layer (`ulak` binary with 8 subcommands)
+- SQLite + FTS5 project memory (cross-session learning extraction)
+- Vendor adapter abstraction (subprocess-based auto-detection: Claude, Codex, Gemini)
+- Pack versioning and upgrade system
+- TypeScript project infrastructure (src/, dist/, tsconfig.json)
+- Platform command parity: Claude 8 commands, Gemini 8 commands
+- Core contract v2.0.0 with CLI/memory/adapter sections
+- Full EN translation coverage for docs/
+
 ## v1.0.0 (2026-04-07) — First Stable Public Release
 
 **Status:** ✅ Released
@@ -14,7 +27,7 @@
 - awesome-design-md integration (/ulak-design-ref wrapper + fetch script)
 - Ecosystem related-work doc
 
-## v1.1 Plan (research candidates)
+## v2.1 Plan (research candidates)
 
 ### TOP PRIORITY — Plugin marketplace publication
 Reference architectural pattern: `akin-ozer/devops-skills-plugin` (cross-vendor manifest pattern with shared `skills/` directory).
@@ -89,10 +102,10 @@ Each candidate requires its own brainstorming + spec + plan cycle in v1.1:
 - Sponsor / donation setup if applicable
 
 ### Release semantics
-- v1.0.x: bug fixes, doc fixes, no new features
-- v1.1.0: first feature release after v1.0.0 — pick 2-3 from above
-- v1.x.0: each feature release adds 2-3 candidates with stability gates
-- v2.0.0: major architectural shift (e.g., agentscope substrate adoption, RAG layer)
+- v2.0.x: bug fixes, doc fixes, no new features
+- v2.1.0: first feature release after v2.0.0 — pick 2-3 from above
+- v2.x.0: each feature release adds 2-3 candidates with stability gates
+- v3.0.0: major architectural shift (e.g., agentscope substrate adoption, RAG layer)
 
 ## Decision principles
 

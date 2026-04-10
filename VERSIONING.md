@@ -2,6 +2,14 @@
 
 ## Ulak OS — Public release line
 
+- **2.0.0** — CLI Console + Memory + Vendor Adapters (2026-04-09)
+  - CLI orchestration layer (`ulak` binary with 8 subcommands)
+  - SQLite + FTS5 project memory
+  - Vendor adapter abstraction (subprocess-based)
+  - Pack versioning and upgrade system
+  - TypeScript project infrastructure
+  - Full platform command parity and EN translation coverage
+
 - **1.0.0** — First Stable Public Release (2026-04-07)
   - Brand transition Claude Ulak → Ulak OS
   - Three-vendor adapter parity
@@ -26,7 +34,7 @@ GitHub, README, changelog ve dağıtım paketlerinde görünen seri budur.
 - 1.7.0 — V10.2 Hybrid Office Front OS
 - 1.8.0 — V10.3 Autonomous Program Director
 - 1.9.0 — Ulak OS Distribution Candidate
-- 1.0.0 — Equalized Version Distribution
+- 1.9.1 — Equalized Version Distribution
 
 ## 2) Internal codename line
 Tarihsel iz sürmek için korunur:
@@ -39,4 +47,4 @@ Tarihsel iz sürmek için korunur:
 ## Kural
 - Kullanıcıya ve GitHub’a gösterilen sürüm = **public release line**
 - Arşiv ve teknik soy ağacı = **internal codename line**
-- Yeni değişiklikler 2.0.0’a zıplamadan önce 1.x çizgisinde ilerletilir. Dağıtım ve arşiv eşitlemeleri mümkün olduğunda patch sürüm olarak çıkarılır.
+- 2.0.0 yayınlanmıştır. Yeni değişiklikler 2.x çizgisinde ilerletilir. Dağıtım ve arşiv eşitlemeleri mümkün olduğunda patch sürüm olarak çıkarılır.

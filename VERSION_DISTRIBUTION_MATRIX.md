@@ -2,6 +2,7 @@
 
 | Public version | Title | Status | Internal mapping |
 |---|---|---|---|
+| 2.0.0 (Ulak OS) | CLI Console + Memory + Vendor Adapters | exact artifact | v1.0.0 prompt pack + TypeScript CLI layer |
 | 1.0.0 (Ulak OS) | First Stable Public Release | exact artifact | rebrand from Claude Ulak 1.9.1 |
 
 ## Pre-1.0.0 internal lineage (Claude Ulak series — archived)

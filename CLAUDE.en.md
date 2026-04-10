@@ -2,7 +2,7 @@
 
 > [Türkçe](CLAUDE.md) | English
 
-@prompts/core/ulak-os-core-contract-1.0.0.md
+@prompts/core/ulak-os-core-contract-2.0.0.md
 @docs/adapters/universal-runtime-contract.md
 @docs/history/version-lineage.md
 @docs/adapters/claude-code.md

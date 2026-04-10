@@ -25,6 +25,7 @@
 
 ## Public release line (Ulak OS brand)
 
+- **2.0.0** — CLI Console + Memory + Vendor Adapters (2026-04-09)
 - **1.0.0** — Ulak OS First Stable Public Release (2026-04-07)
 
 ### Brand transition note

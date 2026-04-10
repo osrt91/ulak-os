@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "vendor": "claude",
+  "promptPack": "ulak-os@2.0.0",
+  "memory": {
+    "backend": "sqlite",
+    "path": ".ulak/memory.db"
+  },
+  "artefacts": {
+    "outputDir": "reports/current"
+  }
+}

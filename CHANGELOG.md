@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.0.0] — 2026-04-09
+
+### Added — CLI Console + Memory + Vendor Adapters
+
+- CLI orchestration layer: `ulak` command with 8 subcommands (init, run, status, validate, memory, config, upgrade, export)
+- SQLite + FTS5 project memory layer (`.ulak/memory.db`) for cross-session learning extraction
+- Vendor adapter abstraction (subprocess-based): Claude Code, Codex/Copilot, Gemini CLI auto-detection and routing
+- Pack versioning and upgrade system (`src/pack/loader.ts`, `upgrader.ts`, `validator.ts`)
+- TypeScript project infrastructure: `src/` source tree (18 files), `dist/` compiled output, `tsconfig.json`
+- vitest test scaffold with unit and e2e configuration
+- Platform command parity: Claude and Gemini now share 8 commands each
+- `market-scan` command for Claude (was Gemini-only)
+- 3 new Gemini commands: `pack-gap-audit`, `ulak-design-ref`, `ulak-intake`
+- Core contract v2.0.0 with CLI orchestration, memory, and adapter sections
+- 17 new EN translation files for docs/ subdirectories
+
+### Changed
+
+- Core contract reference: `ulak-os-core-contract-1.0.0.md` → `ulak-os-core-contract-2.0.0.md` in all adapter files
+- Command count: 6 → 8 per vendor (full parity)
+- `package-lock.json` now tracked for reproducible builds
+
 ## [1.0.0] — 2026-04-07
 
 ### Added — First Stable Public Release (Ulak OS brand)
