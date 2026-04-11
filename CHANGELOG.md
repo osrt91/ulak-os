@@ -58,14 +58,28 @@ A second session report came in from scanner-project.com — a security/complian
 
 - **`prompts/core/ulak-os-core-contract-2.0.0.md`** — two new @imports for the handoff-plan and persona-dispatch contracts in the Runtime rules layer.
 
+### Persona agent files (7 new agents, c21204b)
+
+Makes `docs/runtime/persona-dispatch-pattern.md` runnable. Each persona follows the specialist agent shape:
+
+- `.claude/agents/customer-persona.md`, `admin-persona.md`, `bayi-persona.md`, `security-redteam.md`, `support-persona.md`, `developer-persona.md`, `compliance-persona.md`
+- Office roster (`docs/runtime/office-roster.md`) updated with a "Personas" section listing all 7.
+
+### Schema extensions (a0f0cec — UOI-03 + UOI-07 + time-sensitivity)
+
+- **`docs/runtime/anti-patterns.md`** — new "Destructive action without live-probe (gate pattern)" section. Forbidden destructive actions list, pre_check field requirement on every destructive roadmap item. References R-119 rm cancellation from Sprint 1 Wave 3. This is UOI-07.
+- **`docs/governance/evidence-trust-scoring.md`** — new "Tier promotion mechanism" section. T-tier promotion and regression rules, consensus promotion via dual-path / multi-specialist overlap. Hard rule: tier promotion without new evidence is fraud. Live probe is the only path to T0. This is UOI-03.
+- **`docs/governance/finding-schema.md`** — schema extended with `time_sensitivity` optional block (deadline + reason + deadline_source), `source_personas`, `source_specialists`, explicit T0 in `evidence_trust`. New "Time sensitivity — a third axis" section: orthogonal to severity and priority. Escalation rule: High+ severity with <24h deadline surfaces at top of manager-verdict next-action. Reference: scanner-project SEC-B1/SEC-B2.
+
 ### What's still NOT in this patch
 
-- **Release tag** — still `[Unreleased]`. FP-01 fix + v2.1.2 contract prep + scanner-project patterns land together in the next tagged release.
+- **Release tag** — still `[Unreleased]`.
 - **PG-01 parallel-dispatch-planner skill** — deferred.
 - **PG-04 migration-dry-runner skill** — deferred.
-- **7 persona agent files** — `.claude/agents/customer-persona.md`, `admin-persona.md`, `bayi-persona.md`, `security-redteam.md`, `support-persona.md`, `developer-persona.md`, `compliance-persona.md` — not yet written. The contract is documented; the agents need their own prompts.
-- **Director command argument parser** — the arguments are documented but the director agent's prompt does not yet parse them explicitly. Current runs ignore `mode=` etc. and infer from positional intent.
-- **v1.x stale reference cleanup** — still ~10 stale v1.0.0/v1.1+ references in `docs/skills-integration/` and `docs/ecosystem/`. Tracked in earlier audit notes.
+- **Director command argument parser** — args documented but not parsed.
+- **Workstream extension to waves-pattern.md** — business-layer vs execution-layer grouping should be documented.
+- **Docs drift detection in memory-hygiene.md** — pattern from scanner-project "CLAUDE.md says 17 plugins, reality is 40".
+- **v1.x stale reference cleanup** — still ~10 stale v1.0.0/v1.1+ references in `docs/skills-integration/` and `docs/ecosystem/`.
 
 ## [Unreleased — earlier] — v2.1.2 docs prep (v2.2 runtime contract drafts)
 
