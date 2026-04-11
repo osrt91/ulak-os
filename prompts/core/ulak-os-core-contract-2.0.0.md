@@ -21,6 +21,8 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 @docs/runtime/waves-pattern.md
 @docs/runtime/live-probe-contract.md
 @docs/runtime/dual-path-validation.md
+@docs/runtime/handoff-plan-contract.md
+@docs/runtime/persona-dispatch-pattern.md
 
 ### Operational motors (mode-loaded)
 @docs/runtime/toolchain-precheck.md

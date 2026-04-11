@@ -59,5 +59,37 @@ The director must run the full depth protocol before producing any verdict. Shal
 - No overlay or sector pack load without an explicit router decision.
 - No `signoff_status: ready` with unresolved Critical findings.
 
+## Arguments
+
+The director accepts positional user intent PLUS optional keyword arguments:
+
+### Positional (user intent)
+- `komple` / `full` / `complete` — full Phase 0 → 5 program
+- `brownfield audit` / `brownfield rescue` — state hints
+- `mode=<intervention>` — CREATE | REPAIR | EXTEND | REFACTOR | MIGRATE | RESCUE | REPACKAGE
+
+### Keyword arguments
+- `mode=<intervention>` — pre-set the intervention mode, bypass router inference
+- `entry=<file-path>` — use an existing handoff-plan or prior artefact as the Phase 0 entry point (see `docs/runtime/handoff-plan-contract.md`)
+- `skip_phase_1=true` — skip deep inventory if the existing `reports/current/inventory.md` is fresh (typical for resume runs from a handoff-plan)
+- `skip_phase_2=<comma-list>` — skip specific specialist dispatches if they already ran (e.g., `skip_phase_2=cartographer,security-hardening-lead`)
+- `parallel_dispatch=<N>` — override the Phase 2 default dispatch cap (default 6)
+- `dispatch=<specialist|persona>` — dispatch mode:
+  - `specialist` (default) — discipline-based agents (security-hardening-lead, backend-api-architect, etc.)
+  - `persona` — user-role-based agents (customer-persona, admin-persona, etc. — see `docs/runtime/persona-dispatch-pattern.md`)
+  - `both` — run both in sequence, merge evidence with overlap boost
+- `validation_depth=<light|standard|deep>` — validation gate depth in Phase 7
+- `profile=<AUDIT_PROFILE|GREENFIELD_BUILDER_PROFILE|...>` — pre-select output profile
+
+### Resume form
+
+When continuing a prior session from a handoff-plan:
+
+```
+/director komple mode=RESCUE entry=reports/current/ulak-handoff-plan.md skip_phase_1=true parallel_dispatch=9
+```
+
+The director reads the handoff-plan first, loads the context files it names, skips phases whose inputs are still fresh, and dispatches the specialists the handoff-plan recommends.
+
 ARGUMENTS:
 $ARGUMENTS

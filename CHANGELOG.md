@@ -39,12 +39,33 @@ Files updated:
 
 A Claude Code hook can block or allow tool calls, but it cannot FORCE a tool call the model decided not to make. The default rule causes the model to decline Write and return inline instead; the Write call is never attempted, so no hook fires. The fix has to be at the prompt level — telling the model that the rule does not apply in this context — not at the tool level.
 
+### Patterns from the scanner-project.com session (2026-04-11)
+
+A second session report came in from scanner-project.com — a security/compliance scanner with 78 HTTP routes, 32 Docker services, 198 pytest + 57 vitest, 4-persona audit producing 92 findings including 4 KATASTROFİK security blockers (SEC-B1 self-escalation to admin, SEC-B2 unauthenticated payment callback, SEC-B3 iyzico webhook signature bypass, SEC-B4 unauth `/config/tools`). Two new patterns were observed and absorbed:
+
+- **`docs/runtime/handoff-plan-contract.md`** — new artefact type. `ulak-handoff-plan.md` is a director-produced file designed as the explicit entry point for a FUTURE session. Different from manager-verdict: manager-verdict closes the current session, handoff-plan opens the next. Conditional-mandatory when verdict is blocked/conditional and more work remains. 13 required sections including exec summary, context files to read, blockers with deadlines, workstream breakdown (business-layer grouping), phase skip recommendations, effort estimate, exact resume command.
+
+- **`docs/runtime/persona-dispatch-pattern.md`** — alternative to discipline-based specialist dispatch. Audits the project as each user role (Customer, Admin, Bayi/Reseller, Security/Red-team, Support, Developer, Compliance) would experience it. Comparison table of specialist vs persona dispatch. When to use each. Dispatch-and-merge protocol with persona overlap as T-tier consensus boost. Output contract per persona (`findings/<persona>-persona.md`). Anti-patterns. The two dispatch modes can coexist — `dispatch=both` in the director command runs both.
+
+### Director command argument surface
+
+- **`.claude/commands/director.md`** — new "Arguments" section documenting:
+  - Positional: `komple`, `brownfield audit`, etc.
+  - Keyword: `mode=<CREATE|REPAIR|...>`, `entry=<file>`, `skip_phase_1=true`, `skip_phase_2=<comma-list>`, `parallel_dispatch=<N>`, `dispatch=<specialist|persona|both>`, `validation_depth=<light|standard|deep>`, `profile=<AUDIT_PROFILE|...>`
+  - Resume form example: `/director komple mode=RESCUE entry=reports/current/ulak-handoff-plan.md skip_phase_1=true parallel_dispatch=9`
+
+### Core contract update (scanner-project patterns)
+
+- **`prompts/core/ulak-os-core-contract-2.0.0.md`** — two new @imports for the handoff-plan and persona-dispatch contracts in the Runtime rules layer.
+
 ### What's still NOT in this patch
 
-- **Release tag** — still `[Unreleased]`. FP-01 fix + v2.1.2 contract prep (waves, live-probe, dual-path) land together in the next tagged release (v2.1.2 or v2.2.0) once the hook approach is explored as a defense-in-depth addition.
+- **Release tag** — still `[Unreleased]`. FP-01 fix + v2.1.2 contract prep + scanner-project patterns land together in the next tagged release.
 - **PG-01 parallel-dispatch-planner skill** — deferred.
 - **PG-04 migration-dry-runner skill** — deferred.
-- **Handoff-plan and persona-dispatch patterns** from the scanner-project.com session — next patch.
+- **7 persona agent files** — `.claude/agents/customer-persona.md`, `admin-persona.md`, `bayi-persona.md`, `security-redteam.md`, `support-persona.md`, `developer-persona.md`, `compliance-persona.md` — not yet written. The contract is documented; the agents need their own prompts.
+- **Director command argument parser** — the arguments are documented but the director agent's prompt does not yet parse them explicitly. Current runs ignore `mode=` etc. and infer from positional intent.
+- **v1.x stale reference cleanup** — still ~10 stale v1.0.0/v1.1+ references in `docs/skills-integration/` and `docs/ecosystem/`. Tracked in earlier audit notes.
 
 ## [Unreleased — earlier] — v2.1.2 docs prep (v2.2 runtime contract drafts)
 
