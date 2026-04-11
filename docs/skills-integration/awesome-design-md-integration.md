@@ -67,7 +67,7 @@ awesome-design-md MIT lisanslıdır. İndirdiğin her DESIGN.md dosyasının kay
 - Upstream repo'nun dizin yapısı değişirse fetch script güncellenmeli (3 fallback path zaten denenir)
 - Marka adları lowercase olmalıdır (`stripe`, `Stripe` değil)
 
-## v1.1 planı
+## Gelecek plan
 
 - `examples/design-driven-frontend/` → fetch + apply pattern'ının çalıştırılabilir örneği
 - Smoke test: 5 popüler marka için fetch → parse → kullanılabilir mi?

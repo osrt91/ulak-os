@@ -31,11 +31,11 @@ Claude Code konfigürasyon CLI'ı. Bizim init scriptlerimizin alternatif bir des
 ## Cross-vendor plugin pattern referansı
 
 ### [akin-ozer/devops-skills-plugin](https://github.com/akin-ozer/cc-devops-skills)
-Aynı `skills/` dizinini hem `.claude-plugin/plugin.json` hem `.codex-plugin/plugin.json` ile yayınlayan plugin. Ulak OS'un v1.1'de plugin marketplace'ine yayınlanması için **doğrudan referans olacak** cross-vendor manifest deseni.
+Aynı `skills/` dizinini hem `.claude-plugin/plugin.json` hem `.codex-plugin/plugin.json` ile yayınlayan plugin. Ulak OS'un gelecek plugin marketplace yayını için **doğrudan referans olacak** cross-vendor manifest deseni.
 
-## v1.1 araştırma adayları
+## Araştırma adayları (future evaluation)
 
-Aşağıdaki projeler Ulak OS v1.1+ sürümlerinde değerlendirilecek; v1.0.0'da yok ama izlenecek:
+Aşağıdaki projeler Ulak OS'un gelecek sürümlerinde değerlendirilecek; şu an ship edilmedi ama izlenecek:
 
 - **firecrawl/firecrawl** — Web scraping API, `research-currency` skill için
 - **HKUDS/LightRAG** — RAG knowledge base, proje bilgi tabanı için
@@ -46,7 +46,7 @@ Aşağıdaki projeler Ulak OS v1.1+ sürümlerinde değerlendirilecek; v1.0.0'da
 - **nextlevelbuilder/ui-ux-pro-max-skill** — UI/UX skill superpowers desenine
 - **affaan-m/everything-claude-code** — Agent performance optimization
 
-Detaylı v1.1 planı: [`ROADMAP.md`](../../ROADMAP.md)
+Detaylı roadmap: [`ROADMAP.md`](../../ROADMAP.md)
 
 ## Felsefi yakınlıklar
 

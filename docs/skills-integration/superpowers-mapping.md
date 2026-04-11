@@ -33,7 +33,7 @@ Superpowers yüklüyse, Ulak OS komutlarını çalıştırırken **manuel olarak
 İki çıktıyı Ulak OS sentezleyip `reports/current/intake.md`'ye yazar.
 
 ### 2. Wrapper komutları üzerinden (PoC: /ulak-intake)
-Ulak OS v1.0.0 bir tane proof-of-concept wrapper komut içerir: `/ulak-intake`. Bu komut superpowers yüklüyse otomatik tetikler.
+Ulak OS'un proof-of-concept wrapper komutu `/ulak-intake` superpowers yüklüyse otomatik tetikler.
 
 ```
 > /ulak-intake
@@ -41,13 +41,13 @@ Ulak OS v1.0.0 bir tane proof-of-concept wrapper komut içerir: `/ulak-intake`. 
 [Sonra Ulak intake formatında reports/current/intake.md yazar]
 ```
 
-Diğer wrapper'lar (`/ulak-roadmap`, `/ulak-validate`, `/ulak-evidence`, vb.) v1.1+ sürümlerde gelecek.
+Diğer wrapper'lar (`/ulak-roadmap`, `/ulak-validate`, `/ulak-evidence`, vb.) şu an shipped değil — pack-gap register'da tracked, gelecekte değerlendirilecek.
 
 ## Lisans ve bağımlılık notu
 
 Superpowers içeriği bu repoya kopyalanmamıştır. Bu sadece mapping rehberidir. Superpowers'ın kendi kurulumu ve lisansı için: https://github.com/obra/superpowers
 
-## v1.1+ planı
+## Gelecek plan
 
 - Kalan 5 wrapper komut (`/ulak-roadmap`, `/ulak-validate`, `/ulak-evidence`, `/ulak-pack-gap`, `/ulak-final`)
 - Codex/Gemini için eşdeğer entegrasyon (vendor-spesifik komut formatlarında)

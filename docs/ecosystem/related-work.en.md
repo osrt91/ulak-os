@@ -31,11 +31,11 @@ DESIGN.md files from 58+ brands (Stripe, Linear, Vercel, Notion, Tesla, etc.). U
 ## Cross-vendor plugin pattern reference
 
 ### [akin-ozer/devops-skills-plugin](https://github.com/akin-ozer/cc-devops-skills)
-A plugin that publishes the same `skills/` directory with both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`. This is the **direct reference** cross-vendor manifest pattern that Ulak OS will use for its v1.1 plugin marketplace publication.
+A plugin that publishes the same `skills/` directory with both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`. This is the **direct reference** cross-vendor manifest pattern that Ulak OS will use for future plugin marketplace publication.
 
-## v1.1 research candidates
+## Research candidates (future evaluation)
 
-The following projects will be evaluated for Ulak OS v1.1+ releases; they are not in v1.0.0 but will be tracked:
+The following projects will be evaluated for future Ulak OS releases; they are not yet shipped but will be tracked:
 
 - **firecrawl/firecrawl** — Web scraping API, for the `research-currency` skill
 - **HKUDS/LightRAG** — RAG knowledge base, for project knowledge base
@@ -46,7 +46,7 @@ The following projects will be evaluated for Ulak OS v1.1+ releases; they are no
 - **nextlevelbuilder/ui-ux-pro-max-skill** — UI/UX skill for the superpowers pattern
 - **affaan-m/everything-claude-code** — Agent performance optimization
 
-Detailed v1.1 plan: [`ROADMAP.md`](../../ROADMAP.md)
+Detailed roadmap: [`ROADMAP.md`](../../ROADMAP.md)
 
 ## Philosophical kinship
 

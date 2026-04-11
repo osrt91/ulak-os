@@ -33,7 +33,7 @@ If superpowers is installed, you can manually trigger the relevant skill while r
 Ulak OS synthesizes both outputs into `reports/current/intake.md`.
 
 ### 2. Via wrapper commands (PoC: /ulak-intake)
-Ulak OS v1.0.0 includes one proof-of-concept wrapper command: `/ulak-intake`. It auto-triggers superpowers if installed.
+Ulak OS's proof-of-concept wrapper command `/ulak-intake` auto-triggers superpowers if installed.
 
 ```
 > /ulak-intake
@@ -41,13 +41,13 @@ Ulak OS v1.0.0 includes one proof-of-concept wrapper command: `/ulak-intake`. It
 [Then writes reports/current/intake.md in Ulak intake format]
 ```
 
-Other wrappers (`/ulak-roadmap`, `/ulak-validate`, `/ulak-evidence`, etc.) ship in v1.1+.
+Other wrappers (`/ulak-roadmap`, `/ulak-validate`, `/ulak-evidence`, etc.) are not yet shipped — tracked in the pack-gap register for future evaluation.
 
 ## License and dependency note
 
 Superpowers content is NOT copied into this repo. This is only a mapping guide. For superpowers installation and licensing: https://github.com/obra/superpowers
 
-## v1.1+ plan
+## Future plan
 
 - Remaining 5 wrapper commands (`/ulak-roadmap`, `/ulak-validate`, `/ulak-evidence`, `/ulak-pack-gap`, `/ulak-final`)
 - Equivalent integration for Codex/Gemini (in their vendor-specific command formats)

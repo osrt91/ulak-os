@@ -67,7 +67,7 @@ awesome-design-md is MIT licensed. The source of every DESIGN.md file you downlo
 - If the upstream repo's directory structure changes, the fetch script should be updated (3 fallback paths are already tried)
 - Brand names must be lowercase (`stripe`, not `Stripe`)
 
-## v1.1 plan
+## Future plan
 
 - `examples/design-driven-frontend/` → runnable example of the fetch + apply pattern
 - Smoke test: fetch → parse → usable? for 5 popular brands

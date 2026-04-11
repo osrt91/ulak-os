@@ -25,7 +25,7 @@ Bu komut Ulak OS'un intake artefakt zincirinin ilk halkasını üretir. Public s
 
 ## Notlar
 
-Bu komut, Ulak OS v1.0.0'da yer alan **tek** superpowers wrapper'dır. Diğer 5 wrapper (`/ulak-roadmap`, `/ulak-validate`, `/ulak-evidence`, `/ulak-pack-gap`, `/ulak-final`) v1.1+ sürümlerinde gelecektir.
+Bu komut Ulak OS'un mevcut superpowers wrapper'ıdır. Diğer wrapper'lar (`/ulak-roadmap`, `/ulak-validate`, `/ulak-evidence`, `/ulak-pack-gap`, `/ulak-final`) henüz shipped değil — ilgi duyuyorsan `reports/current/pack-gap-register.md` altında PG-* item'ı olarak tracked.
 
 Eşleştirme detayları için: `docs/skills-integration/superpowers-mapping.md`
 
