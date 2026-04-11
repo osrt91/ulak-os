@@ -1,11 +1,174 @@
 # Program Phases
 
-1. Intake and inventory
-2. Evidence and research
-3. Specialist analysis
-4. Target-state design
-5. Execution planning
-6. Pack-gap escalation
-7. Validation and manager verdict
+## Why phases matter
 
-The director may loop within phases, but the user should see forward movement, not repeated restarts.
+A phase is a guarantee about state. At the end of Phase 0, the runtime manifest and assumptions exist. At the end of Phase 1, the deep inventory exists. At the end of Phase 2, the evidence register exists and specialists have run in parallel. Without phases, the director can claim "done" while key guarantees are missing. With phases, "done" is checkable.
+
+The director may loop within a phase if evidence is weak, but the user must see forward movement — not repeated restarts from Phase 0.
+
+## Phase 0 — Environment lock
+
+**Purpose**: Capture the ground truth of the environment so later phases don't drift.
+
+**What the director does**:
+- Detect project root (regardless of the current working directory when invoked)
+- Record git branch, last commit, uncommitted files
+- Record package manager, build tool, runtime versions
+- Record env var presence (not values — presence only)
+- Run the router (see `docs/runtime/router.md`) and emit the router decision YAML
+- Populate the active variable contract (see `docs/runtime/active-variable-contract.md`)
+
+**Artefacts written**:
+- `reports/current/runtime-manifest.md`
+- `reports/current/assumptions.md`
+- `reports/current/active-variables.yaml` (or block inside runtime-manifest.md)
+
+**Phase gate**: runtime-manifest exists and router decision is committed. No later phase runs until this is true.
+
+## Phase 1 — Deep inventory
+
+**Purpose**: Build a full, file-level map of the project. This is cartographer-level work.
+
+**What the director does**:
+- Dispatch the cartographer subagent (or run the walk directly if no cartographer is available)
+- Walk every directory inside the project root that is not gitignored
+- For each surface that exists, list file paths with line ranges where meaningful: routes, pages, components, API endpoints, env schemas, migrations, models, queries, deploy scripts, CI workflows, Dockerfiles, reverse proxy configs, i18n / locale files (each locale, each key), style tokens, design system entry points, dependency graph, dead code candidates, docs, ADRs, runbooks
+
+**Artefacts written**:
+- `reports/current/intake.md` — user intent, scope, constraints
+- `reports/current/inventory.md` — the deep map
+
+**Phase gate**: inventory.md is non-trivial. A top-level `ls` output is not an inventory. If the file lacks file:line citations for most claims, the phase is rejected and re-run.
+
+## Phase 2 — Parallel specialist evidence
+
+**Purpose**: Get cross-cutting findings in parallel, not sequential, so that security, SEO, i18n, infra, design-system, data, privacy, and release-readiness all contribute at the same time.
+
+**What the director does**:
+- Decide which specialists apply to this project (see the office roster in `docs/runtime/office-roster.md`)
+- Dispatch all relevant specialists in a **single parallel batch** (one message, multiple subagent calls). Never serialize.
+- Each specialist must return claims conforming to `docs/governance/finding-schema.md` with evidence trust tiers.
+- If a specialist returns shallow or uncited output, re-dispatch.
+
+**Artefacts written**:
+- `reports/current/evidence-register.md` — raw per-specialist bullets
+- `reports/current/deep-scan-report.md` — merged narrative, ranked by severity + priority
+- `reports/current/research-notes.md` — if live research was required
+
+**Phase gate**: evidence-register.md contains findings from multiple specialists AND every finding has a trust tier. Single-agent evidence is rejected.
+
+## Phase 3 — Non-obvious findings (surprise layer, MANDATORY)
+
+**Purpose**: Surface the things the user did not ask about and likely does not already know. This is the "did the system actually look deep?" gate.
+
+**What the director does**:
+- From the merged evidence, extract findings the user likely did NOT ask about
+- Target examples: unused imports inflating bundle size, missing keys between locale files, RLS on one table absent on a sibling, cert auto-renew without fallback, N+1 query risk, dead dependencies, hardcoded strings bypassing i18n, admin endpoints without rate limit / CSRF, deploy scripts missing rollback, Dockerfiles copying secrets
+- Write to `did-you-know.md` with the same finding schema + a `surprise: true` tag
+
+**Artefacts written**:
+- `reports/current/did-you-know.md`
+
+**Phase gate**: did-you-know.md is non-empty AND non-trivial. If it only restates obvious issues already surfaced in Phase 2, the phase is rejected and Phase 2 re-runs with wider scope.
+
+## Phase 4 — Synthesis
+
+**Purpose**: Turn evidence into a plan. Merge findings, write the target state, order the roadmap, design the validation plan.
+
+**What the director does**:
+- Merge overlapping findings across specialists (see merge rule in `docs/governance/finding-schema.md`)
+- Write target-state for each surface
+- Write the execution roadmap — quick-wins → foundational → strategic, with tags
+- Write the validation plan — how each item will be verified
+- Write the pack-gap register — missing commands, skills, agents, hooks, MCP, docs, evals
+
+**Artefacts written**:
+- `reports/current/analysis-findings.md`
+- `reports/current/target-state.md`
+- `reports/current/execution-roadmap.md`
+- `reports/current/validation-plan.md`
+- `reports/current/pack-gap-register.md`
+
+**Phase gate**: All five artefacts exist. Each non-empty.
+
+## Phase 5 — Pack / file generation (optional, profile-dependent)
+
+**Purpose**: If the output profile is `PACK_GENERATION_PROFILE` or the execution mode allows pack-generation, materialize the pack files.
+
+**What the director does**:
+- Produce `CLAUDE.md`, `.claude/settings.json`, `.claude/commands/*.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.mcp.json`
+- Produce starter reports and evals destinations
+- Follow `docs/governance/plugin-skill-decision.md` — do not over-materialize; use the smallest reusable unit that fits
+
+**Artefacts written**:
+- Pack files at their target paths
+- `reports/current/pack-generation-log.md` — what was created
+
+**Phase gate**: All pack files are syntactically valid and the smallest tree that satisfies the pack plan.
+
+## Phase 6 — Execution (optional, permission-gated)
+
+**Purpose**: If `CAN_EDIT_FILES: true` is set in the active variable contract and the user has explicitly authorized edits, apply changes in controlled batches.
+
+**What the director does**:
+- Step through the execution roadmap
+- Mark risky items, break them into small batches
+- Apply edits or code generation
+- Run tests and validation between batches
+- Stop immediately on any failure and escalate
+
+**Artefacts written**:
+- `reports/current/execution-log.md` — what was changed, when, with diffs
+
+**Phase gate**: Each batch ends with a passing validation run, or the phase halts.
+
+## Phase 7 — Validate
+
+**Purpose**: Run the actual validation gates.
+
+**What the director does**:
+- Run build, lint, typecheck
+- Run the test suite at the depth the router chose (`light` | `standard` | `deep`)
+- Run security regression, localization checks, Turkish normalization checks, release-readiness checks, broken-link checks — based on the active profile
+- Emit the validation result schema from `docs/runtime/validation-result-schema.md`
+
+**Artefacts written**:
+- `reports/current/validation-result.yaml`
+
+**Phase gate**: Every applicable gate has a status. `not-run` gates are converted to residual risks.
+
+## Phase 8 — Finalize
+
+**Purpose**: Produce the single manager-verdict that ends the run.
+
+**What the director does**:
+- Write the manager-verdict with:
+  - runtime decision and intervention mode
+  - active agent map (which specialists ran)
+  - phase status — each phase `complete` only if its artefact files exist and are non-trivial
+  - top 3 did-you-know highlights inline
+  - residual risks
+  - explicit next execution lane
+
+**Artefacts written**:
+- `reports/current/manager-verdict.md`
+
+**Phase gate**: manager-verdict.md exists, references each phase's artefact, and carries a signoff_status from the validation result.
+
+## Hard rules across all phases
+
+- **Forward movement.** The user should see progress, not menu loops. If the director has to loop within a phase, log it in runtime-manifest.md — don't restart from Phase 0.
+- **No phase skipping on shallow evidence.** If a phase's artefact is trivial, the phase is rejected, not accepted-with-caveats.
+- **Phases are gates, not suggestions.** The director cannot claim completion with a phase gate unmet.
+- **Phase 3 (did-you-know) is not optional.** Absence of did-you-know = director not done.
+- **Phase 7 (validate) runs even in analysis-only mode.** In analysis-only mode, the gates are "what would we need to verify this", not "here are the green checks". Either way, the schema is filled.
+
+## Integration
+
+- `docs/runtime/router.md` — Phase 0 router output
+- `docs/runtime/artefact-contract.md` — the mandatory artefact chain
+- `docs/runtime/context-budget.md` — context compression between phases
+- `docs/runtime/validation-result-schema.md` — Phase 7 output
+- `docs/runtime/output-profiles.md` — profile gates what's required per phase
+- `.claude/agents/autonomous-program-director.md` — the agent that runs these phases
+- `.claude/commands/director.md` — the command that enters the phase chain
