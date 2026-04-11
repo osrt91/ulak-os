@@ -23,3 +23,15 @@
 17. **support-ops-orchestrator** — Support and operations specialist for help flows, moderation/support tooling, and issue deflection quality.
 18. **release-readiness-auditor** — Release readiness reviewer for store/distribution/launch quality and final launch blockers.
 19. **red-team-challenger** — Adversarial reviewer that challenges the current plan and tries to break weak assumptions.
+
+## Personas (v2.1.2 — alternative Phase 2 dispatch mode)
+
+Persona agents are an alternative to specialist dispatch. They audit the project as each user role would experience it, rather than by discipline. See `docs/runtime/persona-dispatch-pattern.md` for when to use personas vs specialists (the two can also coexist via `dispatch=both`).
+
+1. **customer-persona** — Primary paying/using customer. Onboarding, task completion, payment clarity, trust signals, privacy controls.
+2. **admin-persona** — Internal operator. Permission boundaries, dangerous actions, audit trails, bulk ops, BI surfaces.
+3. **bayi-persona** — Reseller / partner (mid-tier between customer and platform). White-label, sub-users, quota visibility, branded deliverables.
+4. **security-redteam** — Adversarial lens. Auth bypass, privilege escalation, injection, webhook replay, multi-tenant isolation. Complements security-hardening-lead.
+5. **support-persona** — CS operator. Impersonation tooling, customer context, refund flows, bulk support actions.
+6. **developer-persona** — External API consumer. Doc freshness, versioning, SDK quality, rate limits, webhook reliability.
+7. **compliance-persona** — Regulator / auditor. Data retention, consent, KVKK / GDPR / CCPA / HIPAA obligations.
