@@ -50,3 +50,53 @@ The autonomous-program-director's Phase 2 (parallel specialist deep-scan) must:
 ## Integration with did-you-know
 
 The did-you-know layer is a surprise surface. It *can* include T5-T7 findings, but each such finding must be labeled as a hypothesis and paired with a validation step. Never present a T7 finding as a confirmed issue.
+
+## Tier promotion mechanism
+
+A claim's trust tier can move between tiers **only when new evidence arrives**. There is no "time passes, tier upgrades" rule — a T3 inference does not become a T2 fact without someone actually doing the work.
+
+### Allowed promotions (stronger confidence)
+
+| From | To | Trigger |
+|---|---|---|
+| T7 (AI-inferred, unvalidated) | T4 (user-provided artifact) | Operator validates the inference and confirms it |
+| T6 (community / forum) | T5 (reputable secondary source) | A reputable source independently confirms |
+| T5 (reputable secondary) | T1 (official primary) | Upstream vendor docs confirm the claim |
+| T3 (production telemetry, indirect) | T2 (repo source of truth) | A grep or read surfaces the explicit code path |
+| T3 (inferred from behavior) | T2 (repo source of truth) | The file is read and the mechanism confirmed |
+| T2 (repo source of truth) | T1 (official primary) | The mechanism is verified against upstream documentation |
+| T2 / T1 | **T0 (runtime observed)** | A Phase 4.5 live probe directly observed the runtime state |
+
+Live-probe results (Phase 4.5) are the **only path to T0**. A T1 claim remains T1 until a probe observes the live state, at which point it upgrades to T0. This is the highest-confidence tier.
+
+### Regressions (weaker confidence)
+
+A claim can drop from Tx to Tx+1 when:
+
+- New evidence **contradicts** it (the file was changed, the upstream doc was updated, the live state diverged)
+- The file it cites was **deleted or moved**
+- A live probe **refuted** the static claim
+- Time has passed AND the claim depends on a live state that may have drifted (T0 → T2 after > 24h without re-probe)
+
+Regressions must be logged in `evidence-register.md` with a timestamp, a link to the superseding evidence, and a note about what the regression means for any downstream finding that cited the old tier.
+
+### Consensus promotions (dual-path)
+
+When two independent observers (e.g., two specialists, or Path A + Path B of dual-path validation per `docs/runtime/dual-path-validation.md`) agree on the same claim via **different evidence traces**, the claim's tier is promoted one level:
+
+- T3 + T3 → T2 (two independent inferences become a confirmed fact)
+- T2 + T2 → T1 (two independent repo reads reach consensus)
+
+This promotion is **one level only per run**. It is not transitive — three specialists agreeing does not promote twice. The consensus credit is in the diversity of the evidence paths, not the count.
+
+### Hard rule
+
+**Tier promotion without new evidence is fraud.** Never upgrade a claim's tier because "we've been running it for a while and it seems to work". Either find new evidence or accept the existing tier.
+
+## Integration with Phase 4.5 live probe
+
+The live-probe contract (`docs/runtime/live-probe-contract.md`) enforces this promotion mechanism:
+
+- Every probe that confirms a prior T2/T3 claim promotes it to T1 or T0 (depending on whether the probe was a read of the source or an observation of runtime state)
+- Every probe that refutes a prior claim drops its tier to `contradicted` and triggers a finding rewrite
+- New findings that only exist because of the probe (NF-* entries) start at T0 (the probe observed them) and can never be demoted without a later contradicting probe

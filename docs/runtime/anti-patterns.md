@@ -95,6 +95,34 @@ Findings that match an anti-pattern automatically carry a tag in the finding sch
 - **Shared normalization for display and search** — the display form and the search form must differ
 - **Claiming locale support when only UI is translated** — email / push / legal / store not covered
 
+## Destructive action without live-probe (gate pattern)
+
+The director must not schedule ANY destructive action against a **remote** target without a preceding `validation-plan.md §6` probe that confirms the action is safe. This applies to:
+
+- `rm -rf <remote path>` — confirm the path is really stale and has no live references
+- `DROP TABLE` / `DROP INDEX` / `DROP DATABASE` — confirm the table / index is not in use
+- `REVOKE ALL` / `REVOKE <privilege>` — confirm callers are not relying on the grant
+- `git reset --hard` on a shared branch — confirm nobody has uncommitted work
+- `docker network rm` — confirm no containers are attached
+- PM2 `delete` — confirm the process is not serving traffic
+- `TRUNCATE` / any mass DELETE — confirm the rows are not referenced by foreign keys, not in backup scope, not pending audit export
+- Cloud resource deletion (S3 buckets, IAM roles, VPC, KMS keys) — confirm no dependent resources
+
+Each destructive item in `execution-roadmap.md` MUST have a `pre_check` field naming the live probe that authorized it. Example:
+
+```yaml
+item_id: NF-03
+action: rm -rf /opt/oguzhansert/
+pre_check:
+  - LP-09: "ls -la /opt/oguzhansert/" returned only README stubs
+  - result: BLOCKED — found .env.local (Apr 9), not stale
+  - resolution: chmod 0600 instead; operator decision on rm
+```
+
+This pattern was observed as a pivot in the oguzhansert.dev Sprint 0+1 session (2026-04-11, FP-07). The director had scheduled `rm -rf /opt/oguzhansert/` as R-119 because static analysis said the directory was stale. The Wave 3 live probe found an `.env.local` with real secrets. The destructive action was cancelled, the finding was downgraded from a delete to a chmod, and a new finding (NF-03) was issued. Without the pre-check live probe, the director would have blindly deleted secrets.
+
+See `docs/runtime/live-probe-contract.md` for the Phase 4.5 protocol that enforces this gate.
+
 ## Prompt / governance anti-patterns
 
 - **Giant one-file everything prompt with no runtime router**
