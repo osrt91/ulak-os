@@ -1,2 +1,30 @@
-description = "Runs market and category scan for the requested segment."
-prompt = "Read GEMINI.md and docs/adapters/universal-runtime-contract.md. Run market scan for: {{args}}. Update reports/current/research-notes.md and mention pricing, positioning, locale and architecture relevance."
+description = "Live market research lane — competitor map, pricing, language opportunity, positioning gaps, with T1-T6 trust-tiered evidence."
+prompt = """
+Read GEMINI.md, docs/runtime/market-research-engine.md, docs/runtime/architecture-currency.md and docs/governance/evidence-trust-scoring.md.
+
+Run market research for: {{args}}
+
+Mandatory questions to answer:
+1. What is the user searching for? (primary jobs-to-be-done)
+2. Who are the top 3-5 competitors and what do they do well/badly?
+3. What language/locale are they operating in? Which markets are underserved?
+4. What are the trust signals in this category?
+5. How do they price (tier structure, anchor price, free tier, trial)?
+6. Which features are must-have vs differentiators vs nice-to-have?
+
+Required output artefacts under reports/current/:
+- market-summary.md
+- competitor-map.md (per-competitor YAML block with tier, pricing, audience, source list with trust)
+- pricing-map.md
+- feature-expectation-map.md
+- review-pain-point-clusters.md (T6 evidence with bias note)
+- language-opportunity-map.md (with ADD_NOW / ADD_NEXT_WAVE / PILOT_ONLY / DO_NOT_ADD_YET labels)
+- positioning-gaps.md
+- market-current-recommendations.md (each recommendation with supporting evidence + trust + risk + validation)
+
+Hard rules:
+- T1 (official source) + T5 (reputable secondary) preferred for factual claims.
+- T6 (reviews / forums) is signal for pain points, not proof of product features.
+- Never recommend a pricing strategy without a pricing-map.
+- Never claim "the market is moving toward X" without T1 or T5 evidence.
+"""

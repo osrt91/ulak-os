@@ -1,2 +1,26 @@
-description = "Starts intake and inventory for the requested scope."
-prompt = "Read GEMINI.md and begin intake + inventory. Focus scope: {{args}}. Update reports/current/runtime-manifest.md, intake.md, inventory.md and evidence-register.md."
+description = "Phase 0 + Phase 1 only — environment lock and deep inventory for the requested scope. Light pass; does not run specialists."
+prompt = """
+Read GEMINI.md, prompts/core/ulak-os-core-contract-2.0.0.md and docs/runtime/router.md.
+
+Run Phase 0 (environment lock) and Phase 1 (deep inventory) for: {{args}}
+
+Phase 0 artefacts:
+- reports/current/runtime-manifest.md (router decision YAML, branch, commit, env-var presence)
+- reports/current/assumptions.md (every assumption labeled)
+
+Phase 1 artefact:
+- reports/current/intake.md (user intent, scope, constraints)
+- reports/current/inventory.md — deep inventory with file:line citations across:
+  - routes, pages, API endpoints
+  - components, hooks, providers
+  - config files, env schemas, secret references
+  - migrations, models, queries
+  - deploy scripts, CI workflows, Dockerfiles
+  - i18n / locale files (each locale, each key)
+  - design tokens, dependency graph, dead code candidates
+
+Hard rules:
+- Folder dump is rejected. Every claim needs file:line.
+- Do not run Phase 2 specialists. This is a light pass.
+- After Phase 1, return summary and ask whether to proceed to Phase 2 (full /director komple).
+"""

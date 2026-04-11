@@ -1,0 +1,32 @@
+description = "Ulak OS intake artefact — captures user intent, project context, surfaces, constraints, and labeled assumptions."
+prompt = """
+Read GEMINI.md, docs/runtime/intake-protocol.md and docs/runtime/active-variable-contract.md.
+
+Produce the intake artefact for: {{args}}
+
+The intake captures the user's literal request, the project context, the active variable contract, and any user-provided material.
+
+Steps (per docs/runtime/intake-protocol.md):
+
+1. File intake summary — for every file or batch the user provides (zip, screenshot, log, csv, json, pdf, url, note), emit a YAML block with name, type, surface, trust tier, use_reason, criticality.
+
+2. Evidence map — group intake material into categories: strategy_brief, design_ui, technical_repo, routes_screens_endpoints, security_qa_logs, market_pricing_reviews, language_copy_localization, release_store_policy.
+
+3. Conflict register — record sources that disagree with each other, pick the authoritative one using trust ordering, explain the pick.
+
+4. Missing evidence list — name every critical artefact that is NOT in scope but should be (auth flow docs, route map, env separation, analytics taxonomy, locale files, store listing copy, etc.) with fallback labeled assumptions.
+
+Output artefacts under reports/current/:
+- intake.md (user intent, scope, constraints)
+- file-intake-summary.md (the YAML blocks)
+- evidence-map.md (the categorized lists)
+- conflict-register.md
+- missing-evidence.md
+- assumptions.md (every assumption explicitly labeled)
+- active-variables.yaml (Phase 0 contract pinned for the run)
+
+Hard rules:
+- Do not silently integrate user-provided material — emit the intake summary first.
+- Do not stop the run because evidence is missing — record the gap and proceed with labeled assumptions.
+- Trust tiers per docs/governance/evidence-trust-scoring.md.
+"""

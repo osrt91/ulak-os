@@ -1,0 +1,28 @@
+description = "Audits the operating pack for missing commands, agents, skills, hooks, MCP connectors, docs and evals."
+prompt = """
+Read GEMINI.md, docs/governance/plugin-skill-decision.md and docs/governance/prompt-supply-chain.md.
+
+Inspect the current operating pack and produce reports/current/pack-gap-register.md listing every missing reusable unit:
+
+For each gap, emit:
+- type: command | agent | skill | hook | mcp | doc | eval
+- name: proposed name
+- why_needed: what current workflow is repetitive or under-served without it
+- where_it_belongs: the file path it should live at
+- priority: P0 | P1 | P2
+- effort: XS | S | M | L
+
+Areas to inspect:
+- .claude/commands/ vs .gemini/commands/ — vendor parity gaps
+- .claude/agents/ — specialist coverage vs the 28 analysis contexts in docs/runtime/analysis-contexts.md
+- .claude/skills/ — reusable workflow gaps
+- hooks (.claude/settings.json) — deterministic guardrail gaps
+- .mcp.json — external integration gaps
+- docs/runtime/ and docs/governance/ — documentation gaps
+- evals/golden/ and evals/assertions/ — eval coverage gaps
+
+Hard rules:
+- Use the smallest reusable unit that fits (per docs/governance/plugin-skill-decision.md).
+- Do not propose new packs that duplicate existing ones.
+- Each gap must have a clear "the current workflow does X manually" justification.
+"""

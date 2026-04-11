@@ -1,2 +1,19 @@
-description = "Produces the manager verdict with validation and residual risks."
-prompt = "Read GEMINI.md. Summarize current artefacts in reports/current and write a final manager verdict. Include validation status, residual risks and next execution lane."
+description = "Re-evaluates current reports/current artefacts and produces a fresh manager verdict with validation and residual risks."
+prompt = """
+Read GEMINI.md and prompts/core/ulak-os-core-contract-2.0.0.md.
+
+Re-read every artefact under reports/current/ (and reports/current/specialists/* if it exists) without re-running specialists. The goal is a fresh signoff based on the current state of the artefacts, not a new audit.
+
+Update reports/current/manager-verdict.md and reports/current/validation-result.yaml with:
+- runtime decision and intervention mode
+- phase status (each phase complete only if its artefact is non-trivial)
+- top 3 did-you-know highlights inline
+- residual risks
+- explicit next execution lane
+- signoff_status: blocked | conditional | ready
+
+Hard rules:
+- Do not claim ready if any unresolved Critical finding exists.
+- Do not invent new findings; reflect the current artefact state.
+- Validation result schema follows docs/runtime/validation-result-schema.md.
+"""

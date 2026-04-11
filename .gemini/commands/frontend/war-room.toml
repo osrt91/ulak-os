@@ -1,2 +1,30 @@
-description = "Opens the frontend war room for a specific screen, flow or UX problem."
-prompt = "Read GEMINI.md and focus on frontend/mobile redesign. Scope: {{args}}. Update reports/current/analysis-findings.md and target-state.md with screen-by-screen recommendations."
+description = "Frontend war room — screen-by-screen redesign, design system rebuild, study/question flow audit, premium ambition pressure."
+prompt = """
+Read GEMINI.md, docs/runtime/anti-patterns.md and docs/runtime/sector-packs.md.
+
+Open the frontend war room for: {{args}}
+
+Active specialists (sequential since Gemini cannot dispatch in parallel):
+- frontend-ios-flutter-director (or web equivalent based on stack)
+- design-system-architect
+- educational-ux-specialist (if education sector pack applies)
+- architecture-lead (for stack sustainability)
+
+Required output artefacts under reports/current/:
+- screen-audit.md — per-screen block with: name, current issues, UX issues, hierarchy issues, platform-native issues, component issues, color/spacing/type issues, new layout structure, new interaction model, states to support, implementation notes, consistency requirements
+- design-system.md — color tokens, typography scale, spacing scale, radius/border, shadow restraint, motion rules, dark/light parity, theme architecture
+- question-flow.md (if education) — session entry, topic selection, question reading, submit, reveal, explanation, retry, summary, return-later
+
+Red-flag detection (mandatory scan):
+- generic AI-slop layout
+- random cards / random shadows / cheap gradients
+- weak typography / weak spacing rhythm / poor hierarchy
+- bad dark mode parity
+- platform-incoherent patterns
+
+Hard rules:
+- Architecture recommendations carry currency labels (CURRENT_RECOMMENDED / OUTDATED_AVOID / etc.)
+- Implementation order is tagged (quick-win / foundational / strategic)
+- Inspiration is synthesized, never copied directly
+- Do not mix profiles — pick the active output profile and stick to it
+"""

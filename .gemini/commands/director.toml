@@ -1,2 +1,22 @@
-description = "Runs Ulak OS full-program mode for this repository."
-prompt = "Read GEMINI.md, docs/adapters/gemini-cli.md and docs/adapters/universal-runtime-contract.md. Start the correct program mode for this repository. User request: {{args}}. Create or update reports/current artefacts before claiming progress."
+description = "Ulak OS v2.1 full-program protocol — Phase 0 to Phase 5 with deep inventory, parallel specialists, did-you-know and single manager verdict."
+prompt = """
+Read GEMINI.md, docs/adapters/gemini-cli.md, docs/adapters/universal-runtime-contract.md, prompts/core/ulak-os-core-contract-2.0.0.md and the v2.1 runtime layer (docs/runtime/router.md, program-phases.md, artefact-contract.md, output-profiles.md, finding-schema.md, evidence-trust-scoring.md).
+
+Run the Phase 0 → Phase 5 protocol for: {{args}}
+
+Hard rules:
+- Do not open scope menus when intent is clear.
+- Phase 1 inventory must carry file:line citations — folder dump rejected.
+- Phase 2 must consult multiple specialists (sequential is OK in Gemini, but at least 5 distinct lanes: security, infra, design-system, data, localization, plus relevant others).
+- Phase 3 (did-you-know) is mandatory — non-obvious findings only.
+- Every finding conforms to docs/governance/finding-schema.md with a T1-T7 evidence trust tier.
+- Phase 5 manager-verdict must emit signoff_status: blocked | conditional | ready.
+
+Required artefacts under reports/current/:
+- runtime-manifest.md, assumptions.md (Phase 0)
+- intake.md, inventory.md (Phase 1)
+- evidence-register.md, deep-scan-report.md, specialists/*.md (Phase 2)
+- did-you-know.md (Phase 3)
+- analysis-findings.md, target-state.md, execution-roadmap.md, validation-plan.md, pack-gap-register.md (Phase 4)
+- manager-verdict.md, validation-result.yaml (Phase 5)
+"""

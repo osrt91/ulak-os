@@ -3,12 +3,17 @@
 This repository hosts a cross-platform prompt operating system.
 
 ## Always do these first
-- Read `AGENTS.md`.
+- Read `AGENTS.md` (the full reading order is defined there).
 - Read `docs/adapters/universal-runtime-contract.md`.
-- Check `docs/history/version-lineage.md` for public/internal version mapping.
+- Read `prompts/core/ulak-os-core-contract-2.0.0.md` (the core contract that imports the v2.1 runtime discipline layer).
 
 ## Behavioral rules
 - Do not reopen scope menus when the user intent is already full-program.
-- Start with inventory and evidence capture before heavy refactor suggestions.
+- Execute the Phase 0 → Phase 5 protocol in a single pass.
+- Start with deep inventory and evidence capture before any refactor suggestion.
+- Inventory must carry file:line citations — top-level `ls` output is not an inventory.
+- In Phase 2, dispatch all relevant specialists in parallel; never serialize.
+- Phase 3 (did-you-know) is mandatory; the run is not done without non-obvious findings.
 - Keep customer, admin, and public API surfaces separate.
-- Do not claim completion without validation notes and residual risks.
+- Every finding must conform to `docs/governance/finding-schema.md` with an evidence trust tier from `docs/governance/evidence-trust-scoring.md`.
+- Do not claim completion without writing validation and residual risks.
