@@ -94,6 +94,71 @@ If the project's Node version is recorded in `CLAUDE.md`, in `README.md`, in `.n
 - **Imports are loaded fully.** They count against context budget.
 - **Rotate before you add.** Every memory write is a good time to check if something should be deleted.
 
+## Drift detection (a Phase 1 deep-inventory task)
+
+Project memory rots. Facts that were true when the memory was written may no longer be true. "This project has 17 plugins" becomes "this project has 40 plugins" silently — the plugin count grows in the filesystem, nobody updates CLAUDE.md, and the next Ulak OS director run cites the stale count.
+
+Drift is a form of evidence degradation. A T2 fact (claimed in CLAUDE.md) can drop to T7 (unvalidated assumption) when the filesystem contradicts it. Detection is the job of the Phase 1 cartographer, not the writer of CLAUDE.md.
+
+### Drift patterns observed
+
+From the scanner-project.com session (2026-04-11):
+
+- **CLAUDE.md** claimed `scanner-project.py` was **3318 lines**. Reality: 73 lines (a shim file after a refactor). 45x drift.
+- **CLAUDE.md** claimed **17 plugins**. Reality: 40. 2.4x drift.
+- **CLAUDE.md** claimed **43 Docker services**. Reality: 32. 25% drift downward.
+
+None of these facts were load-bearing for correctness, but every director run that cited them carried false context. The effect compounds: a specialist reading "17 plugins" scans differently than one reading "40 plugins".
+
+### Detection protocol
+
+In Phase 1 (deep inventory), the cartographer compares memory claims to filesystem facts:
+
+1. **Parse CLAUDE.md** (and imported memory files) for numeric claims (file counts, line counts, service counts, dependency counts, route counts)
+2. **Query the filesystem** for the actual current count
+3. **Diff** — flag any claim that differs from reality by more than 10% or 1 order of magnitude (whichever is smaller)
+4. **Write drift findings** into `reports/current/did-you-know.md` or a dedicated `reports/current/memory-drift.md`
+5. **Downgrade T-tier** of any finding that cited the stale number from T2 (memory) to T7 (contradicted)
+
+### Drift as a finding
+
+Drift findings use the standard finding-schema with:
+
+```yaml
+- id: DRIFT-001
+  area: prompt
+  title: "CLAUDE.md plugin count out of date"
+  problem: "CLAUDE.md:line X claims 17 plugins, filesystem has 40 (src/plugins/)"
+  evidence: "CLAUDE.md:42 + ls src/plugins/ | wc -l = 40"
+  evidence_trust: T2
+  severity: Low
+  priority: P2
+  tags: [memory-drift, documentation]
+  recommended_fix: "Update CLAUDE.md:42 plugin count to 40, or replace literal count with 'see src/plugins/'"
+  validation: "grep -c '17 plugin' CLAUDE.md == 0 after fix"
+```
+
+### Why drift detection is worth the cost
+
+Drift detection is cheap (one grep + one filesystem query per claim) and prevents downstream specialists from reasoning on stale facts. The cost of a specialist writing a 500-line report based on a stale claim is much higher than the cost of finding the drift early.
+
+### Recommended drift-prone claim types to watch
+
+- File counts ("N source files", "N plugins", "N migrations")
+- Line counts of specific files
+- Service counts ("N Docker services", "N API endpoints")
+- Dependency counts ("N npm packages", "N python packages")
+- Test counts ("N pytest tests passing")
+- Locale counts ("supports N languages")
+- Version numbers of embedded dependencies
+
+### Integration
+
+- `docs/runtime/program-phases.md` — Phase 1 cartographer task includes drift detection as a step
+- `docs/governance/finding-schema.md` — DRIFT-* findings use the standard finding schema
+- `docs/governance/evidence-trust-scoring.md` — a memory claim contradicted by drift detection drops from T2 to T7 (contradicted)
+- `docs/runtime/artefact-contract.md` — `memory-drift.md` is an optional Phase 1 artefact when drift is detected
+
 ## Integration
 
 - `docs/runtime/context-budget.md` — memory content counts as Layer 3 (project memory) in the context budget

@@ -131,6 +131,78 @@ Wave 3 (orchestrator-direct VPS ops):
 - `docs/runtime/live-probe-contract.md` — VPS operations in a Wave must pass live-probe gates
 - `docs/runtime/anti-patterns.md` — the anti-patterns above cross-reference there
 
+## Workstreams vs Waves (two orthogonal groupings)
+
+Waves are an **execution-layer** grouping: which items can run in parallel without file conflicts. Workstreams are a **business-layer** grouping: which items share a strategic goal, owner, and definition of done.
+
+They coexist. A workstream contains multiple items; those items are scheduled into waves within the workstream's execution window.
+
+Observed in the scanner-project.com session (2026-04-11), which organized its execution plan by workstream first (W1 Payment, W2 Bayi, W3 Admin, W4 Security, W5 Cleanup), then within each workstream used waves for parallel-vs-serial execution scheduling.
+
+### Workstream definition
+
+A workstream is a block of the execution roadmap that:
+
+- Has a clear business goal ("Payment actually works" or "Bayi package delivers on its promises")
+- Has a primary owner (a specialist lane or a team)
+- Has a scope (which findings this workstream resolves)
+- Has a `definition_of_done` block with grep-able assertions
+- Can be scheduled independently of other workstreams
+- May span multiple sprints internally, with waves within each sprint
+
+### Workstream shape
+
+In `execution-roadmap.md`, workstreams are top-level groupings above items:
+
+```yaml
+workstreams:
+  - id: W1
+    name: "Payment actually works"
+    owner: backend-api-architect + security-hardening-lead
+    scope:
+      findings: [DIR-005, DIR-012, H1, H2, H4]
+      surfaces: [payment, billing, subscription]
+    definition_of_done:
+      - "iyzico CSP fix deployed, browser console shows zero block"
+      - "End-to-end real payment (₺1 test plan), redirect + callback + DB row written"
+      - "Post-payment success page shows real plan limits"
+      - "pytest: tests/test_payment_flow.py with ≥5 cases"
+    estimated_effort: "1-2 days single-dev, ~4 hours parallel-agent"
+    waves:
+      - wave_id: W1-W1
+        type: parallel
+        items: [R-001, R-002, R-003]
+      - wave_id: W1-W2
+        type: sequential
+        items: [R-004]
+```
+
+### Parallel execution across workstreams
+
+Workstreams are **independently executable**. A team can run W1 and W4 in parallel (different owners, disjoint scope) while W3 waits for W1's output. The handoff-plan section 6 (workstream breakdown) is the entry point for this scheduling.
+
+### When to use workstreams
+
+- Multi-sprint programs with distinct business outcomes
+- Team execution where different lanes own different outcomes
+- Projects where findings cluster naturally by user-facing goal (payment, reseller, admin, security)
+- Sessions that produce a handoff-plan for a future executor
+
+### When NOT to use workstreams
+
+- Small runs (< 10 items, single outcome)
+- Audit-only sessions (no execution planned)
+- Single-sprint rescue operations (one goal: stabilize)
+
+### Interaction with waves
+
+Within a workstream, waves still apply for parallel execution scheduling. The difference:
+
+- **Workstreams** are about strategic grouping — "payment", "admin", "security"
+- **Waves** are about dispatch safety — "these 9 items can run in parallel because their file scopes are disjoint"
+
+A workstream may have waves; a wave belongs to at most one workstream.
+
 ## Future — parallel-dispatch-planner skill (PG-01)
 
 A skill that takes a Wave's agent list + claimed file scopes and automatically builds the conflict matrix, emitting GREEN (dispatch) or RED (refuse + reasons). Not implemented yet. Until it exists, the orchestrator builds the matrix manually and records it in `reports/current/conflict-matrix-wave-N.md` before dispatch.
