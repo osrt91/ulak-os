@@ -25,8 +25,29 @@
 
 ## Public release line (Ulak OS brand)
 
+- **2.1.0** — V9 Runtime Discipline Integration (2026-04-11)
 - **2.0.0** — CLI Console + Memory + Vendor Adapters (2026-04-09)
 - **1.0.0** — Ulak OS First Stable Public Release (2026-04-07)
+
+### 2.1.0 note
+
+Ulak OS 2.1.0 integrates the operational discipline from the internal V7 and V9 lineage into the 2.0 distributed doc architecture. The core contract file stays at 2.0.0; the 2.1.0 delta is the runtime and governance layer that the contract now imports. Highlights:
+
+- Evidence trust scoring (T1-T7) with required fields on every finding
+- Canonical finding schema (YAML with severity, priority, trust, validation)
+- Output profiles (7 profile types gating final output shape)
+- Active variable contract (pinned Phase 0 runtime state)
+- Validation result schema (structured Phase 7 output)
+- Context budget manager with layered load / evict / pin rules
+- Expanded router decision (9-field YAML) and program phases (8 phases with gates)
+- Trust model (data vs instructions firewall) with injection defense patterns
+- Surface split (public runtime / hidden core / maintainer)
+- Operational motors: toolchain precheck, intake protocol, architecture currency, localization strategy, Turkish normalization, market research engine, sector packs
+- Governance: hook governance, MCP governance, memory hygiene, prompt supply chain
+- Eval harness groundwork: 5 expanded golden examples + core assertions catalog
+- Director agent and `/director` command updated to enforce the new schemas
+
+No breaking change to 2.0.0 behavior. The discipline layer is additive; existing runs still work but now produce deeper, schema-conformant output by default.
 
 ### Brand transition note
 

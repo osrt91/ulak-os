@@ -1,5 +1,65 @@
 # Changelog
 
+## [2.1.0] — 2026-04-11
+
+### Added — V9 Runtime Discipline Integration
+
+Operational discipline from the internal V7 and V9 lineage, integrated into the 2.0 distributed doc architecture. The core contract file stays at 2.0.0; the delta is the runtime and governance layer the contract now imports.
+
+#### Runtime discipline (docs/runtime/)
+- `context-budget.md` — layered context model (1 core → 7 sector packs), eviction rules, pin rules, compression stages
+- `output-profiles.md` — seven output profiles (AUDIT, GREENFIELD_BUILDER, BROWNFIELD_INTERVENTION, LOCALIZATION_REPAIR, MARKET_ENTRY, PACK_GENERATION, RELEASE_READINESS) with required sections
+- `active-variable-contract.md` — Phase 0 YAML contract with request context, surface map, permission boundaries, output location
+- `validation-result-schema.md` — Phase 7 YAML with engineering, test, surface gates and signoff status rules
+- `toolchain-precheck.md` — tool detection schema (required / conditional / optional / not-needed / not-recommended)
+- `intake-protocol.md` — 4-step protocol for user-provided material (file intake, evidence map, conflict register, missing evidence)
+- `architecture-currency.md` — question stack and labels (CURRENT_RECOMMENDED, OUTDATED_AVOID, etc.) for architectural recommendations
+- `localization-strategy.md` — 5-phase motor for locale work, ADD_NOW / ADD_NEXT_WAVE labels
+- `turkish-normalization.md` — Turkish character handling, ı/i/İ/I case pair rules, display vs search vs slug three-layer split
+- `market-research-engine.md` — when live research is required, T1-T6 source priority, mandatory questions, required output artefacts
+- `sector-packs.md` — core kernel vs optional sector overlays (education, saas, fintech, ecommerce, marketplace, enterprise-b2b, media-content, health-sensitive, ai-copilot, pwa-desktop)
+- `analysis-contexts.md` — 28 mandatory analysis contexts from product/business through prompt/runtime governance
+- `anti-patterns.md` — categorized anti-pattern catalog (architectural, frontend, backend, security, data, infra, localization, prompt)
+- `universal-surface-inventory.md` — canonical surface taxonomy with broken-surface map requirement for RESCUE
+- `roadmap-rule.md` — 60+ step rule with step shape, tag vocabulary, ordering rules
+
+#### Runtime expansions
+- `router.md` expanded from 14-line decision list to full 9-field YAML router decision template with surface list and integration hooks
+- `artefact-contract.md` expanded with depth requirement, mandatory chain mapped to phases, profile-specific optional artefacts
+- `program-phases.md` expanded from 12 lines to 8-phase protocol with per-phase purpose, director tasks, artefacts written, phase gates
+
+#### Governance (docs/governance/)
+- `evidence-trust-scoring.md` — T1-T7 tiers, default ordering, required finding fields, integration hooks
+- `finding-schema.md` — canonical YAML schema for all findings, severity vs priority split, merge rule
+- `trust-model.md` — instructions vs data firewall, injection patterns, trust boundaries
+- `surface-split.md` — public runtime / hidden core / maintainer surface separation
+- `hook-governance.md` — when hooks are appropriate, security rules, review checklist
+- `mcp-governance.md` — scope rules, approved vs high-risk surfaces, approval workflow
+- `memory-hygiene.md` — layered memory model, hygiene rules, what goes where
+- `prompt-supply-chain.md` — canonical source identification, version labels, release discipline
+
+#### Eval harness groundwork (evals/)
+- `golden/01_full_program_komple.md` through `05_frontend_rebuild.md` — expanded from 9-line stubs to full goldens with router YAML, active agent map, assertions, validation criteria, regression signals
+- `assertions/core-assertions.md` — 14 assertion types with resolution values and regression signal catalog
+- `assertions/README.md` — baseline assertion contract and pointer to core assertions
+
+#### Director hardening
+- `.claude/agents/autonomous-program-director.md` — references all new schemas, enforces trust tiers on every finding, profile selection at Phase 0, overlay discipline
+- `.claude/commands/director.md` — lists enforced schemas and hard rules for the full protocol
+- `prompts/core/ulak-os-core-contract-2.0.0.md` — imports the entire v2.1 runtime and governance layer via `@` imports
+
+### Changed
+- The `/director komple` command now runs deep inventory + parallel specialist dispatch + did-you-know by default. Shallow inventory (folder dump) and single-agent evidence are rejected.
+- Router decision is now a 9-field YAML pinned for the whole run, not a 4-bullet mental note.
+- Every finding must carry evidence_source, evidence_trust, completeness_risk, contradiction_status.
+
+### Not changed
+- Core contract filename stays `ulak-os-core-contract-2.0.0.md`. The 2.1.0 delta is the surrounding layer.
+- Vendor adapters (Claude Code, Codex/Copilot, Gemini CLI) continue to work unchanged.
+- CLI orchestration (`ulak` command) behavior unchanged.
+- SQLite memory layer unchanged.
+- No breaking changes to 2.0.0 runs.
+
 ## [2.0.0] — 2026-04-09
 
 ### Added — CLI Console + Memory + Vendor Adapters

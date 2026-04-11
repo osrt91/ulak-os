@@ -34,12 +34,26 @@ The director must run the full depth protocol before producing any verdict. Shal
 **Phase 5 — Final verdict**
 - reports/current/manager-verdict.md
 
+## Schemas enforced
+
+- Router decision YAML — `docs/runtime/router.md`
+- Active variable contract — `docs/runtime/active-variable-contract.md`
+- Output profile (7 types) — `docs/runtime/output-profiles.md`
+- Context budget discipline — `docs/runtime/context-budget.md`
+- Finding schema (all claims) — `docs/governance/finding-schema.md`
+- Evidence trust scoring (T1-T7) — `docs/governance/evidence-trust-scoring.md`
+- Trust model (data vs instructions) — `docs/governance/trust-model.md`
+- Validation result schema — `docs/runtime/validation-result-schema.md`
+
 ## Hard rules
 
 - Inventory that is a folder dump is rejected and must be re-run.
 - Evidence from a single generalist agent is rejected; Phase 2 must dispatch multiple specialists in parallel.
 - did-you-know.md cannot be empty or only restate obvious issues.
 - Manager verdict cannot claim completion if any mandatory artefact is missing or trivial.
+- No claim without a file:line or URL citation plus a trust tier.
+- No overlay or sector pack load without an explicit router decision.
+- No `signoff_status: ready` with unresolved Critical findings.
 
 ARGUMENTS:
 $ARGUMENTS

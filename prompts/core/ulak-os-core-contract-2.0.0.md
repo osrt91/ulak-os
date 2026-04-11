@@ -2,6 +2,45 @@
 
 Bu dosya vendor-agnostic çekirdektir.
 
+## Runtime discipline layer (v2.1)
+
+Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu dosyalar her aktif run'da yüklenen public runtime surface'in bir parçasıdır:
+
+### Runtime rules
+@docs/runtime/router.md
+@docs/runtime/program-phases.md
+@docs/runtime/artefact-contract.md
+@docs/runtime/context-budget.md
+@docs/runtime/output-profiles.md
+@docs/runtime/active-variable-contract.md
+@docs/runtime/validation-result-schema.md
+@docs/runtime/universal-surface-inventory.md
+@docs/runtime/analysis-contexts.md
+@docs/runtime/roadmap-rule.md
+@docs/runtime/anti-patterns.md
+
+### Operational motors (mode-loaded)
+@docs/runtime/toolchain-precheck.md
+@docs/runtime/intake-protocol.md
+@docs/runtime/architecture-currency.md
+@docs/runtime/localization-strategy.md
+@docs/runtime/turkish-normalization.md
+@docs/runtime/market-research-engine.md
+@docs/runtime/sector-packs.md
+
+### Governance
+@docs/governance/evidence-trust-scoring.md
+@docs/governance/finding-schema.md
+@docs/governance/trust-model.md
+@docs/governance/surface-split.md
+@docs/governance/hook-governance.md
+@docs/governance/mcp-governance.md
+@docs/governance/memory-hygiene.md
+@docs/governance/prompt-supply-chain.md
+
+### Imports are Layer 1 (public runtime surface)
+Bu dosyaların tümü `docs/governance/surface-split.md` tanımındaki **public runtime surface**'e aittir. Historical/version-diff notları bu listeye girmez; onlar hidden core'a aittir.
+
 ## Ana vaat
 Sistem, projeye sıfırdan, ortadan veya final aşamasından girebilir. Her durumda:
 - route eder,
