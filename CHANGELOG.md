@@ -1,5 +1,41 @@
 # Changelog
 
+## [Unreleased] — v2.1.2 docs prep (v2.2 runtime contract drafts)
+
+### Runtime contract additions from the oguzhansert.dev Sprint 0+1 session (2026-04-11)
+
+The 7-file session report under `reports/sessions/2026-04-11-oguzhansert-dev-sprint-0-1/` identified 10 friction points and 15 pack-gap proposals from a real 1h 31m + sprint execution run. This patch addresses the contract-level findings (UOI-01, UOI-02, UOI-04, UOI-11) without shipping the harness hook (PG-03 still pending — needs shell/JS implementation, deferred).
+
+#### New runtime contracts
+
+- **`docs/runtime/waves-pattern.md`** — formalizes the "parallel within a Wave, serial between Waves" execution pattern the session improvised. Covers dependency grouping, pre-dispatch conflict map, validation gate between Waves, sub-waves for partial parallelism, reference example from oguzhansert.dev Sprint 1 (9+2+1+VPS agents, zero file conflicts), anti-patterns.
+
+- **`docs/runtime/live-probe-contract.md`** — formalizes Phase 4.5 as conditional-mandatory when `validation-plan.md §6` has ≥1 probe, or any Critical finding depends on T2/T3 claims, or the roadmap contains destructive remote actions. Read-only-by-default rules, timeouts, credential handling, output artefact (`live-probe-results.md`), T-tier promotion rules, new findings layer (NF-* in did-you-know), gate enforcement. References the LP-07 JWT reuse probe and LP-09 /opt/oguzhansert staleness probe from the session as pivot examples.
+
+- **`docs/runtime/dual-path-validation.md`** — formalizes the dual-path non-obvious findings pattern the operator improvised (manual did-you-know in parallel with director Phase 3, then merge). Path A (director) + Path B (independent reviewer) with a merge step. Consensus promotes T2/T3 → T1. Contradictions become probe candidates. Lens diversity guidance for parallel Path B subagents. Anti-patterns against same-prompt parallel, pre-merge contamination, T6/T7 promotion abuse.
+
+#### Core contract update
+
+- **`prompts/core/ulak-os-core-contract-2.0.0.md`** — three new @imports added to the Runtime rules layer (waves-pattern, live-probe-contract, dual-path-validation). Artefakt zinciri expanded to include `live-probe-results` as conditional-mandatory Phase 4.5, and notes that `execution-roadmap` is executed via Waves pattern and `did-you-know` can be optionally enhanced via dual-path validation.
+
+#### Program phases update
+
+- **`docs/runtime/program-phases.md`** — new Phase 4.5 section with purpose, required-when conditions, director tasks, artefacts, phase gate. Phase 3 section gains a dual-path optional enhancement note. Phase 6 section updated to use the Waves pattern with per-Wave conflict maps and per-Wave validation gates.
+
+#### Director agent update
+
+- **`.claude/agents/autonomous-program-director.md`** — Phase 4 synthesis updated to require `depends_on` fields on roadmap items (for Waves grouping) and live probes in validation-plan §6 when T2/T3 evidence is blocking. New Phase 4.5 section added with the conditional-mandatory protocol. Rules section gains three new directives: Waves pattern for execution, Phase 4.5 conditional-mandatory gate, dual-path validation as optional Phase 3 enhancement.
+
+### What's NOT in this patch
+
+- **PG-03 — `director-artefact-write-exempt` hook** — deferred. Needs shell/JS implementation (.claude/hooks/). FP-01 (Write tool blocked mid-phase) remains unfixed until the hook lands. This patch documents the contracts that will be enforced once the hook exists.
+- **Harness-level implementations** — all changes are markdown contract docs. The runtime harness (Claude Code hooks, pre-tool-use rules) still needs code changes to match the new contracts.
+- **v2.1.2 release tag** — intentionally not tagged yet. This is `[Unreleased]` until PG-03 lands, at which point v2.1.2 or v2.2.0 will ship as a cohesive release.
+
+### Why "Unreleased" instead of a tagged release
+
+Per session report recommendation: "PG-01, PG-02, PG-03 as Critical (they fix the harness itself)". Shipping contract docs without the matching harness fix would announce the rule without the enforcement. The contract docs land first so the next director run can cite them; the hook lands next as v2.1.2 or v2.2.0.
+
 ## [2.1.1] — 2026-04-11
 
 ### Vendor parity + version-lineage cleanup

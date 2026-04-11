@@ -71,6 +71,8 @@ The director may loop within a phase if evidence is weak, but the user must see 
 
 **Phase gate**: did-you-know.md is non-empty AND non-trivial. If it only restates obvious issues already surfaced in Phase 2, the phase is rejected and Phase 2 re-runs with wider scope.
 
+**Optional enhancement — dual-path validation**: for high-stakes runs, Phase 3 can run in dual-path mode (Path A = director, Path B = independent reviewer) with a merge step that promotes overlapping findings to T1 consensus and flags contradictions as probe candidates. See `docs/runtime/dual-path-validation.md`.
+
 ## Phase 4 — Synthesis
 
 **Purpose**: Turn evidence into a plan. Merge findings, write the target state, order the roadmap, design the validation plan.
@@ -90,6 +92,39 @@ The director may loop within a phase if evidence is weak, but the user must see 
 - `reports/current/pack-gap-register.md`
 
 **Phase gate**: All five artefacts exist. Each non-empty.
+
+## Phase 4.5 — Live probe (conditional-mandatory)
+
+**Purpose**: Convert T2/T3 claims from the static analysis into T1/T0 evidence by running read-only probes against live targets (VPS, production DB, HTTP endpoints, file permissions). Surface new findings that pure static analysis could not see.
+
+**Required when**:
+- `validation-plan.md §6` (or equivalent) lists ≥1 live probe
+- The manager-verdict would cite any T2 or T3 evidence as blocking
+- The execution-roadmap contains destructive actions against a remote target
+- Any Critical finding depends on a claim that cannot be verified from the repo alone
+
+**Optional when**:
+- All evidence is T1/T2 from the repo itself
+- No production deploy exists
+- The operator explicitly requested a static-only audit
+
+**What the director does**:
+- Collect credentials (SSH config, API tokens, DB connection strings) — if missing, PAUSE and request from operator
+- Execute each probe from `validation-plan.md §6` in dependency order
+- Probes are **read-only** by default — no write, no destructive operations (per `docs/runtime/live-probe-contract.md`)
+- Each probe has a timeout (default 30s)
+- Raw probe output is saved to log files, not inlined into artefacts
+- T-tier promotions are applied to `evidence-register.md`
+- New findings from probing are added to `did-you-know.md` as NF-* entries
+
+**Artefacts written**:
+- `reports/current/live-probe-results.md` — one entry per probe with result, T-tier upgrade, log reference
+- Updates to `reports/current/evidence-register.md` — trust tier promotions
+- Updates to `reports/current/did-you-know.md` — new findings from probing (NF-* section)
+
+**Phase gate**: Phase 5 cannot set `signoff_status: ready` with unresolved probes. `blocked-by-credentials` counts as unresolved. Destructive Sprint items without matching pre-check probes cannot be scheduled.
+
+See `docs/runtime/live-probe-contract.md` for the full protocol.
 
 ## Phase 5 — Pack / file generation (optional, profile-dependent)
 
@@ -112,15 +147,21 @@ The director may loop within a phase if evidence is weak, but the user must see 
 
 **What the director does**:
 - Step through the execution roadmap
-- Mark risky items, break them into small batches
+- Group roadmap items into **Waves** per `docs/runtime/waves-pattern.md` — parallel within a Wave, serial between Waves
+- Build a **file conflict map** before dispatching each Wave — reject the Wave if two agents would own the same file
+- Dispatch each Wave as a single parallel Task batch (not serialized within the Wave)
+- Run validation gate between Waves (typecheck + lint + build + commit)
+- Mark risky items and break them into sub-waves if needed
 - Apply edits or code generation
-- Run tests and validation between batches
 - Stop immediately on any failure and escalate
 
 **Artefacts written**:
 - `reports/current/execution-log.md` — what was changed, when, with diffs
+- `reports/current/conflict-matrix-wave-N.md` — one per Wave, the pre-dispatch file conflict map
 
-**Phase gate**: Each batch ends with a passing validation run, or the phase halts.
+**Phase gate**: Each Wave ends with a passing validation run (typecheck + lint + build + commit), or the phase halts. Do not batch cleanup at the end — always between Waves.
+
+See `docs/runtime/waves-pattern.md` for the full protocol.
 
 ## Phase 7 — Validate
 

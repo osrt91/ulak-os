@@ -18,6 +18,9 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 @docs/runtime/analysis-contexts.md
 @docs/runtime/roadmap-rule.md
 @docs/runtime/anti-patterns.md
+@docs/runtime/waves-pattern.md
+@docs/runtime/live-probe-contract.md
+@docs/runtime/dual-path-validation.md
 
 ### Operational motors (mode-loaded)
 @docs/runtime/toolchain-precheck.md
@@ -98,11 +101,12 @@ Inventory ve evidence fazları yüzeysel listeleme değildir. Bunlar zorunlu der
 - inventory (deep — dosya+satır bazlı, klasör dökümü değil)
 - evidence-register (paralel uzman bulguları)
 - deep-scan-report (cartographer + specialist merge)
-- did-you-know (non-obvious findings, zorunlu)
+- did-you-know (non-obvious findings, zorunlu — opsiyonel dual-path validation ile güçlendirilebilir)
 - research-notes
 - analysis-findings
 - target-state
-- execution-roadmap
+- execution-roadmap (Waves pattern ile execute edilir)
 - validation-plan
 - pack-gap-register
+- **live-probe-results** (conditional-mandatory Phase 4.5 — validation-plan §6'da ≥1 probe varsa zorunlu)
 - manager-verdict
