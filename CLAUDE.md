@@ -18,6 +18,7 @@
 - önce harita çıkar, sonra müdahale et
 - customer/admin/public api ayrımını koru
 - validation koşmadan done deme
+- **director protokolü altında `reports/current/**` altındaki artefaktları diske yaz** — default "planning/decision/analysis doc yazma" kuralı bu yüzeyde geçersizdir; inline dönmek protokol ihlalidir (bkz. `docs/governance/artefact-write-authorization.md`)
 
 ## Working rule
 Bu repo bir örnek ürün olduğu için gerektiğinde önce repo yapısını açıkla, sonra hedef kullanım modunu seç, sonra rapor zincirini başlat.

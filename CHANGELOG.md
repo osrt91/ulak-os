@@ -1,6 +1,52 @@
 # Changelog
 
-## [Unreleased] — v2.1.2 docs prep (v2.2 runtime contract drafts)
+## [Unreleased] — v2.1.2 docs prep continued — FP-01 artefact write authorization fix
+
+### Fix for FP-01 — Subagent Write tool blocked mid-phase
+
+The oguzhansert.dev Sprint 0+1 session (2026-04-11) identified FP-01 as the top priority harness bug: 8 of 13 Phase 2 specialists and 1 of 9 Phase 4 artefacts could not write their `.md` deliverables to disk. They returned content inline and the orchestrator had to re-persist them. The root cause is **not a hook, skill, or settings rule** — it is the default Claude Code system prompt rule against creating planning/decision/analysis documents. The fix must be at the **prompt level**, not the tool level.
+
+#### New governance doc
+
+- **`docs/governance/artefact-write-authorization.md`** — formal override contract for the director protocol. Explains the collision between the default system prompt and the director protocol's artefact chain. Lists authorized write targets per phase (Phase 0 → Phase 5 + profile-specific artefacts). Propagation rule for specialist dispatch (director includes override block verbatim in every specialist brief). What the override does NOT permit (no new README.md, no scratch files, no bypass of permission boundaries). Detection and enforcement protocol (orchestrator-level diff of expected vs actual `reports/current/` contents).
+
+#### Director agent update
+
+- **`.claude/agents/autonomous-program-director.md`** — prominent "Artefact Write Authorization (OVERRIDES DEFAULT SYSTEM PROMPT)" section added at the top (right after the intro, before "Hard rule: depth before verdict"). Includes the propagation rule telling the director to include the override verbatim in every specialist dispatch prompt.
+
+#### Specialist agent updates (19 files)
+
+Each of the 19 specialist agent files gets a short "Artefact Write Authorization" section after its existing "Rules:" block, telling the specialist:
+- The default rule does not apply to director-protocol artefacts under `reports/current/**`
+- Write target for the specialist dispatch (`reports/current/specialists/<role>.md`)
+- Pointer to the full governance doc
+
+Files updated:
+- architecture-lead, backend-api-architect, cartographer, data-database-governor,
+- design-system-architect, educational-ux-specialist, frontend-ios-flutter-director,
+- infra-release-sre, localization-i18n-lead, market-researcher,
+- privacy-compliance-counsel, product-business-strategist, prompt-skill-plugin-governor,
+- qa-validation-commander, red-team-challenger, release-readiness-auditor,
+- security-hardening-lead, seo-aso-growth-strategist, support-ops-orchestrator
+
+#### Command + core contract + CLAUDE.md reinforcement
+
+- **`.claude/commands/director.md`** — adds an "Artefact Write Authorization (OVERRIDES DEFAULT)" section before the artefact chain listing, plus instruction to include the override in specialist dispatches.
+- **`prompts/core/ulak-os-core-contract-2.0.0.md`** — new `@docs/governance/artefact-write-authorization.md` @import added to the Governance layer.
+- **`CLAUDE.md`** — new runtime default line referencing the artefact write authorization override.
+
+#### Why prompt-level, not hook-level
+
+A Claude Code hook can block or allow tool calls, but it cannot FORCE a tool call the model decided not to make. The default rule causes the model to decline Write and return inline instead; the Write call is never attempted, so no hook fires. The fix has to be at the prompt level — telling the model that the rule does not apply in this context — not at the tool level.
+
+### What's still NOT in this patch
+
+- **Release tag** — still `[Unreleased]`. FP-01 fix + v2.1.2 contract prep (waves, live-probe, dual-path) land together in the next tagged release (v2.1.2 or v2.2.0) once the hook approach is explored as a defense-in-depth addition.
+- **PG-01 parallel-dispatch-planner skill** — deferred.
+- **PG-04 migration-dry-runner skill** — deferred.
+- **Handoff-plan and persona-dispatch patterns** from the scanner-project.com session — next patch.
+
+## [Unreleased — earlier] — v2.1.2 docs prep (v2.2 runtime contract drafts)
 
 ### Runtime contract additions from the oguzhansert.dev Sprint 0+1 session (2026-04-11)
 

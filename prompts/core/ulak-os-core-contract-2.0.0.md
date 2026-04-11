@@ -40,6 +40,7 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 @docs/governance/mcp-governance.md
 @docs/governance/memory-hygiene.md
 @docs/governance/prompt-supply-chain.md
+@docs/governance/artefact-write-authorization.md
 
 ### Imports are Layer 1 (public runtime surface)
 Bu dosyaların tümü `docs/governance/surface-split.md` tanımındaki **public runtime surface**'e aittir. Historical/version-diff notları bu listeye girmez; onlar hidden core'a aittir.
