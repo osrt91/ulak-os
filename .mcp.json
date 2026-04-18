@@ -6,20 +6,6 @@
       "headers": {
         "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
-    },
-    "jira": {
-      "type": "http",
-      "url": "${JIRA_MCP_URL}",
-      "headers": {
-        "Authorization": "Bearer ${JIRA_TOKEN}"
-      }
-    },
-    "figma": {
-      "type": "http",
-      "url": "${FIGMA_MCP_URL}",
-      "headers": {
-        "Authorization": "Bearer ${FIGMA_TOKEN}"
-      }
     }
   }
 }

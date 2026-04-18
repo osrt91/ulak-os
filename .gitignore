@@ -9,6 +9,11 @@ secrets/
 *.key
 *.pem
 
+# Claude Code local settings (per-operator, never commit — see docs/governance/settings-permissions-governance.md)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+
 # OS
 .DS_Store
 Thumbs.db

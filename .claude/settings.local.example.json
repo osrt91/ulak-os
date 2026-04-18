@@ -1,0 +1,30 @@
+{
+  "_comment": "Template for .claude/settings.local.json — copy this to settings.local.json and tailor per operator. NEVER commit settings.local.json (it is gitignored). This template documents the shape, safe-default permissions, and the governance expectation that every authorized MCP server or Bash allowlist entry carries an operator-level justification.",
+  "_see_also": [
+    "docs/governance/settings-permissions-governance.md",
+    "docs/governance/mcp-governance.md",
+    "docs/governance/lock-file-hygiene.md"
+  ],
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Glob(**)",
+      "Grep(**)",
+      "WebFetch(domain:docs.claude.com)",
+      "WebFetch(domain:json.schemastore.org)",
+      "Skill(update-config)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)"
+    ]
+  },
+  "enabledMcpjsonServers": [],
+  "_governance_notes": {
+    "on_enabling_bash_wildcards": "Prefer scoped forms like Bash(git:*) or Bash(npm:*) over Bash(*). Record justification alongside each added entry.",
+    "on_enabling_mcp_servers": "Each entry in enabledMcpjsonServers must have a justification in active-variables.yaml under mcp_authorized_tools per docs/governance/mcp-governance.md.",
+    "on_writing_delete_permissions": "Delete permissions are denied by default. If an agent truly needs them, scope to a directory (e.g. Delete(reports/current/**)).",
+    "on_committing_this_file": "settings.local.example.json IS committed (documents the contract). settings.local.json is NEVER committed (operator-specific state)."
+  }
+}
