@@ -1,0 +1,99 @@
+---
+description: Triage a failing build by stack. Runs toolchain-precheck first, then dispatches to the right subsystem (frontend, backend, container, mobile) with standard diagnostic commands. Use when build/test is red and the cause is unclear.
+phases_run: [0]
+---
+
+# /triage-build
+
+Generalized from scanner-project.com's `/fix-build` command. Stack-agnostic triage flow for any Ulak-OS-managed project.
+
+## Flow
+
+1. **Toolchain precheck** — run `docs/runtime/toolchain-precheck.md` detection to establish which stacks are present. This tells us which subsystem sections apply.
+
+2. **Symptom gathering** — read the last failed CI log (if available) or ask the operator: "What command failed, and what was the last error?"
+
+3. **Dispatch to subsystem** — based on detected stack + failure symptom, run the appropriate block below.
+
+4. **Iterate** — most build failures are one of: missing dep, version mismatch, secret env var, stale cache. Triage rules out each in order.
+
+## Frontend subsystem (TypeScript / React / Next.js / Vite)
+
+```bash
+# install
+pnpm install --frozen-lockfile
+# type
+pnpm tsc --noEmit
+# lint
+pnpm lint
+# build
+pnpm build
+```
+
+Common causes + fixes:
+
+- `Cannot find module '...'` — `pnpm install` skipped or lockfile drift; run `pnpm install --frozen-lockfile`
+- `Type '...' is not assignable to '...'` — recent contract change; check `types/` generated from backend OpenAPI
+- `Cannot find name 'X'` — missing `import` or missing types package; check `@types/*` in devDependencies
+- Stale Next.js cache — `rm -rf .next` and rebuild
+- Tailwind content paths broken — check `tailwind.config.ts` `content:` glob matches current src layout
+
+## Backend subsystem (Python / FastAPI / Django)
+
+```bash
+# install
+pip install -r requirements.txt
+# type
+mypy --strict app/
+# lint
+ruff check .
+# test
+pytest -x --tb=short
+```
+
+Common causes + fixes:
+
+- `ImportError: cannot import name` — circular import; check for Strangler-Fig-pending file with mutual deps
+- `SQLAlchemy ... not found` — migration not run; check `alembic current` and `alembic upgrade head`
+- `KeyError: '<ENV_VAR>'` — `.env.local` missing or `.env.example` out of date
+- `pytest` hangs on one test — often DB fixture not torn down; check for `yield`-style fixtures without cleanup
+- `RuntimeError: Event loop is closed` — sync code in async endpoint; grep for `.json()` vs `.json()` on a dict inside `async def`
+
+## Container subsystem (Docker / Compose)
+
+```bash
+# up
+docker compose up -d
+# logs
+docker compose logs --tail 50 <service>
+# ps
+docker compose ps
+# healthcheck
+docker inspect <container> | grep -A 5 Healthcheck
+```
+
+Common causes + fixes:
+
+- `Cannot start service ... network not found` — `docker network create <name>` or re-run `deploy.sh` precheck
+- Service crashloop — `docker compose logs <service>` → usually missing env var or missing volume mount
+- Healthcheck failing — check the healthcheck endpoint actually exists + returns 200 under the probe's cmd
+- `connect: connection refused` to a sibling container — wrong service name in connection URL (use compose service name, not localhost)
+- Out-of-memory killed — check `docker compose ps` for `exited` with code 137; raise `mem_limit` or find the leak
+
+## Mobile subsystem (iOS / Flutter)
+
+For iOS/Flutter, invoke `frontend-ios-flutter-director` agent directly — triage-build command defers to specialist agent rather than duplicate detail.
+
+## Exit
+
+If triage identifies the cause, propose a fix (file edit or config change). If no cause is identified, emit a `pack-gap` finding: "Build failure not triaged by standard flow — consider adding <subsystem> block to /triage-build".
+
+## Integration
+
+- `docs/runtime/toolchain-precheck.md` — stack detection that drives subsystem selection
+- `.claude/agents/frontend-ios-flutter-director.md` — handoff for iOS/Flutter
+- `.claude/agents/infra-release-sre.md` — handoff for deeper infra failures
+- `docs/runtime/anti-patterns.md` — some recurring build failures map to anti-patterns (e.g., unvalidated JSONB causing test flakes → AP-04)
+
+ARGUMENTS:
+$ARGUMENTS

@@ -1,8 +1,9 @@
 ---
 description: Run project intake and inventory first. Use when the project needs to be read before deeper work starts.
+phases_run: [0, 1, 2]
 ---
 
-Use the cartographer and project-intake skill.
+Use the cartographer agent and `project-intake` skill.
 
 Create or update:
 

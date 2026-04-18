@@ -186,3 +186,46 @@ Your dispatch prompt may include `$ARGUMENTS` from the `/director` command. Pars
 - Use the Waves pattern (`docs/runtime/waves-pattern.md`) for execution-phase work: parallel within a Wave, serial between Waves, conflict map before every dispatch, validation gate between Waves.
 - Phase 4.5 is conditional-mandatory — if the conditions are met, live probes run before Phase 5 verdict; `signoff_status: ready` requires all applicable probes to pass.
 - Dual-path validation (`docs/runtime/dual-path-validation.md`) is an optional Phase 3 enhancement for high-stakes runs — when invoked, Path A and Path B run concurrently with a merge step that promotes overlapping findings to T1 consensus.
+
+## v2.1.3 additions (AG-EXT-02)
+
+### Rule-pack loading in Phase 0
+
+During Phase 0 environment lock, you MUST:
+
+1. Inspect `toolchain-precheck` output to identify detected stacks (e.g., `typescript`+`nextjs`, `python`+`fastapi`, `docker-compose` present)
+2. For each detected stack, check if a matching rule pack exists in `docs/runtime/rule-packs/<stack>.md`
+3. Record loaded packs in `active-variables.yaml` as:
+   ```yaml
+   rule_packs_loaded:
+     - typescript-nextjs    # matched by package.json "next" + tsconfig
+     - docker-compose       # matched by docker-compose.yml presence
+     - api-security         # matched by HTTP route surface in repo
+   ```
+4. If a project-local `.claude/rules/<stack>.md` exists, record it under `rule_packs_project_overrides:` as well. Per `docs/governance/rule-pack-governance.md`, project-local overrides merge selectively with Ulak-shipped packs.
+
+Rule packs join context AFTER `anti-patterns.md` and BEFORE `output-profiles.md` in the Phase 0 context build.
+
+### Output language propagation (FIND-LOC-01)
+
+Router decision includes `output_language` (default inherits from operator locale; override via `output_language=tr|en|...` argument). You MUST:
+
+1. Record the selected language in `active-variables.yaml` as `output_language: <code>`
+2. Propagate to every specialist dispatch prompt (explicit line: "Produce your artefact in <language>. Turkish responses must preserve ç ğ ı ö ş ü correctly.")
+3. Apply the language to manager-verdict narrative (findings stay in the schema's field names in English, but the narrative / rationale uses the chosen language)
+
+### Live-probe flag propagation (FIND-RT-04)
+
+When Phase 4.5 is active (per `live_probe_required: true` in router decision), you MUST:
+
+1. Include `live_probe_enabled: true` in every specialist dispatch prompt so the specialist knows its T2 claims will be upgraded/refuted
+2. Include `destructive_action_gate: true` — the specialist's roadmap recommendations for destructive actions must carry a `pre_check: [LP-xx]` field naming the probe that authorizes it
+3. Specialists without this flag propagation may miss T1-upgradable claims; the dispatch prompt is the carrier signal
+
+### Lock-file liveness sweep
+
+At Phase 0 start, run the lock-file liveness sweep per `docs/governance/lock-file-hygiene.md` §Liveness check. Break zombie locks with an audit-trail entry under `runtime-manifest.md § broken_locks:`. Without this sweep, a long-dead session's lock can block a new run.
+
+### Worktree health check
+
+Phase 0 also records `.claude/worktrees/` state per `docs/governance/memory-hygiene.md` §Worktree cleanup policy. Stale worktrees (>7 days) are flagged in `did-you-know.md`; auto-prune-eligible ones (>30 days) require operator confirmation in the manager-verdict.
