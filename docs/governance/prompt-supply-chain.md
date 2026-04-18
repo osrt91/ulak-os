@@ -100,9 +100,23 @@ Updated on every release. Broken compatibility is a release blocker.
 - **Never bump the core contract version silently.** Version bump = release = release notes.
 - **Archive, don't delete.** History is valuable to maintainers even when it's not loaded at runtime.
 
+## Cross-project pattern imports (G-EXT-04)
+
+The supply chain extends **across projects** when the same operator runs multiple repos. Patterns migrate: `CMS + blog + site-settings` moved from Trend-Platform to scanner-project; `docker-socket-proxy sidecar` moved from an internal template library to scanner-project. Without a ledger, provenance vanishes and upstream bugfixes don't propagate.
+
+The companion governance doc is `docs/governance/pattern-import-ledger.md`:
+
+- Every project that imports patterns from sibling projects maintains a `pattern-import-ledger.yaml`
+- Each entry records source repo, source commit, import date, local divergence, pending upstream fixes
+- Architecture-lead audits the ledger at every Phase 2 sweep and files backport findings for new relevant upstream commits
+
+**The ledger is prompt-supply-chain family** because it answers the same structural question ("if the source changes, what do we need to review?") at the code-pattern level that this doc answers at the rule level.
+
 ## Integration
 
 - `docs/history/version-lineage.md` — records version history (hidden core)
 - `docs/governance/surface-split.md` — explains why archived content is not loaded
+- `docs/governance/pattern-import-ledger.md` — cross-project code-pattern provenance ledger (sibling doc)
+- `docs/governance/ai-provider-allowlist.md` — AI provider changes are supply-chain events (log in release notes)
 - `docs/ecosystem/*` — ecosystem maps and compatibility matrices
 - `evals/` — regression detection runs as part of release discipline

@@ -23,6 +23,7 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 @docs/runtime/dual-path-validation.md
 @docs/runtime/handoff-plan-contract.md
 @docs/runtime/persona-dispatch-pattern.md
+@docs/runtime/office-roster.md
 
 ### Operational motors (mode-loaded)
 @docs/runtime/toolchain-precheck.md
@@ -34,15 +35,21 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 @docs/runtime/sector-packs.md
 
 ### Governance
+@docs/governance/plugin-skill-decision.md
+@docs/governance/rule-collision-matrix.md
 @docs/governance/evidence-trust-scoring.md
 @docs/governance/finding-schema.md
 @docs/governance/trust-model.md
 @docs/governance/surface-split.md
+@docs/governance/product-surface-split.md
 @docs/governance/hook-governance.md
 @docs/governance/mcp-governance.md
 @docs/governance/memory-hygiene.md
 @docs/governance/prompt-supply-chain.md
 @docs/governance/artefact-write-authorization.md
+@docs/governance/rule-pack-governance.md
+@docs/governance/settings-permissions-governance.md
+@docs/governance/lock-file-hygiene.md
 
 ### Imports are Layer 1 (public runtime surface)
 Bu dosyaların tümü `docs/governance/surface-split.md` tanımındaki **public runtime surface**'e aittir. Historical/version-diff notları bu listeye girmez; onlar hidden core'a aittir.

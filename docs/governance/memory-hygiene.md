@@ -159,8 +159,48 @@ Drift detection is cheap (one grep + one filesystem query per claim) and prevent
 - `docs/governance/evidence-trust-scoring.md` — a memory claim contradicted by drift detection drops from T2 to T7 (contradicted)
 - `docs/runtime/artefact-contract.md` — `memory-drift.md` is an optional Phase 1 artefact when drift is detected
 
+## Worktree cleanup policy (G-EXT-02)
+
+Claude Code agent sessions can create isolated git worktrees under `.claude/worktrees/agent-<hex>/` for parallel work. These directories persist after the agent session ends. Without a cleanup policy, worktrees accumulate — scanner-project.com's audit found **12 stale worktree directories (~19 days old)** with no policy. Each worktree holds a full checkout, often gigabytes.
+
+### Lifecycle states
+
+| State | Age | Flag |
+|---|---|---|
+| **Active** | < 24h OR session.pid alive | safe — current work |
+| **Recent** | 24h–7d AND session.pid dead | warn — stale, worth checking if anything uncommitted |
+| **Stale** | 7–30d | flag in `pack-gap-audit` / memory-drift report |
+| **Auto-prune eligible** | > 30d | operator-initiated prune; never silent |
+
+### Cleanup protocol
+
+1. **Detection** — Phase 1 cartographer (and the `pack-gap-audit` command) enumerate `.claude/worktrees/*/` and classify by age
+2. **Stale report** — stale + auto-prune-eligible worktrees listed in `reports/current/did-you-know.md` (or dedicated `worktree-health.md`)
+3. **Check before prune** — each worktree classified for auto-prune gets a `git status` check. If uncommitted changes exist, the worktree is downgraded to "needs manual review" and NOT auto-pruned
+4. **Prune** — `git worktree remove <path>` for worktrees confirmed clean + past auto-prune threshold
+5. **Audit trail** — pruned worktrees logged to `.claude/logs/worktree-pruned.log` with timestamp, path, last-commit-sha
+
+### Never silently prune
+
+Silent pruning breaks the operator's mental model. Every prune goes through:
+
+- An artefact listing the candidates (for operator review)
+- Explicit confirmation (operator command OR scheduled-task configuration approved by operator)
+- A log entry with the last commit SHA so a prune can be partially reversed via `git worktree add` against the SHA
+
+### Git-ignored
+
+`.claude/worktrees/` is gitignored (covered by `docs/governance/settings-permissions-governance.md`). If a worktree directory is committed, that's itself a finding — it leaks agent session state into history.
+
+### Cross-environment concerns
+
+- **PID-based liveness check** needs to handle the case where the owning process is on a different machine (remote worktree); record `hostname` in a per-worktree lockfile (see `docs/governance/lock-file-hygiene.md`)
+- **Containerized sessions** — worktrees inside Docker should be bind-mounted, not created fresh per container launch
+
 ## Integration
 
 - `docs/runtime/context-budget.md` — memory content counts as Layer 3 (project memory) in the context budget
 - `docs/governance/surface-split.md` — memory belongs to the public runtime surface, not hidden core
+- `docs/governance/settings-permissions-governance.md` — `.claude/worktrees/` gitignored
+- `docs/governance/lock-file-hygiene.md` — per-worktree lock file + pid liveness
 - `CLAUDE.md` — the project's actual memory file; this governance applies to it

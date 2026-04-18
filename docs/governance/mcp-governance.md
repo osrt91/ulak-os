@@ -55,6 +55,60 @@ MCP servers can be registered at four scopes. Pick the narrowest.
 - **Never store production API keys in `.mcp.json`.** Use environment variables with `${VAR}` expansion.
 - **Never commit secrets.** `.mcp.json` is checked in; secrets live in env files that are gitignored.
 
+## Audit trail requirement (G-EXT-01)
+
+Every entry in `enabledMcpjsonServers` (and every tool in `enabled_mcpjson_servers`) MUST have a recorded justification. This is not optional — it's the trail that separates "this server runs because we reviewed it" from "this server runs because someone typed 'yes' once".
+
+### Where to record
+
+The justification lives in `active-variables.yaml` (or the equivalent block in `runtime-manifest.md`) under `mcp_authorized_tools`:
+
+```yaml
+mcp_authorized_tools:
+  github:
+    justification: "PR review and issue triage; scoped to read + list operations"
+    approved_at: 2026-04-18
+    approved_by: osrt91
+    scope: read-only
+    rotation_cadence: quarterly
+  supabase:
+    justification: "Multi-tenant DB read for audit reports; per-tenant service role key"
+    approved_at: 2026-03-02
+    approved_by: osrt91
+    scope: read-only
+    rotation_cadence: monthly
+    next_rotation_due: 2026-05-02
+```
+
+### Required fields
+
+- `justification` — one-sentence why this server is authorized
+- `approved_at` — ISO date (converts stand-up "yeah, let's add GitHub" into a tracked decision)
+- `approved_by` — operator identifier (email, handle, role)
+- `scope` — `read-only` | `read-write` | `admin` (narrowest applicable)
+- `rotation_cadence` (for token-based MCPs) — `weekly` | `monthly` | `quarterly` | `annually`
+- `next_rotation_due` (optional) — ISO date; `release-readiness-auditor` flags overdue tokens
+
+### Token rotation runbook
+
+When `next_rotation_due` passes:
+
+1. Generate new PAT / API key at the provider
+2. Update the secret in the operator's secret store (NOT in `.mcp.json` or `settings.local.json`)
+3. Test with a dry-run query
+4. Revoke the old token
+5. Update `next_rotation_due` to next cadence
+
+Forgetting step 4 leaves an orphan token alive indefinitely. Release-readiness-auditor finding category: `mcp_token_rotation_overdue`.
+
+### Enforcement
+
+If a server is enabled in `.mcp.json` without a matching `mcp_authorized_tools` entry:
+
+- `release-readiness-auditor` flags the run as `settings_governance: fail`
+- Manager-verdict cannot issue `signoff_status: ready`
+- The manifest must either add the justification or remove the server
+
 ## Trust rules (data vs instructions — again)
 
 This is where governance meets the trust model:
