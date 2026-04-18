@@ -1,5 +1,134 @@
 # Changelog
 
+## [2.1.3] — 2026-04-18 — scanner-project-pattern absorption release
+
+### Context
+
+This release integrates 39 patterns extracted from scanner-project.com (a production security/compliance scanner with multi-tenant Supabase + Iyzico payments + reseller surface) into Ulak OS runtime and governance docs. A self-audit via `/director komple` produced 85 findings and resolved 6 open questions. Waves 1–4 of the execution roadmap landed in a single session on 2026-04-18.
+
+### New anti-patterns (9) — `docs/runtime/anti-patterns.md`
+
+- **AP-01** In-memory state not durable (rate limits, active jobs lost on restart)
+- **AP-02** Token in URL / query parameter (logged, cached, leaked via referrer)
+- **AP-03** Non-blocking CI gate (`continue-on-error: true` gives false green) — Ulak OS shipped this in its own `scripts/validate-schemas.sh` pre-v2.1.3 (DY-02)
+- **AP-04** Unvalidated JSONB storage (silent data corruption)
+- **AP-05** Raw `docker.sock` bind-mount (needs docker-socket-proxy)
+- **AP-06** `user_metadata` as authz source (client-writable via SDK)
+- **AP-07** DDL at router / module import time (race on first boot)
+- **AP-08** Payment provider hardcoded to sandbox or live (needs env toggle)
+- **AP-09** Copy-paste service logic (3+ duplicated API clients)
+
+### New sector packs (6) — `docs/runtime/sector-packs.md`
+
+- **SP-01** `multi-tenant-supabase` — shared PG, per-tenant GoTrue + PostgREST
+- **SP-02** `container-orchestrating-app` — docker-socket-proxy sidecar pattern
+- **SP-03** `payment-integrated-saas` — sandbox↔live env toggle, webhook signature verification
+- **SP-04** `regulated-saas` (cybersecurity / fintech-regulated / healthcare variants) — compliance framework-registry
+- **SP-05** `reseller-enabled-saas` — 4-surface model with plan-capability gating
+- **SP-06** `vps-nginx-compose-topology` — base+dev+prod layering, 127.0.0.1 binds, Kale Kapısı hardening, cron-poll deploy fallback
+
+`saas` pack extended with SP-EXT-01 web-quality-scanner sub-pattern.
+
+### New unit type — Rule Packs
+
+- **`docs/governance/rule-pack-governance.md`** — 7th unit type in the decision matrix (alongside command/agent/skill/hook/MCP/plugin)
+- **`docs/governance/plugin-skill-decision.md`** — updated from 6 → 7 unit types
+- **4 starter packs** in `docs/runtime/rule-packs/`:
+  - `typescript-nextjs.md`
+  - `python-fastapi.md`
+  - `docker-compose.md`
+  - `api-security.md`
+
+### New governance docs (6)
+
+- **`docs/governance/rule-pack-governance.md`** (see above)
+- **`docs/governance/settings-permissions-governance.md`** — `.claude/settings.json` + `.local.json` discipline, deny lists, MCP authz, git hygiene. Motivated by Ulak OS's own FIND-SEC-01+02 (settings.local.json was tracked in git with `Bash(*)` + `Delete(*)` wildcards)
+- **`docs/governance/product-surface-split.md`** — customer / admin / public / partner-reseller (4-surface product model; NOT to be confused with runtime `surface-split.md` about Public/Hidden/Maintainer layers)
+- **`docs/governance/lock-file-hygiene.md`** — TTL + pid liveness + audit trail for `.claude/*.lock`
+- **`docs/governance/ai-provider-allowlist.md`** — declared AI provider list + drift detection (Gemini-only constraint across user portfolio)
+- **`docs/governance/pattern-import-ledger.md`** — cross-project pattern provenance ledger
+
+### Extended governance docs (4)
+
+- **`docs/governance/mcp-governance.md`** — audit-trail requirement + token rotation runbook
+- **`docs/governance/memory-hygiene.md`** — worktree cleanup policy (stale >7d flag, auto-prune eligible >30d)
+- **`docs/governance/prompt-supply-chain.md`** — pattern-import-ledger cross-link + AI-provider supply-chain events
+- **`docs/governance/artefact-write-authorization.md`** — Phase 5 §5b execution (renamed from old Phase 6 numbering)
+
+### New runtime rules (3 new + 2 extended)
+
+- **`docs/runtime/strangler-fig-protocol.md`** — 4-phase monolith decomposition protocol (A pure → B services → C routers → D engine)
+- **`docs/runtime/multi-agent-merge-sequence.md`** — infrastructure → backend → frontend → tests depth-ordered merge protocol
+- **`docs/runtime/audit-scoring-framework.md`** — 14-dimension 0-100 scorecard with A-F grade
+- **`docs/runtime/runtime-constants.md`** — single source of truth for field names + numeric constants (resolves DY-04 field-name drift `REQUIRED_PACKS` vs `required_sector_packs`)
+- **`docs/runtime/toolchain-precheck.md`** — extended with Pre-push parity + VPS baseline sections
+- **`docs/runtime/architecture-currency.md`** — extended with Deploy resilience section
+
+### Phase numbering refactor
+
+- **`docs/runtime/program-phases.md`** — Numbering A applied: Phase 5 is terminal; old Phase 5/6/7/8 collapsed into §5a (pack materialization, profile-gated), §5b (execution, permission-gated), §5c (validation gates, always), §5d (manager verdict, always)
+- Cross-refs updated in `waves-pattern.md`, `toolchain-precheck.md`, `artefact-write-authorization.md`
+
+### Persona-dispatch accuracy fix
+
+- **`docs/runtime/persona-dispatch-pattern.md:164`** — personas ARE shipped (commit c21204b) — removed the "NOT yet shipped" drift.
+
+### Sample artefact
+
+- **`docs/examples/sample-validation-plan.md`** — §1–§7 worked example with §6 live-probe bank (5 probe examples covering auth bypass, docker.sock mount, reseller plan-capability, webhook HMAC, user_metadata authz). Cross-referenced from `live-probe-contract.md`.
+
+### Agent enhancements (3)
+
+- **`.claude/agents/autonomous-program-director.md`** — rule-pack loader in Phase 0, output_language propagation, live-probe flag propagation, lock-file liveness sweep, worktree health check
+- **`.claude/agents/design-system-architect.md`** — Master + per-page override output contract (adopted from scanner-project ui-ux-pro-max pattern)
+- **`.claude/agents/security-hardening-lead.md`** — secrets rotation + history purge runbook, gitleaks baseline setup, pre-commit hook installation, CI hardening cross-link
+
+### New skills (3)
+
+- **`.claude/skills/god-module-decomposition/`** — Strangler Fig executor
+- **`.claude/skills/fourteen-dimension-audit/`** — 14-dim scorecard runner
+- **`.claude/skills/multi-agent-orchestration/`** — multi-agent Wave planner
+
+### New command
+
+- **`.claude/commands/triage-build.md`** — generic build-failure triage (frontend / backend / container / mobile subsystem sections) with toolchain-precheck gating
+
+### Command frontmatter additions
+
+Added `phases_run` frontmatter + skill cross-references to:
+- `pack-gap-audit.md` (Phase 4, + pack-gap-completion skill)
+- `intake.md` (Phases 0, 1, 2, + project-intake skill)
+- `final-verdict.md` (Phases 4.5, 5, + final-validation skill)
+- `frontend-war-room.md` (Phases 2, 3, 4, + design-system Master+page contract)
+
+### Import structure cleanup
+
+- **`CLAUDE.md`** — reduced to adapters + core-contract only (2 governance imports moved to core)
+- **`prompts/core/ulak-os-core-contract-2.0.0.md`** — added `@docs/runtime/office-roster.md`, 4 new governance imports (rule-pack, settings-permissions, product-surface-split, lock-file-hygiene), and received `plugin-skill-decision.md` + `rule-collision-matrix.md` from CLAUDE.md
+
+### Security fixes
+
+- `.claude/settings.local.json` untracked from git (was committed with `Bash(*)` + `Delete(*)` wildcards) — FIND-SEC-01+02 resolved
+- `.gitignore` extended: `.claude/settings.local.json`, `.claude/scheduled_tasks.lock`, `.claude/worktrees/`
+- `.claude/settings.local.example.json` shipped as the committed contract
+
+### Package metadata
+
+- `package.json` version bump: 2.0.0 → 2.1.3
+
+### Residual risks carried to v2.1.4 / v2.2
+
+- **R1** CLI source (`src/`) not deep-scanned
+- **R3** `tests/` not deep-scanned
+- **R4** Pattern-import ledger Trend-Platform claims T3-memory; verify in v2.2
+- **R6** Mode-loading mechanism deferred to v2.2
+- **W4.18** Log-rotation hook, dependabot, gitleaks CI job, eval runner — Wave 5/6 items carried forward
+
+### Audit trail
+
+- `reports/current/scanner-project-pattern-extraction.md` — Phase A extraction from scanner-project.com (232 lines)
+- `reports/current/{runtime-manifest, assumptions, intake, inventory, evidence-register, deep-scan-report, did-you-know, analysis-findings, target-state, execution-roadmap, validation-plan, pack-gap-register, manager-verdict, research-notes}.md` — Phase 0–5 director self-audit artefacts (3,392 lines)
+
 ## [Unreleased] — v2.1.2 docs prep continued — FP-01 artefact write authorization fix
 
 ### Fix for FP-01 — Subagent Write tool blocked mid-phase
