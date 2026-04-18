@@ -55,7 +55,7 @@ When the director protocol's current phase mandates it, the following paths are 
 - `reports/current/manager-verdict.md`
 - `reports/current/validation-result.yaml`
 
-### Phase 6 — Execution (permission-gated)
+### Phase 5 §5b — Execution (permission-gated)
 - `reports/current/execution-log.md`
 - `reports/current/conflict-matrix-wave-<N>.md` (one per Wave)
 

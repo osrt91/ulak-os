@@ -80,9 +80,43 @@ Every serious architecture recommendation (in `target-state.md` or a specialist'
 - **Never claim "upstream recommends X" without citing the upstream source.** T1 evidence means an actual doc, not vibes.
 - **When the stack conflicts with the recommendation, the stack wins unless migration is explicitly in scope.** Recommending a Vue pattern to a React project is a misread.
 
+## Deploy resilience (R-05)
+
+Every production deployment topology must declare a **CI-independent fallback path** — a way to deploy when the primary CI runner is unavailable (quota exhausted, provider outage, weekend/holiday incident). A CI-only deploy path is flagged as residual risk at Phase 4.
+
+### Acceptable fallback patterns
+
+- **Cron-poll on target host** — `infrastructure/deploy-poll.sh` runs every N minutes on the VPS, `git fetch`, diffs HEAD SHA against deployed SHA, rebuilds affected services, smoke-checks `/health`. Must be flock-guarded (`flock -n /tmp/deploy-poll.lock`) to prevent concurrent runs. Idempotent — re-running after a success is a no-op.
+- **Manual SSH deploy script** — documented `deploy.sh` the operator can run from a dev machine when CI is down. Must produce the SAME result as CI (same steps, same order, same build flags).
+- **Webhook-triggered alternative runner** — a secondary CI on a different provider (e.g. GitLab CI as fallback for GitHub Actions).
+
+### Not acceptable
+
+- "I'll SSH in and run `git pull && docker compose up -d`" — manual, unreproducible, no lock, no smoke check
+- "We have a staging CI" — that's a redundancy in primary path, not a fallback
+- "We don't deploy when CI is down" — the ship doesn't stop because the ferry is broken
+
+### Smoke check discipline
+
+Any fallback path must run the SAME smoke checks as CI after deploy:
+
+- `/health` endpoint returns 200
+- A sample read endpoint returns expected shape
+- Critical dependencies (DB, Redis, queue) reachable
+
+Fallback paths without smoke checks are incomplete.
+
+### Evidence tier
+
+Cron-poll fallback existence is a T1 observation (file exists, executable, has flock). Its effectiveness under a real primary outage is T2 (inferred — often not truly tested). Projects should run a quarterly "fallback drill" where the primary CI is artificially disabled and the fallback is exercised.
+
+Derived from scanner-project.com `infrastructure/deploy-poll.sh:1-69` (flock-guarded, 2-minute polling, rebuild + smoke-check).
+
 ## Integration
 
 - `docs/governance/evidence-trust-scoring.md` — upstream_trust field
 - `docs/runtime/market-research-engine.md` — live research integration when currency check is required
 - `target-state.md` — architecture recommendation cards go here
 - `validation-plan.md` — the validation_plan field feeds into this artefact
+- `docs/runtime/sector-packs.md` §`vps-nginx-compose-topology` includes deploy resilience requirements
+- `docs/governance/ai-provider-allowlist.md` — provider drift scan runs during architecture currency checks

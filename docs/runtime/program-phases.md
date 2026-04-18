@@ -6,6 +6,20 @@ A phase is a guarantee about state. At the end of Phase 0, the runtime manifest 
 
 The director may loop within a phase if evidence is weak, but the user must see forward movement — not repeated restarts from Phase 0.
 
+## Canonical numbering
+
+Ulak OS uses **six named phases** (0–5) plus one conditional interstitial (4.5). Phase 5 is the **terminal phase** — every run ends by writing `manager-verdict.md` inside Phase 5. Optional activities (pack materialization, execution, validation-gate running) that used to live as standalone Phases 5/6/7/8 in earlier drafts are **sub-sections of Phase 5** (§5a, §5b, §5c, §5d). This keeps the phase count stable across profiles and makes the "Phase 5 = final verdict" contract unambiguous.
+
+| Phase | Name | Required? |
+|---|---|---|
+| 0 | Environment lock | always |
+| 1 | Deep inventory | always |
+| 2 | Parallel specialist evidence | always |
+| 3 | Non-obvious findings (did-you-know) | always |
+| 4 | Synthesis | always |
+| 4.5 | Live probe | conditional (see §Phase 4.5 below) |
+| 5 | Finalize & verdict | always (with §5c + §5d always; §5a + §5b profile-gated) |
+
 ## Phase 0 — Environment lock
 
 **Purpose**: Capture the ground truth of the environment so later phases don't drift.
@@ -124,11 +138,17 @@ The director may loop within a phase if evidence is weak, but the user must see 
 
 **Phase gate**: Phase 5 cannot set `signoff_status: ready` with unresolved probes. `blocked-by-credentials` counts as unresolved. Destructive Sprint items without matching pre-check probes cannot be scheduled.
 
-See `docs/runtime/live-probe-contract.md` for the full protocol.
+See `docs/runtime/live-probe-contract.md` for the full protocol and `docs/examples/sample-validation-plan.md` for a worked §6 example.
 
-## Phase 5 — Pack / file generation (optional, profile-dependent)
+## Phase 5 — Finalize & verdict (terminal phase)
 
-**Purpose**: If the output profile is `PACK_GENERATION_PROFILE` or the execution mode allows pack-generation, materialize the pack files.
+**Purpose**: Close the run. Optionally materialize the pack. Optionally execute edits. Always run validation gates. Always write the manager verdict.
+
+Phase 5 has four sub-sections. §5a and §5b are profile-gated; §5c and §5d always run.
+
+### §5a — Pack materialization (optional, profile-gated)
+
+**When active**: `output_profile == PACK_GENERATION_PROFILE`, OR the execution mode explicitly allows pack materialization (typical: greenfield builder runs, repackage runs).
 
 **What the director does**:
 - Produce `CLAUDE.md`, `.claude/settings.json`, `.claude/commands/*.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.mcp.json`
@@ -139,11 +159,11 @@ See `docs/runtime/live-probe-contract.md` for the full protocol.
 - Pack files at their target paths
 - `reports/current/pack-generation-log.md` — what was created
 
-**Phase gate**: All pack files are syntactically valid and the smallest tree that satisfies the pack plan.
+**Sub-section gate**: All pack files are syntactically valid and the smallest tree that satisfies the pack plan. Skip gate cleanly when §5a is not active.
 
-## Phase 6 — Execution (optional, permission-gated)
+### §5b — Execution (optional, permission-gated)
 
-**Purpose**: If `CAN_EDIT_FILES: true` is set in the active variable contract and the user has explicitly authorized edits, apply changes in controlled batches.
+**When active**: `CAN_EDIT_FILES: true` is set in the active variable contract AND the user has explicitly authorized edits (typical: rescue runs with EXECUTE mode, brownfield repair sprints).
 
 **What the director does**:
 - Step through the execution roadmap
@@ -159,26 +179,26 @@ See `docs/runtime/live-probe-contract.md` for the full protocol.
 - `reports/current/execution-log.md` — what was changed, when, with diffs
 - `reports/current/conflict-matrix-wave-N.md` — one per Wave, the pre-dispatch file conflict map
 
-**Phase gate**: Each Wave ends with a passing validation run (typecheck + lint + build + commit), or the phase halts. Do not batch cleanup at the end — always between Waves.
+**Sub-section gate**: Each Wave ends with a passing validation run (typecheck + lint + build + commit), or the phase halts. Do not batch cleanup at the end — always between Waves. Skip gate cleanly when §5b is not active.
 
 See `docs/runtime/waves-pattern.md` for the full protocol.
 
-## Phase 7 — Validate
+### §5c — Validation gates (always runs)
 
-**Purpose**: Run the actual validation gates.
+**Purpose**: Fill the validation result schema with real status for every applicable gate. In analysis-only runs, gates report `not-run` with a residual-risk annotation; in execution runs, gates report `pass` / `fail` with evidence.
 
 **What the director does**:
-- Run build, lint, typecheck
+- Run build, lint, typecheck (if §5b ran; otherwise mark `not-run`)
 - Run the test suite at the depth the router chose (`light` | `standard` | `deep`)
 - Run security regression, localization checks, Turkish normalization checks, release-readiness checks, broken-link checks — based on the active profile
 - Emit the validation result schema from `docs/runtime/validation-result-schema.md`
 
 **Artefacts written**:
-- `reports/current/validation-result.yaml`
+- `reports/current/validation-result.yaml` (or embedded block inside `manager-verdict.md`)
 
-**Phase gate**: Every applicable gate has a status. `not-run` gates are converted to residual risks.
+**Sub-section gate**: Every applicable gate has a status. `not-run` gates are converted to residual risks recorded in the manager-verdict residual register.
 
-## Phase 8 — Finalize
+### §5d — Manager verdict (always runs — the closure artefact)
 
 **Purpose**: Produce the single manager-verdict that ends the run.
 
@@ -188,13 +208,18 @@ See `docs/runtime/waves-pattern.md` for the full protocol.
   - active agent map (which specialists ran)
   - phase status — each phase `complete` only if its artefact files exist and are non-trivial
   - top 3 did-you-know highlights inline
-  - residual risks
+  - residual risks (including all §5c `not-run` gates)
+  - §5a / §5b status (skipped / completed / failed)
   - explicit next execution lane
 
 **Artefacts written**:
 - `reports/current/manager-verdict.md`
 
-**Phase gate**: manager-verdict.md exists, references each phase's artefact, and carries a signoff_status from the validation result.
+**Sub-section gate**: manager-verdict.md exists, references each phase's artefact, carries a `signoff_status` from the validation result, and is non-trivial.
+
+### Phase 5 overall gate
+
+Phase 5 is complete only when §5c and §5d gates pass. §5a and §5b are either completed-clean OR explicitly skipped-clean. `signoff_status: ready` cannot be issued if any §5a / §5b sub-section failed mid-execution.
 
 ## Hard rules across all phases
 
@@ -202,14 +227,18 @@ See `docs/runtime/waves-pattern.md` for the full protocol.
 - **No phase skipping on shallow evidence.** If a phase's artefact is trivial, the phase is rejected, not accepted-with-caveats.
 - **Phases are gates, not suggestions.** The director cannot claim completion with a phase gate unmet.
 - **Phase 3 (did-you-know) is not optional.** Absence of did-you-know = director not done.
-- **Phase 7 (validate) runs even in analysis-only mode.** In analysis-only mode, the gates are "what would we need to verify this", not "here are the green checks". Either way, the schema is filled.
+- **Phase 5 §5c (validate) runs even in analysis-only mode.** In analysis-only mode, the gates are "what would we need to verify this", not "here are the green checks". Either way, the schema is filled.
+- **Phase 5 is the terminal phase.** No "Phase 6" / "Phase 7" / "Phase 8" — those activities collapse into §5a / §5b / §5c sub-sections.
 
 ## Integration
 
 - `docs/runtime/router.md` — Phase 0 router output
 - `docs/runtime/artefact-contract.md` — the mandatory artefact chain
 - `docs/runtime/context-budget.md` — context compression between phases
-- `docs/runtime/validation-result-schema.md` — Phase 7 output
-- `docs/runtime/output-profiles.md` — profile gates what's required per phase
+- `docs/runtime/validation-result-schema.md` — §5c output
+- `docs/runtime/output-profiles.md` — profile gates which §5 sub-sections activate
+- `docs/runtime/waves-pattern.md` — §5b Wave protocol
+- `docs/runtime/live-probe-contract.md` — Phase 4.5 protocol
+- `docs/examples/sample-validation-plan.md` — worked example with §6 live-probe section
 - `.claude/agents/autonomous-program-director.md` — the agent that runs these phases
 - `.claude/commands/director.md` — the command that enters the phase chain

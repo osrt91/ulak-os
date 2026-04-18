@@ -125,7 +125,7 @@ Wave 3 (orchestrator-direct VPS ops):
 
 ## Integration
 
-- `docs/runtime/program-phases.md` — the Waves pattern is the execution model AFTER the director protocol completes (Phase 6 execution onward)
+- `docs/runtime/program-phases.md` — the Waves pattern is the execution model inside Phase 5 §5b (execution sub-section, permission-gated)
 - `docs/runtime/roadmap-rule.md` — roadmap items carry `depends_on` fields that drive Wave grouping
 - `docs/governance/finding-schema.md` — items generated from findings inherit the finding's severity + priority
 - `docs/runtime/live-probe-contract.md` — VPS operations in a Wave must pass live-probe gates

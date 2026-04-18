@@ -20,6 +20,7 @@ Findings that match an anti-pattern automatically carry a tag in the finding sch
 - **Dead code** — unreachable branches, unused exports, commented-out sections left "for later"
 - **Giant prompts with no modularization** — one CLAUDE.md or prompt doc trying to encode everything
 - **Plugin / skill / command sprawl** — dozens of entries with no trigger discipline or maintenance
+- **AP-09 Copy-paste service logic** — the same 100+ LOC service call (API client, email template, logging wrapper) duplicated in 3+ places with minor variations (different error handling, different timeouts, different prompts). Fix: extract `services/<name>.py` with a single client class; replace all call sites with imports. Derived from scanner-project `_project_audit/03_findings/anti-patterns.md:35-60`
 
 ## Frontend / UX anti-patterns
 
@@ -55,6 +56,7 @@ Findings that match an anti-pattern automatically carry a tag in the finding sch
 - **Error leakage** — stack traces or internal paths returned in production errors
 - **Undocumented endpoints** — endpoints that exist in code but not in any docs
 - **Missing audit trail on dangerous actions** — admin deletes with no log
+- **AP-08 Payment provider hardcoded to sandbox or live** — sandbox↔live selection is not a pure env-var switch, webhook signature not cryptographically verified, or the same code path is not exercised in both modes (sandbox tests don't cover live). Fix: `PAYMENT_BASE_URL` env-toggled; HMAC/signature verification on every webhook; TRY+USD dual-amount tables covered by tests. Derived from scanner-project `payment.py:35-43, 717-742`
 
 ## Security anti-patterns
 
@@ -67,6 +69,8 @@ Findings that match an anti-pattern automatically carry a tag in the finding sch
 - **Weak password recovery** — reset link with no expiration or reuse protection
 - **Brute-force friendly login** — no lockout, no rate limit, no captcha
 - **Credential stuffing exposure** — no detection of high-velocity login attempts
+- **AP-02 Token in URL / query parameter** — JWT or auth token passed as URL query string or WebSocket path fragment. Logged by nginx access logs, cached by CDN, exposed in browser history, leaked via Referrer header. Fix: Use a ticket system (exchange JWT for 30s-TTL ticket via REST, then connect with ticket); or accept token in first WebSocket frame. Derived from scanner-project `_project_audit/03_findings/anti-patterns.md:216-244`
+- **AP-06 `user_metadata` as authorization source** — on Supabase/GoTrue (and analogous identity providers), `user_metadata` is client-writable via the SDK. Using it to check "is admin" or "has permission" is an authorization bypass. Fix: canonical source is a server-side DB row (e.g. `user_role_assignments`), cached with TTL invalidation on role changes. Derived from scanner-project `auth.py:37-73`
 
 ## Data / persistence anti-patterns
 
@@ -76,6 +80,9 @@ Findings that match an anti-pattern automatically carry a tag in the finding sch
 - **Unbounded queries** — no pagination, no limit
 - **Migrations that lock tables for minutes** — on tables hot in production
 - **No rollback path on migration** — DDL without a reverse script
+- **AP-01 In-memory state not durable** — application state (rate limits, active jobs, progress tracking, session cache) stored in process memory without a persistence layer. Restart = data loss. Horizontal scaling impossible (each instance has independent state). Rate limits reset on every deploy. Fix: back with Redis (rate limiter: 1-line change to slowapi; job state: TTL-based hash operations). Derived from scanner-project `_project_audit/03_findings/anti-patterns.md:182-213`
+- **AP-04 Unvalidated JSONB storage** — arbitrary JSON written to a JSONB column without Pydantic/Zod validation before insert and without a DB-level check constraint. Silent data corruption; frontend receives `undefined` for missing fields; historical data inconsistent. Fix: Pydantic model with discriminated union; validate before insertion; add `CHECK jsonb_typeof(col) = 'object'` and per-key assertions at DB level. Derived from scanner-project `_project_audit/03_findings/anti-patterns.md:155-178`
+- **AP-07 DDL at router / module import time** — `CREATE TABLE IF NOT EXISTS` (or `CREATE INDEX IF NOT EXISTS`) executed as a side effect of `import`. Race conditions on first boot with multiple workers; schema drift across instances; migration failures silently logged. Fix: consolidate into an explicit migration runner with versioned, idempotent migrations. Downgrade to warning if single-node deploy is a documented constraint. Derived from scanner-project `app/routers/reseller.py:20-42`
 
 ## Infra / release anti-patterns
 
@@ -86,6 +93,8 @@ Findings that match an anti-pattern automatically carry a tag in the finding sch
 - **No crash reporting** — mobile apps shipping without Sentry / Crashlytics
 - **Single environment** — no staging, changes go straight to prod
 - **No env separation of secrets** — dev keys work in prod
+- **AP-03 Non-blocking CI gate** — CI job configured with `continue-on-error: true` on secrets / security / test steps, producing "green" runs that hide failures. The gate gives false confidence; teams ignore red in logs. Fix: remove all `continue-on-error: true`; make each gate a `needs:` dependency of the deploy job; initial failure is expected (gradually raise thresholds). Derived from scanner-project `_project_audit/03_findings/anti-patterns.md:248-284`. **Meta-ironic case**: Ulak OS itself shipped this anti-pattern in `scripts/validate-schemas.sh` (parse-only, not `$schema`-conforming) until v2.1.3 — DY-02 in self-audit.
+- **AP-05 Raw `docker.sock` bind-mount in app container** — application container mounts `/var/run/docker.sock` directly, giving root-equivalent access to the Docker daemon. A compromise of the app = full host compromise. Fix: `tecnativa/docker-socket-proxy` sidecar with verb allowlist (`CONTAINERS=1 EXEC=0 POST=0` for read-only introspection), socket mounted read-only on the proxy, `cap_drop: ALL`, `no-new-privileges:true`. App connects via `DOCKER_HOST=tcp://docker-proxy:2375`. Derived from scanner-project `docker-compose.yml:103-120`
 
 ## Localization anti-patterns
 

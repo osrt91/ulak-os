@@ -161,7 +161,7 @@ Task(subagent_type="admin-persona", prompt=...)
 Task(subagent_type="security-redteam", prompt=...)
 ```
 
-Each persona agent has its own `.claude/agents/<name>.md` file with the persona framing. These agents are NOT yet shipped in Ulak OS 2.1.x — they're a Pack Gap (see `docs/runtime/handoff-plan-contract.md` integration) for v2.2.
+Each persona agent has its own `.claude/agents/<name>.md` file with the persona framing. These persona agents **ARE shipped** in Ulak OS 2.1.x as of commit c21204b (7 persona files: admin-persona, bayi-persona, compliance-persona, customer-persona, developer-persona, support-persona, plus the existing security-redteam which doubles as a persona-style adversarial specialist).
 
 ### Merge
 The director merges persona findings into the evidence register with a `source_persona` field:

@@ -49,6 +49,8 @@ Focus areas:
 - Analytics taxonomy
 - Multi-tenant isolation
 
+**Web-quality-scanner sub-pattern** (SP-EXT-01): SaaS products that scan client websites (security, SEO, accessibility, performance) have a repeatable shape: `BasePlugin` abstract with `run(context)` interface, 9-category weighted scoring engine, multi-format report generation (PDF/HTML/Markdown/JSON), PTES-style phase orchestration (sync or async), result storage validated against Pydantic before DB insertion. Derived from scanner-project.com.
+
 ### `fintech`
 Focus areas:
 - KYC / AML flow
@@ -131,6 +133,87 @@ Focus areas:
 - Multi-window behavior
 - Desktop-like command surfaces
 - Multi-pane layouts
+
+### `multi-tenant-supabase` (SP-01)
+Focus areas:
+- One PostgreSQL cluster hosts N logical databases (or schemas) — never N PostgreSQL instances
+- Per-project GoTrue (auth) container, per-project PostgREST (API) container — JWT secrets never cross-signed between tenants
+- Deploy scripts precheck tenant's Docker network (`docker network inspect supabase_<tenant>`) before bringing app services up
+- RLS enforced per tenant schema; cross-tenant queries require explicit admin-surface routes
+- Authorization source is DB-backed role (`user_role_assignments`), never `user_metadata` (anti-pattern AP-06)
+- Migrations are per-tenant and tracked with a `tenant_id` column in the migration registry
+
+Derived from scanner-project.com `SUPABASE.md:24-31`, `docker-compose.yml:48`, `deploy.sh:10`.
+
+### `container-orchestrating-app` (SP-02)
+Focus areas:
+- Apps that introspect or spawn sibling containers (scanner-style products, CI runners, internal PaaS consoles)
+- Docker API access via docker-socket-proxy sidecar, NEVER raw `/var/run/docker.sock` mount (anti-pattern AP-05)
+- Proxy configured with explicit verb allowlist (`CONTAINERS=1 EXEC=1 POST=1`), socket mounted read-only, `cap_drop: ALL`, `no-new-privileges:true`, `mem_limit` set
+- App connects via `DOCKER_HOST=tcp://docker-proxy:2375` on internal network only
+- Exec'd commands audit-logged with caller identity
+
+Derived from scanner-project.com `docker-compose.yml:103-120`.
+
+### `payment-integrated-saas` (SP-03)
+Focus areas:
+- Sandbox↔live is a **pure env-var switch** (`PAYMENT_BASE_URL`, `PAYMENT_KEY`) — no `if ENV == "prod"` branches, no separate modules (anti-pattern AP-08)
+- Webhook signature verification is mandatory on every callback (HMAC or provider-specific)
+- Raw webhook body capture is env-toggleable (`*_CAPTURE=1`) for incident forensics; capture is NOT on by default
+- TRY + USD (or multi-currency) dual-amount tables; yearly-discount invariants covered by tests
+- Idempotency keys on payment intents; duplicate webhook deliveries must not double-charge
+- Payment provider lock-in audit: if Stripe is primary, Iyzico fallback (or vice versa) should exist for regional compliance
+
+Orthogonal to `fintech` — `fintech` covers the PRODUCT being a financial service; `payment-integrated-saas` covers any SaaS that accepts payments (most do). Activate both when product is fintech AND accepts payments.
+
+Derived from scanner-project.com `payment.py:35-43, 717-742`.
+
+### `regulated-saas` (SP-04)
+Focus areas (three variants — activate the relevant variant):
+
+**Variant A — Cybersecurity regulated**:
+- Compliance framework-registry: one adapter per framework (CVSS v4.0, MITRE ATT&CK, NIST CSF, ISO 27001, KEV, KVKK-GDPR)
+- Each adapter takes `findings[]` and returns `summary` dict with shared shape
+- One aggregator produces audit-ready Markdown / PDF report combining all frameworks
+- Findings flow through shared `severity → severity_bucket` normalization
+
+**Variant B — Fintech regulated** (overlays `fintech`):
+- KYC/AML framework registry (per jurisdiction)
+- Transaction reporting hooks (e.g. FinCEN SAR, AB SFTR)
+- 4-eyes principle on dangerous actions enforced at code level
+
+**Variant C — Healthcare regulated** (overlays `health-sensitive`):
+- HIPAA adapter (or GDPR health-data variant) for audit trail
+- Consent artefact generation
+- Right-to-be-forgotten operational runbook
+
+When `sector: regulated` is declared, the compliance-framework-registry specialist dispatches to verify at least one adapter per mandated framework and that an aggregator produces a single audit-ready report.
+
+Derived from scanner-project.com `compliance_reporter.py`, `cvss_processor.py`, `mitre_attack.py`, `nist_csf.py`, `iso27001.py`, `kev_checker.py`.
+
+### `reseller-enabled-saas` (SP-05)
+Focus areas:
+- Fourth product surface beyond public / customer / admin (see `docs/governance/product-surface-split.md`)
+- Authorization gate is **plan capability** (not role) — `user.plan.reseller_enabled == true`
+- Per-reseller branding data model (logo, color tokens, custom domain) scoped to the reseller's tenant tree
+- Sub-user provisioning: reseller can create customer accounts but cannot grant capabilities they don't have themselves
+- Commission / payout calculations carry their own audit log surface
+- White-label email templates scoped per reseller
+- `bayi-persona` agent activated in Phase 2 dispatch (Turkish products especially)
+
+Derived from scanner-project.com `app/routers/reseller.py:17`, `app/models/reseller_branding.py`.
+
+### `vps-nginx-compose-topology` (SP-06)
+Focus areas:
+- Base compose + dev override + prod override three-file layering
+- Prod bindings use `127.0.0.1:<port>`; nginx is the sole public ingress
+- Prod compose adds `security_opt: [no-new-privileges:true]`, `cap_drop: ALL`, `mem_limit`
+- "Kale Kapısı" VPS hardening baseline: non-default SSH port (e.g. 2244), key-only auth, root disabled, UFW enabled, fail2ban active
+- Dual-SSH-session safety rule (open a second session before running anything that could lock you out)
+- CI-independent cron-poll deploy fallback (`infrastructure/deploy-poll.sh`) with flock-guarded idempotent runner
+- Every deploy topology declares a rollback path
+
+Derived from scanner-project.com `docker-compose.prod.yml:15-23`, `infrastructure/kale-kapisi.sh`, `infrastructure/deploy-poll.sh`.
 
 ## Activation rules
 

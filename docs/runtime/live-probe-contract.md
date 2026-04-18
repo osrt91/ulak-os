@@ -1,5 +1,7 @@
 # Live Probe Contract — Phase 4.5
 
+**Worked example**: see `docs/examples/sample-validation-plan.md` §6 for a canonical probe bank.
+
 ## Why this exists
 
 A static-only audit produces claims like "the committed JWT signing key in `kong.yml:8` MAY match the prod `JWT_SECRET`" — tier T2 evidence at best. The only way to upgrade that claim to T1 (or refute it entirely) is a **live probe**: SSH into the VPS, read the env var, compare.
