@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# {{product_name_pascal}} — deploy script (Ulak OS v{{ulak_os_version}})
+# Webhook-triggered + post-deploy health probe + automated rollback.
+#
+# See docs/runtime/webhook-ci-deploy-pattern.md §6 for the health-probe contract.
+# See docs/runtime/anti-patterns.md §AP-12 (fake rollback) + §AP-18 (static HMAC)
+
+set -euo pipefail
+
+PROJECT_NAME="{{product_name}}"
+PROJECT_PATH="${PROJECT_PATH:-/opt/$PROJECT_NAME}"
+LOCK_FILE="/tmp/$PROJECT_NAME-deploy.lock"
+LOG_DIR="/var/log/$PROJECT_NAME"
+HEALTH_ENDPOINT="${HEALTH_ENDPOINT:-http://127.0.0.1:3000/health}"
+SAMPLE_READ_ENDPOINT="${SAMPLE_READ_ENDPOINT:-http://127.0.0.1:3000/api/public/status}"
+HEALTH_TIMEOUT_SECONDS=60
+
+DEPLOY_ID="${DEPLOY_ID:-$(uuidgen 2>/dev/null || date +%s)}"
+COMMIT="${1:-HEAD}"
+
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/$DEPLOY_ID.log"
+
+log() { echo "[$DEPLOY_ID $(date -Iseconds)] $*" | tee -a "$LOG_FILE"; }
+
+# --- Single-flight lock ---
+exec 200>"$LOCK_FILE"
+if ! flock -n 200; then
+  log "ERROR: Another deploy is running (lock held)."
+  exit 1
+fi
+trap 'rm -f "$LOCK_FILE"' EXIT
+
+log "Deploy start. commit=$COMMIT path=$PROJECT_PATH"
+
+# --- Pull + build ---
+cd "$PROJECT_PATH"
+PREVIOUS_COMMIT=$(git rev-parse HEAD)
+log "Previous commit: $PREVIOUS_COMMIT"
+
+git fetch origin main
+git checkout "$COMMIT"
+
+# Build
+pnpm install --frozen-lockfile 2>&1 | tee -a "$LOG_FILE"
+pnpm build 2>&1 | tee -a "$LOG_FILE"
+
+# Restart (pm2 / systemd — adapt per hosting)
+pm2 restart "$PROJECT_NAME" --update-env 2>&1 | tee -a "$LOG_FILE"
+
+# --- Post-deploy health probe (AP-12 + AP-18 prevention) ---
+log "Waiting for health endpoint..."
+HEALTH_OK=0
+for i in $(seq 1 "$HEALTH_TIMEOUT_SECONDS"); do
+  if curl -sf "$HEALTH_ENDPOINT" >/dev/null 2>&1; then
+    HEALTH_OK=1
+    break
+  fi
+  sleep 1
+done
+
+if [[ $HEALTH_OK -eq 0 ]]; then
+  log "ERROR: Health endpoint did not return 200 within ${HEALTH_TIMEOUT_SECONDS}s"
+  log "Rolling back to $PREVIOUS_COMMIT..."
+  git checkout "$PREVIOUS_COMMIT"
+  pnpm install --frozen-lockfile 2>&1 | tee -a "$LOG_FILE"
+  pnpm build 2>&1 | tee -a "$LOG_FILE"
+  pm2 restart "$PROJECT_NAME" --update-env 2>&1 | tee -a "$LOG_FILE"
+  log "Rollback complete."
+  exit 2
+fi
+
+# --- Sample read probe: verify NEW code is running (not old on warm port) ---
+DEPLOYED_SHA=$(curl -sf "$SAMPLE_READ_ENDPOINT" | grep -oP '"version"\s*:\s*"\K[^"]+' || echo "unknown")
+EXPECTED_SHA=$(git rev-parse HEAD)
+if [[ "$DEPLOYED_SHA" != "$EXPECTED_SHA" ]]; then
+  log "ERROR: Deployed SHA mismatch. expected=$EXPECTED_SHA got=$DEPLOYED_SHA"
+  log "Rolling back..."
+  git checkout "$PREVIOUS_COMMIT"
+  pnpm install --frozen-lockfile
+  pnpm build
+  pm2 restart "$PROJECT_NAME" --update-env
+  exit 3
+fi
+
+log "Deploy complete. commit=$EXPECTED_SHA duration_log=$LOG_FILE"
+exit 0

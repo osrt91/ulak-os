@@ -1,0 +1,126 @@
+import 'server-only'
+
+import type { SupabaseClient, User } from '@supabase/supabase-js'
+
+// {{product_name_pascal}} — single auth helper
+//
+// Every auth decision in this project MUST go through this file.
+// See docs/runtime/anti-patterns.md:
+//   - AP-11 Multi-layer auth bypass
+//   - AP-06 user_metadata as authz source
+//   - AP-13 server-only installed but never imported (the `import 'server-only'`
+//     above is load-bearing — DO NOT REMOVE)
+
+export type Surface = 'public' | 'customer' | 'admin' | 'partner'
+export type Role = 'customer' | 'admin' | 'partner' | 'support'
+
+export interface SessionContext {
+  user: User | null
+  role: Role | null                     // canonical source: DB, not user_metadata
+  planCapabilities: string[]            // for partner surface gating
+  tenantId: string | null
+}
+
+export interface SessionGateResult {
+  allowed: boolean
+  redirectTo: string                     // populated when allowed=false
+  reason?: string                        // debug-only; never surfaced to clients
+}
+
+// --- Surface → required authz mapping ---
+// Extend this table when adding new route trees. Never inline auth checks
+// in individual pages / route handlers.
+const SURFACE_REQUIREMENTS: Record<Surface, {
+  requiresSession: boolean
+  requiresRole?: Role[]
+  requiresPlanCapability?: string
+  redirectTo: string
+}> = {
+  public: {
+    requiresSession: false,
+    redirectTo: '/',
+  },
+  customer: {
+    requiresSession: true,
+    redirectTo: '/login',
+  },
+  admin: {
+    requiresSession: true,
+    requiresRole: ['admin', 'support'],
+    redirectTo: '/login',
+  },
+  partner: {
+    requiresSession: true,
+    requiresRole: ['partner'],
+    requiresPlanCapability: 'partner_dashboard',
+    redirectTo: '/login',
+  },
+}
+
+export function pathToSurface(path: string): Surface {
+  if (path.startsWith('/admin') || path.startsWith('/api/admin')) return 'admin'
+  if (path.startsWith('/partner') || path.startsWith('/api/partner')) return 'partner'
+  if (path.startsWith('/app') || path.startsWith('/api/customer')) return 'customer'
+  return 'public'
+}
+
+// Load role + plan capabilities from DB (never user_metadata).
+// TTL cache lives at the Supabase edge; this function always queries fresh
+// on first request, cached on subsequent (configure TTL in cache layer).
+async function loadRoleFromDb(supabase: SupabaseClient, userId: string): Promise<{ role: Role | null; planCapabilities: string[]; tenantId: string | null }> {
+  const { data, error } = await supabase
+    .from('user_role_assignments')
+    .select('role, plan_capabilities, tenant_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error || !data) {
+    return { role: null, planCapabilities: [], tenantId: null }
+  }
+
+  return {
+    role: data.role as Role,
+    planCapabilities: (data.plan_capabilities as string[]) ?? [],
+    tenantId: (data.tenant_id as string | null) ?? null,
+  }
+}
+
+export async function getSessionContext(
+  supabase: SupabaseClient,
+  user: User | null
+): Promise<SessionContext> {
+  if (!user) {
+    return { user: null, role: null, planCapabilities: [], tenantId: null }
+  }
+  const { role, planCapabilities, tenantId } = await loadRoleFromDb(supabase, user.id)
+  return { user, role, planCapabilities, tenantId }
+}
+
+export async function requireSession(input: {
+  supabase: SupabaseClient
+  user: User | null
+  path: string
+}): Promise<SessionGateResult> {
+  const surface = pathToSurface(input.path)
+  const requirement = SURFACE_REQUIREMENTS[surface]
+
+  if (!requirement.requiresSession) {
+    return { allowed: true, redirectTo: '' }
+  }
+
+  if (!input.user) {
+    return { allowed: false, redirectTo: requirement.redirectTo, reason: 'no-session' }
+  }
+
+  const ctx = await getSessionContext(input.supabase, input.user)
+
+  if (requirement.requiresRole && !requirement.requiresRole.includes(ctx.role as Role)) {
+    return { allowed: false, redirectTo: '/', reason: 'wrong-role' }
+  }
+
+  if (requirement.requiresPlanCapability && !ctx.planCapabilities.includes(requirement.requiresPlanCapability)) {
+    return { allowed: false, redirectTo: '/pricing?upgrade=' + requirement.requiresPlanCapability, reason: 'plan-capability-denied' }
+  }
+
+  return { allowed: true, redirectTo: '' }
+}

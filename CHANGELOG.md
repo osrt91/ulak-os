@@ -1,5 +1,81 @@
 # Changelog
 
+## [2.2.3] — 2026-04-20 — Scaffolder templates complete + awesome-design-md integration
+
+### Context
+
+v2.2.2 shipped the scaffolder infrastructure (command + skill + sector pack) + 5 seed templates. The remaining templates (middleware, auth helper, RLS migrations, CI workflow, deploy script, VPS hardening, preflight) were still in the "skill generates dynamically" mode, which produces inconsistent output. v2.2.3 materializes these as static templates so scaffolded projects are **deterministic from commit 1**.
+
+Also: per operator direction, `VoltAgent/awesome-design-md` (59 brand design-system references) is now cloneable locally via the extended `scripts/fetch-design-references.sh --all` + documented in `docs/references/brand-design-index.md` + integrated into the scaffolder's new `DESIGN.md.template`.
+
+### New template files (10 additions)
+
+Under `templates/saas-starter/`:
+
+- **`DESIGN.md.template`** — project design system starter with `{{design_reference}}` brand substitution; explains inherit-discipline-not-assets principle; Master + per-page override contract baked in
+- **`middleware.ts.template`** — Next.js middleware with Supabase SSR session rehydration + dispatch to single auth helper (no inline auth logic — AP-11 prevention by construction)
+- **`lib/auth/index.ts.template`** — canonical auth helper used by every entry point; DB-sourced role (AP-06 prevention); `import 'server-only'` on line 1 (AP-13 prevention); surface-gated authz dispatch table covers public / customer / admin / partner
+- **`supabase/migrations/00001_initial_schema.sql.template`** — tenants + user_role_assignments + audit_log + webhook_events with `tenant_id` FK, `touch_updated_at` trigger, idempotency-safe DDL
+- **`supabase/migrations/00002_rls_policies.sql.template`** — RLS enabled on every user-facing table with tenant-scoped read + admin-only write + append-only audit + service_role bypass documented; cross-tenant verification protocol referenced
+- **`.github/workflows/ci-validation.yml.template`** — 3 jobs (validate + gitleaks + e2e); all blocking (no `continue-on-error`); concurrency group cancels in-progress runs
+- **`scripts/preflight.sh.template`** — fast mode (~20s, lint + typecheck only) + full mode (mirror CI 1-for-1)
+- **`scripts/install-hooks.sh.template`** — installs `.githooks/pre-push`; bypass policy via `preflight-bypass:` commit-message token
+- **`infrastructure/deploy.sh.template`** — webhook-triggered; single-flight flock guard; post-deploy health probe with SHA verification (proves NEW code is running, not warm port); automated rollback on failure
+- **`infrastructure/kale-kapisi.sh.template`** — VPS hardening (SSH port 2244, key-only, root disabled, UFW, fail2ban); dual-session safety rule enforced via interactive prompt
+
+### Scripts
+
+- **`scripts/fetch-design-references.sh`** rewritten — now supports 4 modes:
+  - `<brand>` — fetch one brand into `reports/current/design-references/<brand>/`
+  - `--all` — clone full `VoltAgent/awesome-design-md` into `vendor/awesome-design-md/` (gitignored)
+  - `--list` — enumerate locally-available brands (requires `--all` first)
+  - `--update` — git pull the mirror
+  - Offline path: if `vendor/awesome-design-md/` exists, single-brand fetch copies from local mirror instead of hitting the network
+
+### Docs
+
+- **`docs/references/brand-design-index.md`** (new) — committed index of all 59 brand references with category tagging (AI / dev tools / SaaS / fintech / automotive / etc.) + domain→brand suggestions table + update cadence
+- **`.gitignore`** extended with `vendor/` block — external references cloned for local reference, not committed
+
+### Scaffolder inputs (extended)
+
+`/ulak-scaffold` now accepts `design_reference=<brand>`. Valid values enumerated in `docs/references/brand-design-index.md`. When provided, the scaffolder writes `DESIGN.md` in the new project citing the chosen brand + inherited discipline.
+
+### Anti-patterns prevented by construction (commit 1 of scaffolded project)
+
+The new templates make these impossible:
+
+- **AP-06 `user_metadata` as authz source** — `lib/auth/index.ts.template` `loadRoleFromDb` reads from `user_role_assignments`, never `user_metadata`
+- **AP-10 Multi-file schema drift** — single canonical SQL in `00001_initial_schema.sql.template`; TypeScript types generated from DB (comment notes the generation step)
+- **AP-11 Multi-layer auth bypass** — middleware.ts dispatches to `lib/auth`; routes import from `lib/auth`; zero inline cookie checks
+- **AP-12 Fake rollback deploy** — `deploy.sh.template` has mandatory health probe + SHA-verification + automated rollback
+- **AP-13 `server-only` installed but not imported** — `lib/auth/index.ts.template` line 1 is `import 'server-only'`
+- **AP-16 `.env.local` committed** — `.gitignore.template` blocks it
+- **AP-18 Static HMAC empty body** — deploy script signs per-deploy `$DEPLOY_ID` + commit SHA, never empty body
+- **AP-19 Root `.env.local` in monorepo** — scaffolder documents per-app env file pattern (to be enforced when `has_mobile=true`)
+
+### Pack counts delta (v2.2.2 → v2.2.3)
+
+- Templates in `templates/saas-starter/`: 5 → 15 (10 new)
+- Scripts: +0 (updated existing `fetch-design-references.sh`)
+- Governance docs: 22 → 22 (no new)
+- `vendor/awesome-design-md/` cloned locally (59 brand references; gitignored)
+
+### Deferred to v2.3
+
+- Plugin packaging (`.claude-plugin/` + npm publish)
+- Showcase UI / GitHub Pages landing
+- Firecrawl MCP integration
+- LightRAG memory upgrade
+- ADRs for v2.x decisions
+- 18 thin specialist agent expansion
+- Remaining ~15 scaffolder templates (tsconfig, next.config, tailwind.config, layout.tsx, login page, supabase clients, docker-compose, settings.json, tests, .gitleaks.toml)
+
+### Package metadata
+
+- `package.json` version: 2.2.2 → 2.2.3
+- `prompts/pack.json` version: 2.2.2 → 2.2.3
+
 ## [2.2.2] — 2026-04-20 — SaaS scaffolder: "Ulak OS produces full-stack SaaS from commit 1"
 
 ### Context

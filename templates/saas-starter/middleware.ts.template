@@ -1,0 +1,64 @@
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+import { requireSession } from '@/lib/auth'
+
+// Single middleware entry point for {{product_name_pascal}}.
+// Every request path hits this file once. It (1) rehydrates the Supabase
+// session from cookies, (2) dispatches to the single auth helper in
+// lib/auth/index.ts for gate decisions.
+//
+// AP-11 prevention: auth decisions live in ONE place (lib/auth). This
+// middleware never implements its own "if cookie present trust" logic.
+
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({ request: { headers: request.headers } })
+
+  // --- Supabase SSR session rehydration ---
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next({ request: { headers: request.headers } })
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+        },
+      },
+    }
+  )
+
+  // Refresh session (mandatory for SSR)
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // --- Surface-gated auth dispatch ---
+  const url = request.nextUrl.clone()
+  const path = url.pathname
+
+  // Public routes: pass through
+  const PUBLIC_PREFIXES = ['/', '/api/public', '/pricing', '/about', '/privacy', '/terms', '/login', '/register', '/reset', '/_next', '/favicon']
+  if (PUBLIC_PREFIXES.some(p => path === p || path.startsWith(p + '/'))) {
+    return response
+  }
+
+  // Everything else needs a session
+  const sessionResult = await requireSession({ supabase, user, path })
+  if (!sessionResult.allowed) {
+    return NextResponse.redirect(new URL(sessionResult.redirectTo, request.url))
+  }
+
+  return response
+}
+
+// Match everything EXCEPT:
+// - _next static assets
+// - _next image optimization
+// - favicon / robots / sitemap
+// - public APIs (they handle their own rate-limit)
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|api/public).*)',
+  ],
+}

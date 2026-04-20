@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# {{product_name_pascal}} — pre-push preflight (Ulak OS v{{ulak_os_version}})
+# See docs/runtime/toolchain-precheck.md §Pre-push parity
+#
+# Usage:
+#   ./scripts/preflight.sh           — full mode (2-5 min); run before git push
+#   ./scripts/preflight.sh --fast    — fast mode (~20s); for iteration loop
+
+set -euo pipefail
+
+MODE="${1:-full}"
+
+cd "$(dirname "$0")/.."
+
+echo "== {{product_name_pascal}} preflight ($MODE mode) =="
+
+# Fast mode: lint + typecheck only
+if [[ "$MODE" == "--fast" ]]; then
+  pnpm lint
+  pnpm typecheck
+  echo "✓ Fast preflight passed."
+  exit 0
+fi
+
+# Full mode: mirror CI 1-for-1
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+pnpm audit --audit-level=high || echo "⚠️  pnpm audit warnings; review before push"
+
+# Local gitleaks (if installed)
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks detect --source . --config .gitleaks.toml --baseline-path .gitleaks.baseline
+fi
+
+echo "✓ Full preflight passed — safe to push."

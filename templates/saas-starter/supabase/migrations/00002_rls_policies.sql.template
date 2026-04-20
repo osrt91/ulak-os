@@ -1,0 +1,119 @@
+-- {{product_name_pascal}} — RLS policies (Ulak OS v{{ulak_os_version}} scaffolder baseline)
+-- See docs/runtime/cross-tenant-rls-verification.md for the 7-step verification protocol
+-- See docs/governance/product-surface-split.md for surface-authz mapping
+
+-- -------------------------------------------------------------------------
+-- Enable RLS on every user-facing table
+-- -------------------------------------------------------------------------
+alter table public.tenants              enable row level security;
+alter table public.user_role_assignments enable row level security;
+alter table public.audit_log            enable row level security;
+alter table public.webhook_events       enable row level security;
+
+-- -------------------------------------------------------------------------
+-- Tenants: authenticated users read their own tenant; admin writes
+-- -------------------------------------------------------------------------
+create policy "tenants_self_read" on public.tenants
+  for select to authenticated
+  using (
+    id in (
+      select tenant_id from public.user_role_assignments
+      where user_id = auth.uid()
+    )
+  );
+
+create policy "tenants_admin_write" on public.tenants
+  for all to authenticated
+  using (
+    exists (
+      select 1 from public.user_role_assignments
+      where user_id = auth.uid()
+        and role in ('admin', 'support')
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.user_role_assignments
+      where user_id = auth.uid()
+        and role in ('admin', 'support')
+    )
+  );
+
+-- Service role bypasses RLS by design (for webhook processors, cron jobs)
+-- No explicit policy needed — service_role has grant-all
+
+-- -------------------------------------------------------------------------
+-- user_role_assignments: user reads own row; admin reads all in tenant
+-- -------------------------------------------------------------------------
+create policy "role_self_read" on public.user_role_assignments
+  for select to authenticated
+  using (user_id = auth.uid());
+
+create policy "role_admin_read" on public.user_role_assignments
+  for select to authenticated
+  using (
+    exists (
+      select 1 from public.user_role_assignments ura2
+      where ura2.user_id = auth.uid()
+        and ura2.role in ('admin', 'support')
+        and ura2.tenant_id = public.user_role_assignments.tenant_id
+    )
+  );
+
+-- Writes are admin-only (no self-role-escalation — AP-06 prevention at DB layer)
+create policy "role_admin_write" on public.user_role_assignments
+  for insert to authenticated
+  with check (
+    exists (
+      select 1 from public.user_role_assignments ura2
+      where ura2.user_id = auth.uid()
+        and ura2.role in ('admin')
+    )
+  );
+
+create policy "role_admin_update" on public.user_role_assignments
+  for update to authenticated
+  using (
+    exists (
+      select 1 from public.user_role_assignments ura2
+      where ura2.user_id = auth.uid()
+        and ura2.role in ('admin')
+    )
+  );
+
+-- -------------------------------------------------------------------------
+-- audit_log: read-only for admins; service_role writes
+-- -------------------------------------------------------------------------
+create policy "audit_admin_read" on public.audit_log
+  for select to authenticated
+  using (
+    exists (
+      select 1 from public.user_role_assignments
+      where user_id = auth.uid()
+        and role in ('admin', 'support')
+        and tenant_id = public.audit_log.tenant_id
+    )
+  );
+
+-- No INSERT / UPDATE / DELETE policy for authenticated → append-only via service_role
+
+-- -------------------------------------------------------------------------
+-- webhook_events: admin-only read; service_role write
+-- -------------------------------------------------------------------------
+create policy "webhook_admin_read" on public.webhook_events
+  for select to authenticated
+  using (
+    exists (
+      select 1 from public.user_role_assignments
+      where user_id = auth.uid()
+        and role in ('admin')
+    )
+  );
+
+-- -------------------------------------------------------------------------
+-- Cross-tenant verification
+-- -------------------------------------------------------------------------
+-- After deploying these policies, run the 7-step protocol from
+-- docs/runtime/cross-tenant-rls-verification.md to confirm isolation.
+-- Expected output: every cross-tenant probe (anon + wrong-tenant auth +
+-- service_role scope) returns 0 rows OR permission-denied.
