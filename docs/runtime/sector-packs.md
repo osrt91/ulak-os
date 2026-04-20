@@ -286,6 +286,34 @@ Focus areas:
 
 Evidence: trend-platform.com (5-app workspace with admin + landing + master + mobile + web).
 
+### `self-hosted-supabase-orchestration` (SP-12)
+Focus areas:
+- 9-service docker-compose topology: postgres + gotrue (auth) + postgrest (rest) + realtime + storage + postgres-meta + kong (gateway) + studio + reverse-proxy
+- Per-service healthcheck with `depends_on: { condition: service_healthy }` — startup order is dependency-gated, not timing-based
+- Named volumes for durable data: `supabase-db:/var/lib/postgresql/data` + `supabase-storage:/var/lib/storage`
+- Kong routes `/auth/v1/*`, `/rest/v1/*`, `/realtime/v1/*`, `/storage/v1/*` — single public entry point per tenant
+- JWT secret uniform across auth + gateway (or separate + rotation-synced)
+- Service role key generation at provision time; stored in operator secret store (NOT committed, NOT in repo)
+- Cross-tenant RLS verification required (see `docs/runtime/cross-tenant-rls-verification.md`)
+- Backup discipline required (AP-17): `pg_dump` + storage rsync; documented RTO/RPO
+- Monitoring: Postgres connection pool + storage disk usage alerts
+
+Evidence: plastics-supplier.com + growth-platform.com + telegram.bot (DIY Supabase compose topology replicated across 3 projects).
+
+### `multi-project-traefik-edge` (SP-13)
+Focus areas:
+- Single Traefik instance at edge of a VPS hosting N projects
+- Each project exposes Docker labels (`traefik.http.routers.<project>.rule=Host(`<project>.<domain>`)`, `traefik.http.routers.<project>.entrypoints=websecure`)
+- Shared external Docker network (e.g. `edge`) bridges project compose files
+- Let's Encrypt certResolver with DNS-01 or HTTP-01 challenge
+- TLS terminated at Traefik; app containers bound to `127.0.0.1` internally (AP-05 kinship)
+- Rate limit + basic auth middleware composable per route
+- Access logs aggregated centrally (not per-app); CrowdSec or fail2ban integration
+- Cross-project network = cross-project blast radius — one compromised app can reach siblings. Compensating controls: network policies, per-app service accounts, internal TLS
+- Rotation: Traefik Let's Encrypt renewal automated; staging cert endpoint for dry runs
+
+Evidence: plastics-supplier.com + growth-platform.com + trend-platform.com + community-platform.com (single VPS shared by 4+ projects via Traefik).
+
 ## Activation rules
 
 A sector pack loads only when **ALL** of these are true:

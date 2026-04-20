@@ -60,6 +60,19 @@ The CI workflow step that triggers deploy MUST:
 - **No health check post-deploy** — fake rollback (AP-12): deploy "succeeds" but app is broken
 - **No flock on deploy script** — concurrent webhook invocations corrupt state
 - **Deploy token rotated without CI update** — webhook returns 401, CI is green (see above) because response not checked
+- **AP-18 Static HMAC over empty body** — `openssl dgst -sha256 -hmac $SECRET` computed over `""` or `"{}"` produces a constant signature; anyone who observes it replays forever. Fix: sign the full body including commit + timestamp + nonce; verify timestamp within 5-minute replay window.
+
+### 6. Post-deploy health-probe contract (v2.2.1 addition)
+
+The webhook endpoint MUST run a post-deploy health probe that is stricter than "process started":
+
+1. **`/health` endpoint returns 200** — the application process is up and accepting HTTP
+2. **Sample read endpoint returns expected shape** — e.g., `/api/public/status` returns valid JSON with `{ ok: true, version: <deployed-sha> }`; this proves the NEW code is running (not the old one on a still-warm port)
+3. **Sample write path (if applicable)** — dry-run write to a canary table; confirms DB connection + migrations landed
+4. **Dependency liveness** — probes Redis / external APIs the app depends on
+5. **If ANY probe fails** — automatic rollback to previous image/symlink; webhook response `state: rolled-back`
+
+The time between "deploy script says done" and "health probe passes" is the **silent window**. A deploy script that skips health probing guarantees the silent window is infinite when something breaks. Fake rollback (AP-12) is the anti-pattern this section closes.
 
 ## Worked example — growth-platform.com
 

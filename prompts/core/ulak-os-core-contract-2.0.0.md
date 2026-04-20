@@ -50,6 +50,8 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 @docs/governance/rule-pack-governance.md
 @docs/governance/settings-permissions-governance.md
 @docs/governance/lock-file-hygiene.md
+@docs/governance/secrets-rotation-policy.md
+@docs/governance/observability-baseline.md
 
 ### Imports are Layer 1 (public runtime surface)
 Bu dosyaların tümü `docs/governance/surface-split.md` tanımındaki **public runtime surface**'e aittir. Historical/version-diff notları bu listeye girmez; onlar hidden core'a aittir.
