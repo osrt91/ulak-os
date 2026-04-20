@@ -1,5 +1,41 @@
 # Changelog
 
+## [2.3.0] — 2026-04-20 — Plugin packaging + full scaffolder templates + ADRs + thin agent polish
+
+### Context
+
+v2.2.3 completed 15 core scaffolder templates. v2.3.0 finishes the v1.0-showcase-readiness pass: plugin packaging manifest + 12 more scaffolder templates (tsconfig, next.config, tailwind, layout, landing, supabase clients, tests, settings) + 5 ADRs for v2.x architectural decisions + 3 expanded thin agents.
+
+### New
+
+- **`.claude-plugin/plugin.json`** — Claude Code marketplace manifest (capabilities, flagship commands + skills, vendor compat)
+- **`.claude-plugin/README.md`** — 4 install methods (clone, plugin install, submodule, via scaffolder) + verify + uninstall
+- **12 scaffolder templates** in `templates/saas-starter/` — tsconfig.json, next.config.ts, tailwind.config.ts, lib/supabase/{client,server,admin}.ts, app/{layout,globals.css,(public)/page}.tsx, tests/unit/lib.test.ts, tests/e2e/landing.spec.ts, .claude/settings.json
+- **5 ADRs** in `docs/adr/` — ADR-001 rule packs 7th unit type · ADR-002 Phase 5 terminal · ADR-003 product vs runtime surface split · ADR-004 pattern import ledger · ADR-005 SaaS scaffolder
+- **`docs/adr/README.md`** — ADR index + format + write-when guide
+- **3 thin agent expansions** — `cartographer` (31L→90L), `architecture-lead` (31L→95L), `infra-release-sre` (31L→110L) — each with focus areas, evidence rules, finding-schema YAML, hard rules
+
+### Pack counts delta (v2.2.3 → v2.3.0)
+
+- Scaffolder templates: 15 → 27
+- ADRs: 1 → 6
+- Thin agents expanded: 0 → 3 (15 remaining deferred)
+- Plugin manifest: new `.claude-plugin/`
+
+### Deferred to v2.3.x / v3.0
+
+- 15 remaining thin agents
+- Showcase UI / GitHub Pages landing
+- Firecrawl MCP integration
+- LightRAG memory upgrade
+- Alternative stack templates (Remix, SvelteKit, FastAPI)
+
+### Package metadata
+
+- `package.json` version: 2.2.3 → 2.3.0
+- `prompts/pack.json` version: 2.2.3 → 2.3.0
+- `.claude-plugin/plugin.json` version: 2.3.0 (new)
+
 ## [2.2.3] — 2026-04-20 — Scaffolder templates complete + awesome-design-md integration
 
 ### Context
