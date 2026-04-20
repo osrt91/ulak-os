@@ -110,7 +110,7 @@ Fallback paths without smoke checks are incomplete.
 
 Cron-poll fallback existence is a T1 observation (file exists, executable, has flock). Its effectiveness under a real primary outage is T2 (inferred — often not truly tested). Projects should run a quarterly "fallback drill" where the primary CI is artificially disabled and the fallback is exercised.
 
-Derived from scanner-project.com `infrastructure/deploy-poll.sh:1-69` (flock-guarded, 2-minute polling, rebuild + smoke-check).
+Derived from a security scanner project `infrastructure/deploy-poll.sh:1-69` (flock-guarded, 2-minute polling, rebuild + smoke-check).
 
 ## Integration
 

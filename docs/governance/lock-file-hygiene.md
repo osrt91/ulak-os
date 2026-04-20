@@ -4,7 +4,7 @@
 
 Claude Code sessions write transient lock files to signal "I'm the active session holding this resource." If a session crashes, is force-killed, or the machine reboots, the lock file persists as a zombie — future sessions see it, assume the resource is held, and refuse to proceed.
 
-The scanner-project.com self-audit revealed `.claude/scheduled_tasks.lock` containing a raw `pid` with no TTL, no liveness check, no owner session tag. A machine reboot would leave that lock in place; a new session would then either deadlock or clobber it. Ulak OS's own repo had the same shape.
+The a security scanner project self-audit revealed `.claude/scheduled_tasks.lock` containing a raw `pid` with no TTL, no liveness check, no owner session tag. A machine reboot would leave that lock in place; a new session would then either deadlock or clobber it. Ulak OS's own repo had the same shape.
 
 This doc is the doctrine to prevent zombie locks.
 
@@ -90,4 +90,4 @@ Standard `.gitignore` block (covered by `docs/governance/settings-permissions-go
 
 ## Canonical footer
 
-This file is authoritative as of Ulak OS **v2.1.3**. The motivating evidence is scanner-project.com's `scheduled_tasks.lock` containing pid 18440 from 2026-04-18 with no TTL (FIND-INF-* category in the v2.1.3 audit).
+This file is authoritative as of Ulak OS **v2.1.3**. The motivating evidence is a security scanner project's `scheduled_tasks.lock` containing pid 18440 from 2026-04-18 with no TTL (FIND-INF-* category in the v2.1.3 audit).

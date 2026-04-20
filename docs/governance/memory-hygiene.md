@@ -102,9 +102,9 @@ Drift is a form of evidence degradation. A T2 fact (claimed in CLAUDE.md) can dr
 
 ### Drift patterns observed
 
-From the scanner-project.com session (2026-04-11):
+From the a security scanner project session (2026-04-11):
 
-- **CLAUDE.md** claimed `scanner-project.py` was **3318 lines**. Reality: 73 lines (a shim file after a refactor). 45x drift.
+- **CLAUDE.md** claimed `the security scanner project.py` was **3318 lines**. Reality: 73 lines (a shim file after a refactor). 45x drift.
 - **CLAUDE.md** claimed **17 plugins**. Reality: 40. 2.4x drift.
 - **CLAUDE.md** claimed **43 Docker services**. Reality: 32. 25% drift downward.
 
@@ -161,7 +161,7 @@ Drift detection is cheap (one grep + one filesystem query per claim) and prevent
 
 ## Worktree cleanup policy (G-EXT-02)
 
-Claude Code agent sessions can create isolated git worktrees under `.claude/worktrees/agent-<hex>/` for parallel work. These directories persist after the agent session ends. Without a cleanup policy, worktrees accumulate — scanner-project.com's audit found **12 stale worktree directories (~19 days old)** with no policy. Each worktree holds a full checkout, often gigabytes.
+Claude Code agent sessions can create isolated git worktrees under `.claude/worktrees/agent-<hex>/` for parallel work. These directories persist after the agent session ends. Without a cleanup policy, worktrees accumulate — a security scanner project's audit found **12 stale worktree directories (~19 days old)** with no policy. Each worktree holds a full checkout, often gigabytes.
 
 ### Lifecycle states
 

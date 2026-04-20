@@ -14,11 +14,11 @@ Safely decompose a single-file monolith into a multi-module package without a bi
 
 ## When to use
 
-Invoke when `inventory.md` or an anti-patterns match flags a "God module (>1000 LOC)" finding. Representative example: scanner-project.com's `scanner-project.py` (146KB, 15+ responsibilities) decomposed to a 73-line shim backed by `app/main.py` + `app/routers/*.py`.
+Invoke when `inventory.md` or an anti-patterns match flags a "God module (>1000 LOC)" finding. Representative example: a security scanner project's `the security scanner project.py` (146KB, 15+ responsibilities) decomposed to a 73-line shim backed by `app/main.py` + `app/routers/*.py`.
 
 ## Inputs
 
-- `source_file` — absolute path to the monolith (e.g., `C:/Users/osrt91/desktop/proje/<project>/scanner-project.py`)
+- `source_file` — absolute path to the monolith (e.g., `C:/Users/osrt91/desktop/proje/<project>/the security scanner project.py`)
 - `target_package` — destination package name (e.g., `app`)
 - `extraction_plan` — YAML document listing phases A/B/C/D with:
   - `phase_id` — A / B / C / D

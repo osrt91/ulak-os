@@ -156,4 +156,4 @@ rls_verification:
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.1**. Evidence base: trend-platform.com + erbilpetshop.com + plastics-supplier.com cross-project scan showing shared Supabase instance with schema-per-tenant isolation but no runtime verification of isolation.
+Authoritative as of Ulak OS **v2.2.1**. Evidence base: a monorepo e-commerce project + an e-commerce project + a B2B multi-locale SaaS project cross-project scan showing shared Supabase instance with schema-per-tenant isolation but no runtime verification of isolation.

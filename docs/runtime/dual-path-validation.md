@@ -4,7 +4,7 @@
 
 The director's Phase 3 produces `did-you-know.md` — the surprise layer of non-obvious findings. By design, Phase 3 is *one subagent's* interpretation of the evidence register. That produces 15-25 good findings on a typical run, but it has a blind spot: **what would a second independent reviewer catch that this specific subagent missed?**
 
-On the oguzhansert.dev session (2026-04-11), the operator improvised a second path: while the director ran Phase 3, the operator was independently preparing their own non-obvious findings list (stale CLAUDE.md claims, cartographer-flagged inconsistencies). The two lists were then merged. The overlap was **T1 consensus**; the divergence was **new signal**.
+On the a portfolio + CMS project session (2026-04-11), the operator improvised a second path: while the director ran Phase 3, the operator was independently preparing their own non-obvious findings list (stale CLAUDE.md claims, cartographer-flagged inconsistencies). The two lists were then merged. The overlap was **T1 consensus**; the divergence was **new signal**.
 
 Dual-path validation formalizes this pattern as an optional Phase 3 enhancement.
 
@@ -125,4 +125,4 @@ A `/director --dual-path` flag (or a `/dual-path-validate` standalone command) c
 
 ## Origin
 
-This pattern was observed in the oguzhansert.dev 2026-04-11 session. While the director ran Phase 3, the operator was independently preparing a non-obvious findings list. The improvised merge caught 2 findings the director had missed (stale CLAUDE.md claim, cartographer-flagged inconsistencies). Neither path alone would have surfaced both. Dual-path is the formal version of that improvisation.
+This pattern was observed in the a portfolio + CMS project 2026-04-11 session. While the director ran Phase 3, the operator was independently preparing a non-obvious findings list. The improvised merge caught 2 findings the director had missed (stale CLAUDE.md claim, cartographer-flagged inconsistencies). Neither path alone would have surfaced both. Dual-path is the formal version of that improvisation.

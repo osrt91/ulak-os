@@ -4,7 +4,7 @@
 
 ### Context
 
-After v2.2.0 shipped, a user-directed second-pass deep-infrastructure scan ran across plastics-supplier.com, growth-platform.com, trend-platform.com, erbilpetshop.com, oguzhansert.dev, telegram.bot, recipe-platform.xyz. Three parallel Explore agents, with explicit "no real credentials in output" discipline, surfaced 10 infrastructure patterns that v2.2.0 did NOT cover — most notably the database-backup gap, monorepo root-env leak, static HMAC deploy webhook, cross-tenant RLS verification absence, and baseline observability gap across the entire portfolio.
+After v2.2.0 shipped, a user-directed second-pass deep-infrastructure scan ran across a B2B multi-locale SaaS project, an EdTech AI platform project, a monorepo e-commerce project, an e-commerce project, a portfolio + CMS project, a Telegram commerce bot project, a content gamification platform project. Three parallel Explore agents, with explicit "no real credentials in output" discipline, surfaced 10 infrastructure patterns that v2.2.0 did NOT cover — most notably the database-backup gap, monorepo root-env leak, static HMAC deploy webhook, cross-tenant RLS verification absence, and baseline observability gap across the entire portfolio.
 
 ### Security fix (backported to tag HEAD)
 
@@ -12,19 +12,19 @@ After v2.2.0 shipped, a user-directed second-pass deep-infrastructure scan ran a
 
 ### New anti-patterns (3, AP-17..AP-19)
 
-- **AP-17 No database backup / disaster recovery plan** — Docker volumes alone are not a backup; no off-host dump, no retention, no tested restore. Cross-project finding in kismet + growth-platform.
-- **AP-18 Static HMAC over empty body in deploy webhook** — `openssl dgst -sha256 -hmac $SECRET` over `""`/`"{}"` produces constant signature; infinite replay. Cross-project finding in trend-platform + oguzhansert.
-- **AP-19 Root `.env.local` in monorepo** — Turbo/Next.js/Vite inheritance means root `.env.local` compromise leaks across every app. Finding from trend-platform.
+- **AP-17 No database backup / disaster recovery plan** — Docker volumes alone are not a backup; no off-host dump, no retention, no tested restore. Cross-project finding in the B2B multi-locale SaaS project + the EdTech AI platform project.
+- **AP-18 Static HMAC over empty body in deploy webhook** — `openssl dgst -sha256 -hmac $SECRET` over `""`/`"{}"` produces constant signature; infinite replay. Cross-project finding in the monorepo e-commerce project + the portfolio + CMS project.
+- **AP-19 Root `.env.local` in monorepo** — Turbo/Next.js/Vite inheritance means root `.env.local` compromise leaks across every app. Finding from the monorepo e-commerce project.
 
 ### New sector packs (2, SP-12..SP-13)
 
-- **SP-12 `self-hosted-supabase-orchestration`** — 9-service compose (postgres + gotrue + postgrest + realtime + storage + postgres-meta + kong + studio + reverse-proxy), dependency-gated startup, cross-tenant RLS verification required, backup discipline required. Evidence: kismet + dipten + telegram.bot.
+- **SP-12 `self-hosted-supabase-orchestration`** — 9-service compose (postgres + gotrue + postgrest + realtime + storage + postgres-meta + kong + studio + reverse-proxy), dependency-gated startup, cross-tenant RLS verification required, backup discipline required. Evidence: the B2B multi-locale SaaS project + the EdTech AI platform project + a Telegram commerce bot project.
 - **SP-13 `multi-project-traefik-edge`** — Single Traefik fronting N project compose files, shared `edge` network, Let's Encrypt automation, 127.0.0.1 app binding, TLS-terminated-at-edge, cross-project blast radius control. Evidence: 4+ projects on single VPS.
 
 ### New runtime rules (2)
 
-- **`docs/runtime/cross-tenant-rls-verification.md`** — 7-step protocol for verifying Row-Level Security actually isolates tenants sharing a Postgres instance. Includes anon probe, authenticated-cross-tenant probe, service-role escape test, write-probe, automated runner spec. Closes a gap shared by trend-platform + erbilpetshop + kismet + dipten.
-- **`docs/runtime/transactional-fsm-payment.md`** — Finite state machine for multi-rail payment (Stripe + Iyzico + Telegram Stars + crypto) with explicit timeout + rollback at every transition, `external_id` idempotency, append-only transition audit log. Evidence: telegram.bot TON handler (reserve → connect → send → confirm + timeout rollback).
+- **`docs/runtime/cross-tenant-rls-verification.md`** — 7-step protocol for verifying Row-Level Security actually isolates tenants sharing a Postgres instance. Includes anon probe, authenticated-cross-tenant probe, service-role escape test, write-probe, automated runner spec. Closes a gap shared by the monorepo e-commerce project + the e-commerce project + the B2B multi-locale SaaS project + the EdTech AI platform project.
+- **`docs/runtime/transactional-fsm-payment.md`** — Finite state machine for multi-rail payment (Stripe + Iyzico + Telegram Stars + crypto) with explicit timeout + rollback at every transition, `external_id` idempotency, append-only transition audit log. Evidence: a Telegram commerce bot project TON handler (reserve → connect → send → confirm + timeout rollback).
 
 ### New governance docs (2)
 
@@ -62,27 +62,27 @@ After v2.2.0 shipped, a user-directed second-pass deep-infrastructure scan ran a
 ### Out-of-band flags still live
 
 - **Operator action required**: rotate Resend API key (full key was in v2.1.4 tag `.gitleaks.toml` between tag time and `d1d05d6` HEAD cleanup)
-- **game-platform.com audit finding**: `eni_terminal.py` contains prompt-injection payload (identified by Explore agent 3 during v2.2.1 scan). No patterns extracted from game-platform per operator direction. Separate investigation recommended if source is unknown.
+- **an excluded project audit finding**: `eni_terminal.py` contains prompt-injection payload (identified by Explore agent 3 during v2.2.1 scan). No patterns extracted from game-platform per operator direction. Separate investigation recommended if source is unknown.
 
 ## [2.2.0] — 2026-04-20 — Cross-project pattern absorption (Eksen A)
 
 ### Context
 
-v2.1.3 absorbed 39 patterns from scanner-project.com. This release does a second absorption pass across 10+ other projects in the user's portfolio (growth-platform.com, erbilpetshop.com, game-platform.com, plastics-supplier.com, maliyet.app, oguzhansert.dev, oshiaz.com, recipe-platform.xyz, telegram.bot, trend-platform.com, community-platform.com). 3 parallel Explore agents surfaced 18 cross-project-reusable patterns; this release lands them.
+v2.1.3 absorbed 39 patterns from a security scanner project. This release does a second absorption pass across 10+ other projects in the user's portfolio (an EdTech AI platform project, an e-commerce project, an excluded project, a B2B multi-locale SaaS project, a stub project, a portfolio + CMS project, a stub project, a content gamification platform project, a Telegram commerce bot project, a monorepo e-commerce project, a community/event platform project). 3 parallel Explore agents surfaced 18 cross-project-reusable patterns; this release lands them.
 
 Scope is **Eksen A only** of the v2.2 plan. Eksen B (Wave 5 polish, 18 items) and Eksen C (ulak-design-intelligence-mcp, mode-loading conditional loader, eval warn→blocking) are deferred to subsequent patch releases.
 
 ### New sector packs (5)
 
-- **SP-07 `admin-cms-hardening`** — Single auth helper reused at every admin entry point (AP-11 prevention); DB-sourced role with TTL cache (not `user_metadata`); CSRF on all mutations including multipart; rate limit on CRUD; per-mutation audit log; `server-only` guards on service-role clients (AP-13 prevention); upload magic-byte sniffing; Origin allowlist; dead-CRUD detection (AP-14). Evidence: oguzhansert.dev 13-specialist consensus + telegram.bot + community-platform.com.
+- **SP-07 `admin-cms-hardening`** — Single auth helper reused at every admin entry point (AP-11 prevention); DB-sourced role with TTL cache (not `user_metadata`); CSRF on all mutations including multipart; rate limit on CRUD; per-mutation audit log; `server-only` guards on service-role clients (AP-13 prevention); upload magic-byte sniffing; Origin allowlist; dead-CRUD detection (AP-14). Evidence: a portfolio + CMS project 13-specialist consensus + a Telegram commerce bot project + a community/event platform project.
 
-- **SP-08 `ai-relay-cost-control`** — Input length cap, explicit `maxOutputTokens`, per-user + per-session rate limit, streaming-first (SSE/ReadableStream), injection-resistant prompt construction, cost observability (token count + model + user_id to metrics), prompt-log privacy-scoped with TTL, (prompt, context) caching for deterministic queries, AI provider allowlist enforcement, graceful degradation on provider outage. Evidence: oguzhansert.dev + growth-platform.com + recipe-platform.xyz.
+- **SP-08 `ai-relay-cost-control`** — Input length cap, explicit `maxOutputTokens`, per-user + per-session rate limit, streaming-first (SSE/ReadableStream), injection-resistant prompt construction, cost observability (token count + model + user_id to metrics), prompt-log privacy-scoped with TTL, (prompt, context) caching for deterministic queries, AI provider allowlist enforcement, graceful degradation on provider outage. Evidence: a portfolio + CMS project + an EdTech AI platform project + a content gamification platform project.
 
-- **SP-09 `telegram-bot`** — aiogram FSM with StatesGroup per domain; MemoryStorage vs RedisStorage decision (ephemeral OK if truly discardable, durable must DB); callback-query-driven navigation with stateless callback data; webhook for prod / long-polling for dev; i18n per-user-language in DB + `t()` per-message; Telegram Stars / TON Connect / Stripe / crypto payments; admin commands namespaced; never trust `message.from_user.id` alone for authz. Evidence: telegram.bot (aiogram 3.15 + Supabase + TON + multi-language catalog).
+- **SP-09 `telegram-bot`** — aiogram FSM with StatesGroup per domain; MemoryStorage vs RedisStorage decision (ephemeral OK if truly discardable, durable must DB); callback-query-driven navigation with stateless callback data; webhook for prod / long-polling for dev; i18n per-user-language in DB + `t()` per-message; Telegram Stars / TON Connect / Stripe / crypto payments; admin commands namespaced; never trust `message.from_user.id` alone for authz. Evidence: a Telegram commerce bot project (aiogram 3.15 + Supabase + TON + multi-language catalog).
 
-- **SP-10 `member-gated-community-platform`** — Member-gated routes (public / member / admin); event model (event → RSVP → attendance → post-event artifacts); calendar + map discovery (see `docs/runtime/interactive-map-privacy.md`); gallery upload with moderation queue; notification subscriptions per member per type; club-branded email (Resend/SES/Postmark) with respected unsubscribe; role hierarchy audit-logged; RLS enforced at DB level; single-tenant by default. Evidence: community-platform.com.
+- **SP-10 `member-gated-community-platform`** — Member-gated routes (public / member / admin); event model (event → RSVP → attendance → post-event artifacts); calendar + map discovery (see `docs/runtime/interactive-map-privacy.md`); gallery upload with moderation queue; notification subscriptions per member per type; club-branded email (Resend/SES/Postmark) with respected unsubscribe; role hierarchy audit-logged; RLS enforced at DB level; single-tenant by default. Evidence: a community/event platform project.
 
-- **SP-11 `multi-app-nextjs-expo-monorepo`** — apps/admin, apps/web, apps/master, apps/mobile, apps/landing layout; pnpm/Turborepo/Nx workspace; shared packages for ui/schemas/lib; per-app independent deploy; shared auth session across apps via shared apex domain; apps communicate via shared DB schema or event bus (never inter-app HTTP). Evidence: trend-platform.com (5-app workspace).
+- **SP-11 `multi-app-nextjs-expo-monorepo`** — apps/admin, apps/web, apps/master, apps/mobile, apps/landing layout; pnpm/Turborepo/Nx workspace; shared packages for ui/schemas/lib; per-app independent deploy; shared auth session across apps via shared apex domain; apps communicate via shared DB schema or event bus (never inter-app HTTP). Evidence: a monorepo e-commerce project (5-app workspace).
 
 ### New rule packs (4) — `docs/runtime/rule-packs/`
 
@@ -96,19 +96,19 @@ Scope is **Eksen A only** of the v2.2 plan. Eksen B (Wave 5 polish, 18 items) an
 
 ### New runtime rules (2)
 
-- **`docs/runtime/webhook-ci-deploy-pattern.md`** — GitHub Actions → deploy webhook discipline: 202 async response with `X-Deploy-Id`; flock-guarded idempotent deploy script; post-deploy `/health` smoke check; CI polls `/deploy-status/<id>` until complete or timeout; CI fails on `failed`/`rolled-back`; 90-day log retention. Evidence: growth-platform.com `.github/workflows/deploy.yml` + scanner-project/community-platform deploys.
+- **`docs/runtime/webhook-ci-deploy-pattern.md`** — GitHub Actions → deploy webhook discipline: 202 async response with `X-Deploy-Id`; flock-guarded idempotent deploy script; post-deploy `/health` smoke check; CI polls `/deploy-status/<id>` until complete or timeout; CI fails on `failed`/`rolled-back`; 90-day log retention. Evidence: an EdTech AI platform project `.github/workflows/deploy.yml` + the security scanner project/the community/event platform project deploys.
 
-- **`docs/runtime/interactive-map-privacy.md`** — No unsolicited `navigator.geolocation` on page load (explicit consent button only); marker clustering at ≥20 points; city-level zoom default + min-zoom to prevent world-zoom; tile provider declared in privacy policy; coordinates stored as PostGIS `geography`; event coordinates deleted N days after event; keyboard-navigable + non-map fallback for screen readers. Evidence: community-platform.com Leaflet event map.
+- **`docs/runtime/interactive-map-privacy.md`** — No unsolicited `navigator.geolocation` on page load (explicit consent button only); marker clustering at ≥20 points; city-level zoom default + min-zoom to prevent world-zoom; tile provider declared in privacy policy; coordinates stored as PostGIS `geography`; event coordinates deleted N days after event; keyboard-navigable + non-map fallback for screen readers. Evidence: a community/event platform project Leaflet event map.
 
 ### New anti-patterns (7, AP-10..AP-16) — `docs/runtime/anti-patterns.md`
 
-- **AP-10 Multi-file schema drift** — same entity in SQL + ORM + Zod + TS type with divergent fields (oguzhansert.dev DIR-003)
-- **AP-11 Multi-layer auth bypass** — middleware + page + lib + route all independently flawed; compromised cookie walks through (oguzhansert.dev DIR-001)
-- **AP-12 Fake rollback deploy** — no pg_dump, no health check, exit code swallowed, CI green on broken state (oguzhansert.dev DIR-006)
-- **AP-13 `server-only` installed but never imported** — latent service-role leak (oguzhansert.dev)
-- **AP-14 Dead admin CRUD** — admin writes to tables nothing reads; silent contract lie to admin users (oguzhansert.dev DIR-008)
-- **AP-15 Drag-drop builder without concurrent-edit conflict resolution** — last-write-wins silent loss (trend-platform.com homepage_sections)
-- **AP-16 `.env.local` committed to git** — live evidence from community-platform.com 2026-04-20; working tree + history both exposure surfaces
+- **AP-10 Multi-file schema drift** — same entity in SQL + ORM + Zod + TS type with divergent fields (a portfolio + CMS project DIR-003)
+- **AP-11 Multi-layer auth bypass** — middleware + page + lib + route all independently flawed; compromised cookie walks through (a portfolio + CMS project DIR-001)
+- **AP-12 Fake rollback deploy** — no pg_dump, no health check, exit code swallowed, CI green on broken state (a portfolio + CMS project DIR-006)
+- **AP-13 `server-only` installed but never imported** — latent service-role leak (a portfolio + CMS project)
+- **AP-14 Dead admin CRUD** — admin writes to tables nothing reads; silent contract lie to admin users (a portfolio + CMS project DIR-008)
+- **AP-15 Drag-drop builder without concurrent-edit conflict resolution** — last-write-wins silent loss (a monorepo e-commerce project homepage_sections)
+- **AP-16 `.env.local` committed to git** — live evidence from a community/event platform project 2026-04-20; working tree + history both exposure surfaces
 
 AP-03 "non-blocking CI gate" updated with **Resolved in Ulak OS v2.1.4** note — Ulak OS's own CI no longer ships the anti-pattern it teaches consumers to avoid.
 
@@ -116,7 +116,7 @@ AP-03 "non-blocking CI gate" updated with **Resolved in Ulak OS v2.1.4** note �
 
 - **`docs/runtime/rule-packs/api-security.md`** — transactional messaging section: multi-SMS provider abstraction with WhatsApp fallback, email-header spoofing prevention (SPF + DKIM + DMARC), unsubscribe mandate, bounce handling, per-recipient rate limit.
 
-- **`docs/governance/pattern-import-ledger.md`** — **IL-001 entry live**: Trend-Platform → scanner-project.com CMS + blog + site-settings + integration-definitions imports. v2.1.3 R4 residual-risk **closed**: T3 memory claim upgraded to T1 via Explore agent verification on 2026-04-20.
+- **`docs/governance/pattern-import-ledger.md`** — **IL-001 entry live**: the monorepo e-commerce project → a security scanner project CMS + blog + site-settings + integration-definitions imports. v2.1.3 R4 residual-risk **closed**: T3 memory claim upgraded to T1 via Explore agent verification on 2026-04-20.
 
 - **`docs/runtime/active-variable-contract.md`** — new fields: `OUTPUT_LANGUAGE` (FIND-LOC-01), `RULE_PACKS_LOADED`, `RULE_PACKS_PROJECT_OVERRIDES`, `MCP_AUTHORIZED_TOOLS` (now director agent v2.1.3 AG-EXT-02 citations are real).
 
@@ -130,7 +130,7 @@ AP-03 "non-blocking CI gate" updated with **Resolved in Ulak OS v2.1.4** note �
 
 ### Residual risk state
 
-- **R4 (Trend-Platform pattern-import T3 claim)** — **CLOSED** (T1 verified, IL-001 entry live)
+- **R4 (the monorepo e-commerce project pattern-import T3 claim)** — **CLOSED** (T1 verified, IL-001 entry live)
 - **R1, R3** (CLI src/ + tests/ deep-scanned) — still open, needs v2.3+
 - **R6** (mode-loading deferred) — moved to v2.3 per deferred plan
 
@@ -141,7 +141,7 @@ AP-03 "non-blocking CI gate" updated with **Resolved in Ulak OS v2.1.4** note �
 
 ### Out-of-band (not in this release)
 
-- **community-platform.com .env.local key rotation** — flagged in v2.2.0 planning phase as URGENT. Live Supabase service-role key + Cloudflare API token + Resend key currently in working tree. Operator action required separately from Ulak OS repo: rotate all keys, verify gitignore, optionally purge history.
+- **a community/event platform project .env.local key rotation** — flagged in v2.2.0 planning phase as URGENT. Live Supabase service-role key + Cloudflare API token + Resend key currently in working tree. Operator action required separately from Ulak OS repo: rotate all keys, verify gitignore, optionally purge history.
 
 ### Package metadata
 
@@ -206,11 +206,11 @@ Ulak OS v2.1.3 shipped anti-pattern **AP-03 "non-blocking CI gate"** in its own 
 - W6.1 ulak-design-intelligence-mcp (scaffolding)
 - W6.4 mode-loading conditional loader
 
-## [2.1.3] — 2026-04-18 — scanner-project-pattern absorption release
+## [2.1.3] — 2026-04-18 — the security scanner project-pattern absorption release
 
 ### Context
 
-This release integrates 39 patterns extracted from scanner-project.com (a production security/compliance scanner with multi-tenant Supabase + Iyzico payments + reseller surface) into Ulak OS runtime and governance docs. A self-audit via `/director komple` produced 85 findings and resolved 6 open questions. Waves 1–4 of the execution roadmap landed in a single session on 2026-04-18.
+This release integrates 39 patterns extracted from a security scanner project (a production security/compliance scanner with multi-tenant Supabase + Iyzico payments + reseller surface) into Ulak OS runtime and governance docs. A self-audit via `/director komple` produced 85 findings and resolved 6 open questions. Waves 1–4 of the execution roadmap landed in a single session on 2026-04-18.
 
 ### New anti-patterns (9) — `docs/runtime/anti-patterns.md`
 
@@ -286,7 +286,7 @@ This release integrates 39 patterns extracted from scanner-project.com (a produc
 ### Agent enhancements (3)
 
 - **`.claude/agents/autonomous-program-director.md`** — rule-pack loader in Phase 0, output_language propagation, live-probe flag propagation, lock-file liveness sweep, worktree health check
-- **`.claude/agents/design-system-architect.md`** — Master + per-page override output contract (adopted from scanner-project ui-ux-pro-max pattern)
+- **`.claude/agents/design-system-architect.md`** — Master + per-page override output contract (adopted from the security scanner project ui-ux-pro-max pattern)
 - **`.claude/agents/security-hardening-lead.md`** — secrets rotation + history purge runbook, gitleaks baseline setup, pre-commit hook installation, CI hardening cross-link
 
 ### New skills (3)
@@ -326,20 +326,20 @@ Added `phases_run` frontmatter + skill cross-references to:
 
 - **R1** CLI source (`src/`) not deep-scanned
 - **R3** `tests/` not deep-scanned
-- **R4** Pattern-import ledger Trend-Platform claims T3-memory; verify in v2.2
+- **R4** Pattern-import ledger the monorepo e-commerce project claims T3-memory; verify in v2.2
 - **R6** Mode-loading mechanism deferred to v2.2
 - **W4.18** Log-rotation hook, dependabot, gitleaks CI job, eval runner — Wave 5/6 items carried forward
 
 ### Audit trail
 
-- `reports/current/scanner-project-pattern-extraction.md` — Phase A extraction from scanner-project.com (232 lines)
+- `reports/current/the security scanner project-pattern-extraction.md` — Phase A extraction from a security scanner project (232 lines)
 - `reports/current/{runtime-manifest, assumptions, intake, inventory, evidence-register, deep-scan-report, did-you-know, analysis-findings, target-state, execution-roadmap, validation-plan, pack-gap-register, manager-verdict, research-notes}.md` — Phase 0–5 director self-audit artefacts (3,392 lines)
 
 ## [Unreleased] — v2.1.2 docs prep continued — FP-01 artefact write authorization fix
 
 ### Fix for FP-01 — Subagent Write tool blocked mid-phase
 
-The oguzhansert.dev Sprint 0+1 session (2026-04-11) identified FP-01 as the top priority harness bug: 8 of 13 Phase 2 specialists and 1 of 9 Phase 4 artefacts could not write their `.md` deliverables to disk. They returned content inline and the orchestrator had to re-persist them. The root cause is **not a hook, skill, or settings rule** — it is the default Claude Code system prompt rule against creating planning/decision/analysis documents. The fix must be at the **prompt level**, not the tool level.
+The a portfolio + CMS project Sprint 0+1 session (2026-04-11) identified FP-01 as the top priority harness bug: 8 of 13 Phase 2 specialists and 1 of 9 Phase 4 artefacts could not write their `.md` deliverables to disk. They returned content inline and the orchestrator had to re-persist them. The root cause is **not a hook, skill, or settings rule** — it is the default Claude Code system prompt rule against creating planning/decision/analysis documents. The fix must be at the **prompt level**, not the tool level.
 
 #### New governance doc
 
@@ -374,9 +374,9 @@ Files updated:
 
 A Claude Code hook can block or allow tool calls, but it cannot FORCE a tool call the model decided not to make. The default rule causes the model to decline Write and return inline instead; the Write call is never attempted, so no hook fires. The fix has to be at the prompt level — telling the model that the rule does not apply in this context — not at the tool level.
 
-### Patterns from the scanner-project.com session (2026-04-11)
+### Patterns from the a security scanner project session (2026-04-11)
 
-A second session report came in from scanner-project.com — a security/compliance scanner with 78 HTTP routes, 32 Docker services, 198 pytest + 57 vitest, 4-persona audit producing 92 findings including 4 KATASTROFİK security blockers (SEC-B1 self-escalation to admin, SEC-B2 unauthenticated payment callback, SEC-B3 iyzico webhook signature bypass, SEC-B4 unauth `/config/tools`). Two new patterns were observed and absorbed:
+A second session report came in from a security scanner project — a security/compliance scanner with 78 HTTP routes, 32 Docker services, 198 pytest + 57 vitest, 4-persona audit producing 92 findings including 4 KATASTROFİK security blockers (SEC-B1 self-escalation to admin, SEC-B2 unauthenticated payment callback, SEC-B3 iyzico webhook signature bypass, SEC-B4 unauth `/config/tools`). Two new patterns were observed and absorbed:
 
 - **`docs/runtime/handoff-plan-contract.md`** — new artefact type. `ulak-handoff-plan.md` is a director-produced file designed as the explicit entry point for a FUTURE session. Different from manager-verdict: manager-verdict closes the current session, handoff-plan opens the next. Conditional-mandatory when verdict is blocked/conditional and more work remains. 13 required sections including exec summary, context files to read, blockers with deadlines, workstream breakdown (business-layer grouping), phase skip recommendations, effort estimate, exact resume command.
 
@@ -389,7 +389,7 @@ A second session report came in from scanner-project.com — a security/complian
   - Keyword: `mode=<CREATE|REPAIR|...>`, `entry=<file>`, `skip_phase_1=true`, `skip_phase_2=<comma-list>`, `parallel_dispatch=<N>`, `dispatch=<specialist|persona|both>`, `validation_depth=<light|standard|deep>`, `profile=<AUDIT_PROFILE|...>`
   - Resume form example: `/director komple mode=RESCUE entry=reports/current/ulak-handoff-plan.md skip_phase_1=true parallel_dispatch=9`
 
-### Core contract update (scanner-project patterns)
+### Core contract update (the security scanner project patterns)
 
 - **`prompts/core/ulak-os-core-contract-2.0.0.md`** — two new @imports for the handoff-plan and persona-dispatch contracts in the Runtime rules layer.
 
@@ -404,7 +404,7 @@ Makes `docs/runtime/persona-dispatch-pattern.md` runnable. Each persona follows 
 
 - **`docs/runtime/anti-patterns.md`** — new "Destructive action without live-probe (gate pattern)" section. Forbidden destructive actions list, pre_check field requirement on every destructive roadmap item. References R-119 rm cancellation from Sprint 1 Wave 3. This is UOI-07.
 - **`docs/governance/evidence-trust-scoring.md`** — new "Tier promotion mechanism" section. T-tier promotion and regression rules, consensus promotion via dual-path / multi-specialist overlap. Hard rule: tier promotion without new evidence is fraud. Live probe is the only path to T0. This is UOI-03.
-- **`docs/governance/finding-schema.md`** — schema extended with `time_sensitivity` optional block (deadline + reason + deadline_source), `source_personas`, `source_specialists`, explicit T0 in `evidence_trust`. New "Time sensitivity — a third axis" section: orthogonal to severity and priority. Escalation rule: High+ severity with <24h deadline surfaces at top of manager-verdict next-action. Reference: scanner-project SEC-B1/SEC-B2.
+- **`docs/governance/finding-schema.md`** — schema extended with `time_sensitivity` optional block (deadline + reason + deadline_source), `source_personas`, `source_specialists`, explicit T0 in `evidence_trust`. New "Time sensitivity — a third axis" section: orthogonal to severity and priority. Escalation rule: High+ severity with <24h deadline surfaces at top of manager-verdict next-action. Reference: the security scanner project SEC-B1/SEC-B2.
 
 ### What's still NOT in this patch
 
@@ -413,20 +413,20 @@ Makes `docs/runtime/persona-dispatch-pattern.md` runnable. Each persona follows 
 - **PG-04 migration-dry-runner skill** — deferred.
 - **Director command argument parser** — args documented but not parsed.
 - **Workstream extension to waves-pattern.md** — business-layer vs execution-layer grouping should be documented.
-- **Docs drift detection in memory-hygiene.md** — pattern from scanner-project "CLAUDE.md says 17 plugins, reality is 40".
+- **Docs drift detection in memory-hygiene.md** — pattern from the security scanner project "CLAUDE.md says 17 plugins, reality is 40".
 - **v1.x stale reference cleanup** — still ~10 stale v1.0.0/v1.1+ references in `docs/skills-integration/` and `docs/ecosystem/`.
 
 ## [Unreleased — earlier] — v2.1.2 docs prep (v2.2 runtime contract drafts)
 
-### Runtime contract additions from the oguzhansert.dev Sprint 0+1 session (2026-04-11)
+### Runtime contract additions from the a portfolio + CMS project Sprint 0+1 session (2026-04-11)
 
-The 7-file session report under `reports/sessions/2026-04-11-oguzhansert-dev-sprint-0-1/` identified 10 friction points and 15 pack-gap proposals from a real 1h 31m + sprint execution run. This patch addresses the contract-level findings (UOI-01, UOI-02, UOI-04, UOI-11) without shipping the harness hook (PG-03 still pending — needs shell/JS implementation, deferred).
+The 7-file session report under `reports/sessions/2026-04-11-the portfolio + CMS project-dev-sprint-0-1/` identified 10 friction points and 15 pack-gap proposals from a real 1h 31m + sprint execution run. This patch addresses the contract-level findings (UOI-01, UOI-02, UOI-04, UOI-11) without shipping the harness hook (PG-03 still pending — needs shell/JS implementation, deferred).
 
 #### New runtime contracts
 
-- **`docs/runtime/waves-pattern.md`** — formalizes the "parallel within a Wave, serial between Waves" execution pattern the session improvised. Covers dependency grouping, pre-dispatch conflict map, validation gate between Waves, sub-waves for partial parallelism, reference example from oguzhansert.dev Sprint 1 (9+2+1+VPS agents, zero file conflicts), anti-patterns.
+- **`docs/runtime/waves-pattern.md`** — formalizes the "parallel within a Wave, serial between Waves" execution pattern the session improvised. Covers dependency grouping, pre-dispatch conflict map, validation gate between Waves, sub-waves for partial parallelism, reference example from a portfolio + CMS project Sprint 1 (9+2+1+VPS agents, zero file conflicts), anti-patterns.
 
-- **`docs/runtime/live-probe-contract.md`** — formalizes Phase 4.5 as conditional-mandatory when `validation-plan.md §6` has ≥1 probe, or any Critical finding depends on T2/T3 claims, or the roadmap contains destructive remote actions. Read-only-by-default rules, timeouts, credential handling, output artefact (`live-probe-results.md`), T-tier promotion rules, new findings layer (NF-* in did-you-know), gate enforcement. References the LP-07 JWT reuse probe and LP-09 /opt/oguzhansert staleness probe from the session as pivot examples.
+- **`docs/runtime/live-probe-contract.md`** — formalizes Phase 4.5 as conditional-mandatory when `validation-plan.md §6` has ≥1 probe, or any Critical finding depends on T2/T3 claims, or the roadmap contains destructive remote actions. Read-only-by-default rules, timeouts, credential handling, output artefact (`live-probe-results.md`), T-tier promotion rules, new findings layer (NF-* in did-you-know), gate enforcement. References the LP-07 JWT reuse probe and LP-09 /opt/the portfolio + CMS project staleness probe from the session as pivot examples.
 
 - **`docs/runtime/dual-path-validation.md`** — formalizes the dual-path non-obvious findings pattern the operator improvised (manual did-you-know in parallel with director Phase 3, then merge). Path A (director) + Path B (independent reviewer) with a merge step. Consensus promotes T2/T3 → T1. Contradictions become probe candidates. Lens diversity guidance for parallel Path B subagents. Anti-patterns against same-prompt parallel, pre-merge contamination, T6/T7 promotion abuse.
 
@@ -597,7 +597,7 @@ Operational discipline from the internal V7 and V9 lineage, integrated into the 
 - Sample artifacts: filled `intake`, `inventory`, `manager-verdict` in TR + EN
 - Ecosystem related-work doc covering superpowers, anthropics/skills, gsd-2, awesome-design-md, akin-ozer/devops-skills-plugin (TR + EN)
 - Structured ROADMAP with v1.1 candidates (plugin marketplace publication priority)
-- LICENSE: MIT, Copyright (c) 2026 Oğuzhan Sert <info@oguzhansert.dev>
+- LICENSE: MIT, Copyright (c) 2026 Oğuzhan Sert <info@a portfolio + CMS project>
 
 ### Changed
 

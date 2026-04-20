@@ -87,7 +87,7 @@ Full rubric in `docs/runtime/audit-scoring-framework.md` §The 14 dimensions.
 ```yaml
 audit:
   date: 2026-04-18
-  repo: scanner-project.com
+  repo: a security scanner project
   stack: [python, fastapi, nextjs, docker]
   dimensions:
     architecture: { current: 20, target: 75, delta_needed: 55 }

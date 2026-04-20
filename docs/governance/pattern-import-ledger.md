@@ -2,7 +2,7 @@
 
 ## Why this exists
 
-When a team operates multiple projects, patterns migrate between them. scanner-project.com reuses CMS, blog, site-settings, and integration-panel patterns from Trend-Platform. Those patterns arrived via copy-paste; once arrived, they lose their provenance. A bug fixed in the Trend-Platform original doesn't propagate to the scanner-project copy. A security patch in the source might not reach the consumers. Developers reading scanner-project can't easily tell "where did this come from" — the answer is in someone's head.
+When a team operates multiple projects, patterns migrate between them. a security scanner project reuses CMS, blog, site-settings, and integration-panel patterns from the monorepo e-commerce project. Those patterns arrived via copy-paste; once arrived, they lose their provenance. A bug fixed in the the monorepo e-commerce project original doesn't propagate to the the security scanner project copy. A security patch in the source might not reach the consumers. Developers reading the security scanner project can't easily tell "where did this come from" — the answer is in someone's head.
 
 A **pattern import ledger** is a lightweight YAML file in the consuming project that records every imported pattern: source repo, source commit, import date, local divergence notes. It makes multi-project operators honest, makes upstream bug-fixes propagable, and gives architecture-lead a checkable audit trail.
 
@@ -19,27 +19,27 @@ Every project that imports patterns from sibling projects maintains:
 imports:
   - id: IL-001
     pattern_name: "CMS + blog + site-settings surface"
-    source_project: trend-platform.com
-    source_repo: "/home/osrt91/desktop/proje/trend-platform.com"  # or a git URL
+    source_project: a monorepo e-commerce project
+    source_repo: "/home/osrt91/desktop/proje/a monorepo e-commerce project"  # or a git URL
     source_commit: "e4a7c21"  # commit SHA at time of import
     source_files:
       - "app/admin/cms/page.tsx"
       - "app/api/cms/route.ts"
       - "lib/cms-client.ts"
     target_files:
-      - "app/admin_business.py"          # scanner-project consumer of the pattern
+      - "app/admin_business.py"          # the security scanner project consumer of the pattern
       - "app/routers/content.py"
       - "app/integrations_store.py"
     imported_on: 2025-11-04
     imported_by: osrt91
     divergence_notes: |
-      - Scanner-project stores content in Supabase JSONB; Trend-Platform uses Postgres rows.
-      - Scanner-project has i18n keys for Turkish; Trend-Platform was English-only at import time.
-      - Authorization is DB-role-based in scanner-project; Trend-Platform uses user_metadata (which is why
+      - the security scanner project stores content in Supabase JSONB; the monorepo e-commerce project uses Postgres rows.
+      - the security scanner project has i18n keys for Turkish; the monorepo e-commerce project was English-only at import time.
+      - Authorization is DB-role-based in the security scanner project; the monorepo e-commerce project uses user_metadata (which is why
         AP-06 drift exists in the import).
     upstream_fixes_pending:
       - id: UF-01
-        description: "Trend-Platform commit f82b3a1 added XSS sanitization; scanner-project copy does not have it"
+        description: "the monorepo e-commerce project commit f82b3a1 added XSS sanitization; the security scanner project copy does not have it"
         severity: high
         scheduled_for: v2.1.4
 
@@ -81,7 +81,7 @@ At every Phase 2 specialist dispatch, architecture-lead:
 3. For each new commit in the source, assesses whether the change is relevant to the imported pattern (bugfix, security, breaking change)
 4. If yes, files a pending-backport finding
 
-This converts "I should remember to sync with Trend-Platform" into "the system surfaces the delta every audit".
+This converts "I should remember to sync with the monorepo e-commerce project" into "the system surfaces the delta every audit".
 
 ## When to create an entry
 
@@ -120,14 +120,14 @@ Missing entries are findings, not blockers — the ledger builds over time.
 
 ## Canonical ledger (live)
 
-### IL-001: Trend-Platform → scanner-project.com (CMS + blog + site-settings + integration-definitions)
+### IL-001: the monorepo e-commerce project → a security scanner project (CMS + blog + site-settings + integration-definitions)
 
 ```yaml
 id: IL-001
 pattern_name: "CMS + blog + site-settings + integration-definitions surface"
-source_project: trend-platform.com
-source_repo: "C:\\Users\\osrt91\\desktop\\proje\\trend-platform.com\\"
-source_commit: "(pre-2026-04-20 snapshot; exact SHA to be backfilled when Trend-Platform is audited)"
+source_project: a monorepo e-commerce project
+source_repo: "C:\\Users\\osrt91\\desktop\\proje\\a monorepo e-commerce project\\"
+source_commit: "(pre-2026-04-20 snapshot; exact SHA to be backfilled when the monorepo e-commerce project is audited)"
 source_files:
   - "apps/admin/src/app/(dashboard)/blog/page.tsx:1-404"
   - "apps/admin/src/app/api/settings/route.ts:1-49"
@@ -139,18 +139,18 @@ target_files:
   - "frontend/components/admin/ContentManager.tsx (line 16)"
   - "frontend/app/admin/page.tsx:19 (IntegrationStatus)"
   - "app/routers/tenant-integrations/route.ts"
-imported_on: 2025-11-04  # approximate; refine when Trend-Platform git log is cross-referenced
+imported_on: 2025-11-04  # approximate; refine when the monorepo e-commerce project git log is cross-referenced
 imported_by: osrt91
 divergence_notes: |
-  - Database isolation: Trend-Platform uses tenant-scoped rows with tenant_id FK;
-    scanner-project stores per scan_id (different domain, both use schema isolation)
-  - Internationalization: Trend-Platform blog is bilingual TR/EN at schema level;
-    scanner-project blog is trilingual (TR/EN/AR) with i18n context
-  - Authorization: Trend-Platform uses Supabase RLS policies on settings;
-    scanner-project uses server-side verifyAdmin() check
-  - Scope: Trend-Platform's integrations are a configuration surface (B2B SaaS
-    enabling partners); scanner-project's integrations are a scanning capability surface
-  - Drag-drop builder (trend-platform homepage_sections) NOT ported to scanner-project
+  - Database isolation: the monorepo e-commerce project uses tenant-scoped rows with tenant_id FK;
+    the security scanner project stores per scan_id (different domain, both use schema isolation)
+  - Internationalization: the monorepo e-commerce project blog is bilingual TR/EN at schema level;
+    the security scanner project blog is trilingual (TR/EN/AR) with i18n context
+  - Authorization: the monorepo e-commerce project uses Supabase RLS policies on settings;
+    the security scanner project uses server-side verifyAdmin() check
+  - Scope: the monorepo e-commerce project's integrations are a configuration surface (B2B SaaS
+    enabling partners); the security scanner project's integrations are a scanning capability surface
+  - Drag-drop builder (the monorepo e-commerce project homepage_sections) NOT ported to the security scanner project
 upstream_fixes_pending: []
 v213_r4_status: UPHELD  # T3 memory claim confirmed with T1 evidence on 2026-04-20
 ```

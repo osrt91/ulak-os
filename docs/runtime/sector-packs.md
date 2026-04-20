@@ -49,7 +49,7 @@ Focus areas:
 - Analytics taxonomy
 - Multi-tenant isolation
 
-**Web-quality-scanner sub-pattern** (SP-EXT-01): SaaS products that scan client websites (security, SEO, accessibility, performance) have a repeatable shape: `BasePlugin` abstract with `run(context)` interface, 9-category weighted scoring engine, multi-format report generation (PDF/HTML/Markdown/JSON), PTES-style phase orchestration (sync or async), result storage validated against Pydantic before DB insertion. Derived from scanner-project.com.
+**Web-quality-scanner sub-pattern** (SP-EXT-01): SaaS products that scan client websites (security, SEO, accessibility, performance) have a repeatable shape: `BasePlugin` abstract with `run(context)` interface, 9-category weighted scoring engine, multi-format report generation (PDF/HTML/Markdown/JSON), PTES-style phase orchestration (sync or async), result storage validated against Pydantic before DB insertion. Derived from a security scanner project.
 
 ### `fintech`
 Focus areas:
@@ -143,7 +143,7 @@ Focus areas:
 - Authorization source is DB-backed role (`user_role_assignments`), never `user_metadata` (anti-pattern AP-06)
 - Migrations are per-tenant and tracked with a `tenant_id` column in the migration registry
 
-Derived from scanner-project.com `SUPABASE.md:24-31`, `docker-compose.yml:48`, `deploy.sh:10`.
+Derived from a security scanner project `SUPABASE.md:24-31`, `docker-compose.yml:48`, `deploy.sh:10`.
 
 ### `container-orchestrating-app` (SP-02)
 Focus areas:
@@ -153,7 +153,7 @@ Focus areas:
 - App connects via `DOCKER_HOST=tcp://docker-proxy:2375` on internal network only
 - Exec'd commands audit-logged with caller identity
 
-Derived from scanner-project.com `docker-compose.yml:103-120`.
+Derived from a security scanner project `docker-compose.yml:103-120`.
 
 ### `payment-integrated-saas` (SP-03)
 Focus areas:
@@ -166,7 +166,7 @@ Focus areas:
 
 Orthogonal to `fintech` — `fintech` covers the PRODUCT being a financial service; `payment-integrated-saas` covers any SaaS that accepts payments (most do). Activate both when product is fintech AND accepts payments.
 
-Derived from scanner-project.com `payment.py:35-43, 717-742`.
+Derived from a security scanner project `payment.py:35-43, 717-742`.
 
 ### `regulated-saas` (SP-04)
 Focus areas (three variants — activate the relevant variant):
@@ -189,7 +189,7 @@ Focus areas (three variants — activate the relevant variant):
 
 When `sector: regulated` is declared, the compliance-framework-registry specialist dispatches to verify at least one adapter per mandated framework and that an aggregator produces a single audit-ready report.
 
-Derived from scanner-project.com `compliance_reporter.py`, `cvss_processor.py`, `mitre_attack.py`, `nist_csf.py`, `iso27001.py`, `kev_checker.py`.
+Derived from a security scanner project `compliance_reporter.py`, `cvss_processor.py`, `mitre_attack.py`, `nist_csf.py`, `iso27001.py`, `kev_checker.py`.
 
 ### `reseller-enabled-saas` (SP-05)
 Focus areas:
@@ -201,7 +201,7 @@ Focus areas:
 - White-label email templates scoped per reseller
 - `bayi-persona` agent activated in Phase 2 dispatch (Turkish products especially)
 
-Derived from scanner-project.com `app/routers/reseller.py:17`, `app/models/reseller_branding.py`.
+Derived from a security scanner project `app/routers/reseller.py:17`, `app/models/reseller_branding.py`.
 
 ### `vps-nginx-compose-topology` (SP-06)
 Focus areas:
@@ -213,7 +213,7 @@ Focus areas:
 - CI-independent cron-poll deploy fallback (`infrastructure/deploy-poll.sh`) with flock-guarded idempotent runner
 - Every deploy topology declares a rollback path
 
-Derived from scanner-project.com `docker-compose.prod.yml:15-23`, `infrastructure/kale-kapisi.sh`, `infrastructure/deploy-poll.sh`.
+Derived from a security scanner project `docker-compose.prod.yml:15-23`, `infrastructure/kale-kapisi.sh`, `infrastructure/deploy-poll.sh`.
 
 ### `admin-cms-hardening` (SP-07)
 Focus areas:
@@ -228,7 +228,7 @@ Focus areas:
 - Dead admin CRUD detection (AP-14): every admin write has an admin-external reader
 - Impersonation (admin-as-user) requires reason field + own audit row
 
-Evidence: oguzhansert.dev 13-specialist consensus + telegram.bot admin panel + community-platform.com admin surface.
+Evidence: a portfolio + CMS project 13-specialist consensus + a Telegram commerce bot project admin panel + a community/event platform project admin surface.
 
 ### `ai-relay-cost-control` (SP-08)
 Focus areas:
@@ -243,7 +243,7 @@ Focus areas:
 - AI provider allowlist enforced (per `docs/governance/ai-provider-allowlist.md`)
 - Graceful degradation on provider outage: queue + retry or visible fallback
 
-Evidence: oguzhansert.dev + growth-platform.com + recipe-platform.xyz (Gemini / OpenAI / Google GenAI relays).
+Evidence: a portfolio + CMS project + an EdTech AI platform project + a content gamification platform project (Gemini / OpenAI / Google GenAI relays).
 
 ### `telegram-bot` (SP-09)
 Focus areas:
@@ -257,7 +257,7 @@ Focus areas:
 - Admin commands namespaced under `/admin`, role gated, audit logged
 - Never trust `message.from_user.id` alone for authorization — always recheck from DB each sensitive action
 
-Evidence: telegram.bot (aiogram 3.15 + Supabase + TON + multi-language catalog).
+Evidence: a Telegram commerce bot project (aiogram 3.15 + Supabase + TON + multi-language catalog).
 
 ### `member-gated-community-platform` (SP-10)
 Focus areas:
@@ -271,7 +271,7 @@ Focus areas:
 - RLS policies enforced at DB level (not application-level-only)
 - Single-tenant by default (one club, not platform-of-clubs); if multi-tenant, activate `saas` pack too
 
-Evidence: community-platform.com (event + blog + gallery + notifications + admin for single club).
+Evidence: a community/event platform project (event + blog + gallery + notifications + admin for single club).
 
 ### `multi-app-nextjs-expo-monorepo` (SP-11)
 Focus areas:
@@ -284,7 +284,7 @@ Focus areas:
 - Shared auth session across apps (same Supabase / auth-provider instance; same cookies on shared apex domain)
 - Apps communicate via shared DB schema or event bus — never direct inter-app HTTP calls
 
-Evidence: trend-platform.com (5-app workspace with admin + landing + master + mobile + web).
+Evidence: a monorepo e-commerce project (5-app workspace with admin + landing + master + mobile + web).
 
 ### `self-hosted-supabase-orchestration` (SP-12)
 Focus areas:
@@ -298,7 +298,7 @@ Focus areas:
 - Backup discipline required (AP-17): `pg_dump` + storage rsync; documented RTO/RPO
 - Monitoring: Postgres connection pool + storage disk usage alerts
 
-Evidence: plastics-supplier.com + growth-platform.com + telegram.bot (DIY Supabase compose topology replicated across 3 projects).
+Evidence: a B2B multi-locale SaaS project + an EdTech AI platform project + a Telegram commerce bot project (DIY Supabase compose topology replicated across 3 projects).
 
 ### `multi-project-traefik-edge` (SP-13)
 Focus areas:
@@ -312,7 +312,7 @@ Focus areas:
 - Cross-project network = cross-project blast radius — one compromised app can reach siblings. Compensating controls: network policies, per-app service accounts, internal TLS
 - Rotation: Traefik Let's Encrypt renewal automated; staging cert endpoint for dry runs
 
-Evidence: plastics-supplier.com + growth-platform.com + trend-platform.com + community-platform.com (single VPS shared by 4+ projects via Traefik).
+Evidence: a B2B multi-locale SaaS project + an EdTech AI platform project + a monorepo e-commerce project + a community/event platform project (single VPS shared by 4+ projects via Traefik).
 
 ## Activation rules
 

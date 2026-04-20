@@ -157,4 +157,4 @@ Observability has operational cost. Baseline DOES NOT mean "capture everything":
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.1**. Evidence base: cross-project scan confirming zero observability in trend-platform + erbilpetshop + oguzhansert + others (no Sentry/Datadog/logging library declared).
+Authoritative as of Ulak OS **v2.2.1**. Evidence base: cross-project scan confirming zero observability in the monorepo e-commerce project + the e-commerce project + the portfolio + CMS project + others (no Sentry/Datadog/logging library declared).

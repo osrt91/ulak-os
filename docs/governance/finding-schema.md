@@ -78,7 +78,7 @@ time_sensitivity:
 
 If `time_sensitivity.deadline` is within 24 hours AND `severity >= High`, the finding is surfaced at the top of `manager-verdict.md` § "Next action" regardless of its P-priority. Time pressure beats priority for the next-action slot.
 
-This pattern was observed in the scanner-project.com session (2026-04-11). SEC-B1 (self-escalation to admin via user_metadata) and SEC-B2 (unauthenticated /payment/callback) were tagged with "HEMEN, 24 SAAT İÇİNDE FIX" because they were exploit-live on production. The handoff-plan correctly escalated them above other Critical findings that had no such deadline.
+This pattern was observed in the a security scanner project session (2026-04-11). SEC-B1 (self-escalation to admin via user_metadata) and SEC-B2 (unauthenticated /payment/callback) were tagged with "HEMEN, 24 SAAT İÇİNDE FIX" because they were exploit-live on production. The handoff-plan correctly escalated them above other Critical findings that had no such deadline.
 
 ## ID rule
 

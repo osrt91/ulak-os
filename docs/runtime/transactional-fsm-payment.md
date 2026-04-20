@@ -7,7 +7,7 @@ Payment flows involve external providers (Stripe, Iyzico, Telegram Stars, crypto
 1. **Partial failure**: provider succeeds, DB update fails. User paid; you don't know.
 2. **No timeout**: provider never responds. User's money is in flight with no recovery path.
 
-The correct shape is a **finite state machine with timeout + rollback** at every transition. The `telegram.bot` project (multi-payment SaaS) implements this cleanly across 4 payment rails. This doc codifies the pattern.
+The correct shape is a **finite state machine with timeout + rollback** at every transition. The `a Telegram commerce bot project` project (multi-payment SaaS) implements this cleanly across 4 payment rails. This doc codifies the pattern.
 
 ## When to apply
 
@@ -57,7 +57,7 @@ INITIATED → RESERVED → PROVIDER_CONTACTED → CONFIRMED → COMPLETED
 - A reconciliation job (cron or worker) walks stuck states every N minutes
 - Stuck-state alerts: if a state is held > 2× MAX_DURATION, alert operator (not just user)
 
-Example (adapted from telegram.bot TON payment):
+Example (adapted from a Telegram commerce bot project TON payment):
 
 ```python
 STATE_TIMEOUTS = {
@@ -132,7 +132,7 @@ The FSM is rail-agnostic. Adding a new rail = implementing the driver interface.
 
 ## Evidence
 
-Pattern observed in `telegram.bot` TON payment handler (reserve → connect → send → confirm with explicit timeout + rollback). Analogous shape needed for Stripe-only and Iyzico-only projects that lack the discipline.
+Pattern observed in `a Telegram commerce bot project` TON payment handler (reserve → connect → send → confirm with explicit timeout + rollback). Analogous shape needed for Stripe-only and Iyzico-only projects that lack the discipline.
 
 ## Anti-patterns
 
@@ -151,4 +151,4 @@ Pattern observed in `telegram.bot` TON payment handler (reserve → connect → 
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.1**. Evidence base: telegram.bot TON payment handler (reserve → connect → send → confirm + timeout rollback pattern).
+Authoritative as of Ulak OS **v2.2.1**. Evidence base: a Telegram commerce bot project TON payment handler (reserve → connect → send → confirm + timeout rollback pattern).

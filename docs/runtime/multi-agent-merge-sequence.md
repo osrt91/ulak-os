@@ -8,7 +8,7 @@ When four or more specialist agents work in parallel on the same codebase, their
 - Infra changes the Docker compose network; backend writes code assuming the old network. Service can't reach DB.
 - Tests get written against interim state that no single branch reaches. Tests pass locally, fail on merge.
 
-The Strangler Fig protocol gave scanner-project's audit a 70% conflict reduction by enforcing a merge order: **infrastructure → backend → frontend → tests**. This doc generalizes that rule.
+The Strangler Fig protocol gave the security scanner project's audit a 70% conflict reduction by enforcing a merge order: **infrastructure → backend → frontend → tests**. This doc generalizes that rule.
 
 ## The ordering principle
 
@@ -129,4 +129,4 @@ The autonomous-program-director agent uses this protocol in Phase 5 §5b (execut
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.1.3**. Evidence base: scanner-project.com `_project_audit/06_multi_agent/agent-topology.md:250-305` and `orchestrator-rules.md:109-130`.
+Authoritative as of Ulak OS **v2.1.3**. Evidence base: a security scanner project `_project_audit/06_multi_agent/agent-topology.md:250-305` and `orchestrator-rules.md:109-130`.

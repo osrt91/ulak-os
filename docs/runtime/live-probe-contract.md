@@ -6,7 +6,7 @@
 
 A static-only audit produces claims like "the committed JWT signing key in `kong.yml:8` MAY match the prod `JWT_SECRET`" — tier T2 evidence at best. The only way to upgrade that claim to T1 (or refute it entirely) is a **live probe**: SSH into the VPS, read the env var, compare.
 
-Before v2.1.2, live probes lived in `validation-plan.md §6` as TODOs. The director's protocol ended at Phase 5 manager-verdict without a formal step that forced the probes to actually run. The oguzhansert.dev Sprint 0+1 session (2026-04-11, FP-04) caught this: the probes ran only because the operator was "lucky" — SSH config was already in place, credentials were ambient. On a session without that luck, Phase 5 would have issued a verdict on T2 evidence and the operator would never have known.
+Before v2.1.2, live probes lived in `validation-plan.md §6` as TODOs. The director's protocol ended at Phase 5 manager-verdict without a formal step that forced the probes to actually run. The a portfolio + CMS project Sprint 0+1 session (2026-04-11, FP-04) caught this: the probes ran only because the operator was "lucky" — SSH config was already in place, credentials were ambient. On a session without that luck, Phase 5 would have issued a verdict on T2 evidence and the operator would never have known.
 
 Phase 4.5 is the formal answer: **if `validation-plan.md §6` has ≥1 live probe, Phase 4.5 is mandatory before Phase 5 can run**.
 
@@ -97,7 +97,7 @@ Live probes often surface **new findings** that weren't in the static pass. Thes
 
 ### NF-01 — .env.local.bak has mode 0644 on prod (discovered during LP-05)
 
-**Evidence**: `ls -la /home/deploy/oguzhansert.dev/` returned:
+**Evidence**: `ls -la /home/deploy/a portfolio + CMS project/` returned:
 -rw-r--r-- .env.local.bak
 
 **Why non-obvious**: no file in the repo points at the backup; it exists because of a manual cp a week ago. Static scan cannot see VPS files.
@@ -117,21 +117,21 @@ Live probes often surface **new findings** that weren't in the static pass. Thes
 
 `docs/runtime/anti-patterns.md` § "Destructive action without live-probe" already lists the forbidden actions that require a probe. Phase 4.5 is the step that **runs** those pre-checks. Every destructive item in `execution-roadmap.md` has a `pre_check` field naming its probe; Phase 4.5 executes the probes in dependency order with execution items.
 
-## Example — oguzhansert.dev session
+## Example — a portfolio + CMS project session
 
 The Sprint 0+1 session had 11 probes. Two were pivotal:
 
 **LP-07 — JWT reuse check**
 
-- `command`: `ssh prod 'pm2 env oguzhansert | grep JWT_SECRET'`
+- `command`: `ssh prod 'pm2 env the portfolio + CMS project | grep JWT_SECRET'`
 - `question`: "Does prod JWT_SECRET match the HS256 key committed in kong.yml:8?"
 - `result`: **REFUTED**. Prod uses a different secret.
 - `impact`: DIR-005 severity dropped from Critical ("prod compromise likely") to High ("historical exposure only, rotation advisable")
 
-**LP-09 — /opt/oguzhansert/ staleness**
+**LP-09 — /opt/the portfolio + CMS project/ staleness**
 
-- `command`: `ssh prod 'ls -la /opt/oguzhansert/'`
-- `question`: "Is /opt/oguzhansert/ stale and safe to rm -rf?"
+- `command`: `ssh prod 'ls -la /opt/the portfolio + CMS project/'`
+- `question`: "Is /opt/the portfolio + CMS project/ stale and safe to rm -rf?"
 - `result`: **BLOCKED**. Directory contained a second `.env.local` from a prior deploy attempt.
 - `impact`: R-119 destructive action cancelled. New finding NF-03 issued: "two .env.local files, chmod needed".
 

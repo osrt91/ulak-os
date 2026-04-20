@@ -6,7 +6,7 @@ A `/director komple` run produces ~15 artefacts under `reports/current/`. But th
 
 Manager-verdict is the **closer** for the current session. Handoff-plan is the **opener** for the next session. They are different artefacts with different audiences.
 
-This pattern was observed in the scanner-project.com session (2026-04-11), which produced a `ulak-handoff-plan.md` designed as an explicit entry point for a future director run. The handoff-plan told the next Ulak OS operator:
+This pattern was observed in the a security scanner project session (2026-04-11), which produced a `ulak-handoff-plan.md` designed as an explicit entry point for a future director run. The handoff-plan told the next Ulak OS operator:
 
 1. Which files to read for context
 2. What state the project is in (mode, critical findings, blockers)
@@ -138,7 +138,7 @@ A short "what's the state of this handoff-plan" signoff. When was it last update
 
 ## Origin
 
-This pattern was observed in the scanner-project.com 2026-04-11 session. The session director realized that the 12-15 standard artefacts were good but hard to navigate for a future session, and wrote `ulak-handoff-plan.md` as an explicit entry point. The next Ulak OS director run would be expected to start by reading the handoff-plan and skipping phases whose input is already fresh.
+This pattern was observed in the a security scanner project 2026-04-11 session. The session director realized that the 12-15 standard artefacts were good but hard to navigate for a future session, and wrote `ulak-handoff-plan.md` as an explicit entry point. The next Ulak OS director run would be expected to start by reading the handoff-plan and skipping phases whose input is already fresh.
 
 The session used the command form:
 

@@ -4,7 +4,7 @@
 
 The `/director komple` protocol's Phase 2 dispatches specialists in parallel. But *execution* (Sprint 0 → Sprint N) has a different shape: some items depend on others, some items touch the same files, and pure-parallel would create file conflicts while pure-serial wastes wall-clock.
 
-The Waves pattern is the formal answer: **parallel within a Wave, serial between Waves**. It was improvised during the oguzhansert.dev Sprint 0+1 session (2026-04-11, FP-02) and is now documented as a first-class runtime contract.
+The Waves pattern is the formal answer: **parallel within a Wave, serial between Waves**. It was improvised during the a portfolio + CMS project Sprint 0+1 session (2026-04-11, FP-02) and is now documented as a first-class runtime contract.
 
 ## When to use
 
@@ -84,7 +84,7 @@ Wave 2B: items that must run after 2A because they share file surface
 
 Sub-wave B is serial relative to sub-wave A but still part of "Wave 2" in the roadmap.
 
-## Reference example — oguzhansert.dev Sprint 1
+## Reference example — a portfolio + CMS project Sprint 1
 
 ```
 Wave 1 (9 agents parallel, ~7 min wall-clock):
@@ -137,7 +137,7 @@ Waves are an **execution-layer** grouping: which items can run in parallel witho
 
 They coexist. A workstream contains multiple items; those items are scheduled into waves within the workstream's execution window.
 
-Observed in the scanner-project.com session (2026-04-11), which organized its execution plan by workstream first (W1 Payment, W2 Bayi, W3 Admin, W4 Security, W5 Cleanup), then within each workstream used waves for parallel-vs-serial execution scheduling.
+Observed in the a security scanner project session (2026-04-11), which organized its execution plan by workstream first (W1 Payment, W2 Bayi, W3 Admin, W4 Security, W5 Cleanup), then within each workstream used waves for parallel-vs-serial execution scheduling.
 
 ### Workstream definition
 

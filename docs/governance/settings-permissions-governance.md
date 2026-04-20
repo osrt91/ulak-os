@@ -122,9 +122,9 @@ A project with zero hooks declared is not a gap; it's a minimal surface. But if 
 }
 ```
 
-### Scanner-project-derived lesson — what NOT to ship
+### the security scanner project-derived lesson — what NOT to ship
 
-scanner-project.com's settings.json (before the self-audit) shipped:
+a security scanner project's settings.json (before the self-audit) shipped:
 
 ```json
 { "permissions": { "allow": ["Bash(*)", "Read(*)", "Write(*)", "Edit(*)", "MultiEdit(*)", "Delete(*)"] } }
@@ -143,4 +143,4 @@ This is **effective root access** inside the repo. The fix: replace with scoped 
 
 ## Canonical footer
 
-This file is authoritative as of Ulak OS **v2.1.3**. Scanner-project-derived SP (settings-permissions) findings FIND-SEC-01+02 and the pattern extraction bucket G-04 are the evidence base.
+This file is authoritative as of Ulak OS **v2.1.3**. the security scanner project-derived SP (settings-permissions) findings FIND-SEC-01+02 and the pattern extraction bucket G-04 are the evidence base.

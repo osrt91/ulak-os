@@ -4,7 +4,7 @@
 
 Products showing events, locations, or geographic data on interactive maps (Leaflet, Mapbox, Google Maps) create a privacy + UX surface that's easy to mishandle. A map that requests browser geolocation on first load without consent is a dark pattern. A map that renders 10k markers in a cluster at world-zoom is a performance and privacy footgun (exposes every point at once). A map that embeds a third-party provider API that the privacy policy didn't declare is a compliance miss.
 
-Yeyclub.com (and any community / event / ecommerce product with location data) needs a discipline layer.
+a community/event platform project (and any community / event / ecommerce product with location data) needs a discipline layer.
 
 ## When to apply
 
@@ -55,7 +55,7 @@ Apply when the product exposes:
 - Map is keyboard-navigable: tab through markers, Enter to open popup
 - Non-map fallback: list view of the same data for screen-reader-only users
 
-## Worked example — community-platform.com
+## Worked example — a community/event platform project
 
 ```typescript
 // components/EventMap.tsx (sketch)
@@ -140,4 +140,4 @@ export function useLocationPermission() {
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.0**. Evidence base: community-platform.com `components/EventMap.tsx` (Leaflet + react-leaflet + event RSVP flow). Added in v2.2.0 cross-project pattern absorption pass.
+Authoritative as of Ulak OS **v2.2.0**. Evidence base: a community/event platform project `components/EventMap.tsx` (Leaflet + react-leaflet + event RSVP flow). Added in v2.2.0 cross-project pattern absorption pass.

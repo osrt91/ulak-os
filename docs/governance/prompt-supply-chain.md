@@ -102,7 +102,7 @@ Updated on every release. Broken compatibility is a release blocker.
 
 ## Cross-project pattern imports (G-EXT-04)
 
-The supply chain extends **across projects** when the same operator runs multiple repos. Patterns migrate: `CMS + blog + site-settings` moved from Trend-Platform to scanner-project; `docker-socket-proxy sidecar` moved from an internal template library to scanner-project. Without a ledger, provenance vanishes and upstream bugfixes don't propagate.
+The supply chain extends **across projects** when the same operator runs multiple repos. Patterns migrate: `CMS + blog + site-settings` moved from the monorepo e-commerce project to the security scanner project; `docker-socket-proxy sidecar` moved from an internal template library to the security scanner project. Without a ledger, provenance vanishes and upstream bugfixes don't propagate.
 
 The companion governance doc is `docs/governance/pattern-import-ledger.md`:
 

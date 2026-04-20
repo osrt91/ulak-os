@@ -6,7 +6,7 @@ When a codebase has a single file over ~1,000 LOC doing five or more unrelated t
 
 The **Strangler Fig** pattern (named after the strangler fig tree that grows around its host tree until the host is gone) is the safer migration: extract responsibilities one at a time, keep the old file as a thin re-export shim, verify each extraction with tests, commit atomically. The old file "dies" when the last responsibility is moved; no production outage, no big-bang weekend.
 
-Scanner-project.com's backend went through this: `scanner-project.py` was a 146KB monolith holding FastAPI app, middleware, Pydantic models, scoring engine, HTML report templates, email sending, AI chat, 15 API routes, WebSocket handler, SSR dashboard. It is now a 73-line shim; the real orchestration lives in `app/main.py` + `app/routers/*.py`.
+a security scanner project's backend went through this: `the security scanner project.py` was a 146KB monolith holding FastAPI app, middleware, Pydantic models, scoring engine, HTML report templates, email sending, AI chat, 15 API routes, WebSocket handler, SSR dashboard. It is now a 73-line shim; the real orchestration lives in `app/main.py` + `app/routers/*.py`.
 
 ## When to apply
 
@@ -32,7 +32,7 @@ Extraction happens in a fixed order: **A → B → C → D**. Each phase extract
 
 Move functions with no side effects and no framework dependencies. These are the easiest to test and the safest to move.
 
-Examples from scanner-project: `config.py` (env var parsing), `models/schemas.py` (Pydantic request/response shapes), `services/scoring.py` (scoring math), `services/utils.py` (helpers).
+Examples from the security scanner project: `config.py` (env var parsing), `models/schemas.py` (Pydantic request/response shapes), `services/scoring.py` (scoring math), `services/utils.py` (helpers).
 
 Acceptance: every moved function has a test; the original call sites import from the new module.
 
@@ -48,7 +48,7 @@ Acceptance: every service has an integration test using test doubles (not mocks 
 
 Move HTTP route handlers one domain at a time. This is where the shim starts to thin.
 
-Examples from scanner-project: `routers/health.py`, `routers/scan.py`, `routers/admin.py`, `routers/reseller.py`, `routers/content.py`, `routers/config_routes.py`.
+Examples from the security scanner project: `routers/health.py`, `routers/scan.py`, `routers/admin.py`, `routers/reseller.py`, `routers/content.py`, `routers/config_routes.py`.
 
 Acceptance: each router file is <400 LOC; each endpoint has a contract test; the original file imports `include_router(<new_router>)` instead of defining routes directly.
 
@@ -95,13 +95,13 @@ The extractor can be codified as a skill: input = file path + target package + e
 
 ## Anti-patterns this protocol replaces
 
-- **Big-bang rewrite**: "let's rewrite scanner-project.py as app/v2/" — 4 weeks of invisible work, two unrelated bugs, merge hell
+- **Big-bang rewrite**: "let's rewrite the security scanner project.py as app/v2/" — 4 weeks of invisible work, two unrelated bugs, merge hell
 - **Mid-session refactor**: splitting in the same commit as a feature add — review impossible, rollback loses the feature
 - **Partial extraction without shim**: imports from the original path still work because the original file still has the code AND the new file has it too — two sources of truth, drift guaranteed
 
 ## Integration
 
-- `docs/runtime/anti-patterns.md` — God module (AP-entry, derived from scanner-project critical-findings) is the primary motivator
+- `docs/runtime/anti-patterns.md` — God module (AP-entry, derived from the security scanner project critical-findings) is the primary motivator
 - `docs/runtime/multi-agent-merge-sequence.md` — merge order when multiple agents run
 - `docs/runtime/waves-pattern.md` — Strangler Fig extractions fit into waves, not ad-hoc PRs
 - `.claude/skills/god-module-decomposition/` — the executable skill form (v2.1.3)
@@ -109,4 +109,4 @@ The extractor can be codified as a skill: input = file path + target package + e
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.1.3**. Evidence base: scanner-project.com `_project_audit/04_modernization/backend-modernization.md` (the real-world executed example) + `final-executive-report.md:86-114`.
+Authoritative as of Ulak OS **v2.1.3**. Evidence base: a security scanner project `_project_audit/04_modernization/backend-modernization.md` (the real-world executed example) + `final-executive-report.md:86-114`.

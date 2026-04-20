@@ -4,7 +4,7 @@
 
 Every production secret has a half-life. An unrotated secret with 3 years of history has a different blast radius than the same secret with 30-day rotation. Teams that don't rotate discover this the hard way — a disgruntled ex-contributor's environment still has the prod JWT secret, or a committed `.env` from 2023 still authorizes to 2026's prod API.
 
-Ulak-family projects inherit a pattern from scanner-project / trend-platform / community-platform: **static JWT_SECRET, static POSTGRES_PASSWORD, static PAYMENT_ENCRYPTION_KEY**. No rotation documented. No schedule. Credential sharing across services means one leak compromises everything.
+Ulak-family projects inherit a pattern from the security scanner project / the monorepo e-commerce project / the community/event platform project: **static JWT_SECRET, static POSTGRES_PASSWORD, static PAYMENT_ENCRYPTION_KEY**. No rotation documented. No schedule. Credential sharing across services means one leak compromises everything.
 
 This doc is the discipline. It answers: which secret rotates how often, who rotates it, what happens when rotation fails mid-flight.
 
@@ -92,8 +92,8 @@ If the OLD value cannot be restored (revoked too early):
 
 Several projects in the Ulak-family portfolio share secrets across repos:
 
-- **JWT_SECRET reused** across Kong gateway + Supabase auth (oguzhansert.dev finding DIR-005)
-- **Cloudflare account credentials** shared across trend-platform + erbilpetshop + others
+- **JWT_SECRET reused** across Kong gateway + Supabase auth (a portfolio + CMS project finding DIR-005)
+- **Cloudflare account credentials** shared across the monorepo e-commerce project + the e-commerce project + others
 - **Shared Supabase instance** (schema isolation, but same master credentials)
 - **Shared SMTP relay** (one credential serves multiple transactional-email surfaces)
 
@@ -107,7 +107,7 @@ These shared-secret arrangements concentrate blast radius. Each shared secret ge
 ## Anti-patterns
 
 - **"We'll rotate when someone leaves"** — by the time someone leaves, the secret has likely been copied to a personal machine
-- **"Secrets in committed files"** — AP-11 (scanner-project lineage) — does not live here but cross-references
+- **"Secrets in committed files"** — AP-11 (the security scanner project lineage) — does not live here but cross-references
 - **Root `.env.local` in monorepo** — see AP-19 (v2.2.1); one rotation must touch all app-level `.env.local` copies
 - **Static encryption-at-rest key** — means re-encrypt migration is impossible; plan rotation path from day 1
 - **Rotation without dual-issue window** — cuts over in a single step, any in-flight request fails
@@ -123,4 +123,4 @@ These shared-secret arrangements concentrate blast radius. Each shared secret ge
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.1**. Evidence base: cross-project scan observing static long-lived secrets across scanner-project / trend-platform / plastics-supplier / growth-platform / oguzhansert. No real secret values in this document by policy.
+Authoritative as of Ulak OS **v2.2.1**. Evidence base: cross-project scan observing static long-lived secrets across the security scanner project / the monorepo e-commerce project / the B2B multi-locale SaaS project / the EdTech AI platform project / the portfolio + CMS project. No real secret values in this document by policy.

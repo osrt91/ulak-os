@@ -4,7 +4,7 @@
 
 "Which AI provider may this project call" is a **governance decision**, not a code detail. It needs a declared allowlist so architecture review can check against it, because residual SDK imports and env-var references **linger long after a provider swap**. If the user decided two releases ago "no more Groq, we use Gemini", but `lib/groq_client.ts` still exists and someone wires it in for a feature, the governance intent is silently violated.
 
-Evidence from the user's portfolio: scanner-project.com's CLAUDE.md listed Groq + Hareki + OpenAI SDK historically; SETUP.md locked the current state to Google Gemini (`gemini-2.5-flash`); the user's Ulak OS memory confirms Gemini-only is the intended steady state. But `lib/hareki.ts` is still present in scanner-project's frontend — **drift between intent and code**. This doc closes that gap.
+Evidence from the user's portfolio: a security scanner project's CLAUDE.md listed Groq + Hareki + OpenAI SDK historically; SETUP.md locked the current state to Google Gemini (`gemini-2.5-flash`); the user's Ulak OS memory confirms Gemini-only is the intended steady state. But `lib/hareki.ts` is still present in the security scanner project's frontend — **drift between intent and code**. This doc closes that gap.
 
 ## The allowlist contract
 
@@ -86,7 +86,7 @@ ai_models_pinned:
 
 The pinning is tighter than the allowlist. Updating the pinned model is a versioned change (not a governance decision but a release decision).
 
-## Worked example — scanner-project.com
+## Worked example — a security scanner project
 
 Target state (as of v2.1.3 audit):
 
@@ -115,4 +115,4 @@ Drift findings expected at baseline:
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.1.3**. Evidence base: user's portfolio-wide Gemini-only constraint (T3 memory) + scanner-project.com's `lib/hareki.ts` drift evidence (T1). This doc was pattern G-02 in the scanner-project extraction.
+Authoritative as of Ulak OS **v2.1.3**. Evidence base: user's portfolio-wide Gemini-only constraint (T3 memory) + a security scanner project's `lib/hareki.ts` drift evidence (T1). This doc was pattern G-02 in the the security scanner project extraction.

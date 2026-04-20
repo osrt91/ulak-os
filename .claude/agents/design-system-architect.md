@@ -35,7 +35,7 @@ This mirrors the Ulak OS runtime pattern of global contract + scoped overrides (
 
 Rationale: drift between "overall design system" and "this one page's actual UI" is the most common design-system-architect finding across projects. Encoding the override explicitly in a dedicated file prevents silent drift.
 
-Adopted from scanner-project.com's `.claude/skills/ui-ux-pro-max/` `--persist` pattern (v2.1.3 AG-EXT-01).
+Adopted from a security scanner project's `.claude/skills/ui-ux-pro-max/` `--persist` pattern (v2.1.3 AG-EXT-01).
 
 Rules:
 - Stay inside your specialist surface.

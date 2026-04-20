@@ -8,7 +8,7 @@ Every non-trivial SaaS product has users with different trust levels and differe
 
 Ulak OS's core contract (runtime-defaults line 4) says "customer/admin/public api ayrımını koru" — but v2.1.2 shipped without a dedicated governance doc defining what that rule actually means. This is that doc.
 
-A real-world product (scanner-project.com) showed that 3 surfaces isn't always enough: the moment a **partner / reseller / bayi** tier appears, a fourth surface with its own authz gate (plan capability, not role) + its own data model (parent/child user mapping) + its own branding story emerges.
+A real-world product (a security scanner project) showed that 3 surfaces isn't always enough: the moment a **partner / reseller / bayi** tier appears, a fourth surface with its own authz gate (plan capability, not role) + its own data model (parent/child user mapping) + its own branding story emerges.
 
 ## The four surfaces
 
@@ -93,4 +93,4 @@ During Phase 2 specialist dispatch, the following checks are mandatory if the pr
 
 ## Canonical footer
 
-This file is authoritative as of Ulak OS **v2.1.3**. It formalizes the rule previously only stated as a single line in CLAUDE.md runtime-defaults. The 4-surface reality is drawn from scanner-project.com's production shape (public + customer + admin + reseller).
+This file is authoritative as of Ulak OS **v2.1.3**. It formalizes the rule previously only stated as a single line in CLAUDE.md runtime-defaults. The 4-surface reality is drawn from a security scanner project's production shape (public + customer + admin + reseller).

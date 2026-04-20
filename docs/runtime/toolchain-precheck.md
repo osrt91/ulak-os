@@ -123,7 +123,7 @@ Preflight should be installable via a repo-local `scripts/install-hooks.sh` that
 
 `--no-verify` is **forbidden without explicit operator consent**, documented in the commit message. Bypass hooks without consent = finding. The rule is enforced by a separate post-receive audit (CI job that reads git push metadata for `--no-verify` markers).
 
-Derived from scanner-project.com `CLAUDE.md:67-94` + `.githooks/pre-push` + `scripts/install-hooks.sh`.
+Derived from a security scanner project `CLAUDE.md:67-94` + `.githooks/pre-push` + `scripts/install-hooks.sh`.
 
 ## VPS baseline precheck (R-04)
 
@@ -149,7 +149,7 @@ When running the hardening script on a remote host:
 
 A single-session execution of SSH hardening is a safety finding — one typo locks the operator out.
 
-Derived from scanner-project.com `infrastructure/kale-kapisi.sh` + `SETUP.md:37-42`.
+Derived from a security scanner project `infrastructure/kale-kapisi.sh` + `SETUP.md:37-42`.
 
 ## Integration
 

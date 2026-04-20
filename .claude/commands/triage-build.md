@@ -5,7 +5,7 @@ phases_run: [0]
 
 # /triage-build
 
-Generalized from scanner-project.com's `/fix-build` command. Stack-agnostic triage flow for any Ulak-OS-managed project.
+Generalized from a security scanner project's `/fix-build` command. Stack-agnostic triage flow for any Ulak-OS-managed project.
 
 ## Flow
 
