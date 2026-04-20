@@ -1,0 +1,34 @@
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+
+import './globals.css'
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
+
+export const metadata: Metadata = {
+  title: {
+    default: '{{product_name_pascal}}',
+    template: '%s · {{product_name_pascal}}',
+  },
+  description: 'Scaffolded by Ulak OS v{{ulak_os_version}}',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    type: 'website',
+    locale: '{{locale_primary}}',
+    siteName: '{{product_name_pascal}}',
+  },
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="{{locale_primary}}" className={inter.variable}>
+      <body className="min-h-screen bg-surface text-ink antialiased">
+        {children}
+      </body>
+    </html>
+  )
+}

@@ -1,0 +1,30 @@
+import { expect, test } from '@playwright/test'
+
+// {{product_name_pascal}} — baseline E2E smoke test
+// Scaffolder ships with this test passing; CI e2e job requires it green.
+
+test('landing page loads with expected elements', async ({ page }) => {
+  await page.goto('/')
+
+  // Title
+  await expect(page).toHaveTitle(/{{product_name_pascal}}/)
+
+  // Hero heading present
+  const heroHeading = page.getByRole('heading', { level: 1 })
+  await expect(heroHeading).toBeVisible()
+  await expect(heroHeading).toContainText('{{product_name_pascal}}')
+
+  // CTAs visible
+  await expect(page.getByRole('link', { name: /hesap oluştur/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /giriş yap/i })).toBeVisible()
+
+  // Footer links
+  await expect(page.getByRole('link', { name: /gizlilik/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /şartlar/i })).toBeVisible()
+})
+
+test('landing page has lang="{{locale_primary}}"', async ({ page }) => {
+  await page.goto('/')
+  const lang = await page.getAttribute('html', 'lang')
+  expect(lang).toBe('{{locale_primary}}')
+})

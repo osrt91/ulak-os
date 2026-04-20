@@ -1,0 +1,68 @@
+import Link from 'next/link'
+
+// {{product_name_pascal}} — landing page
+// Starting point; evolve based on user research + design-system-architect runs
+// Design discipline inherited from {{design_reference}} (see DESIGN.md)
+
+export default function HomePage() {
+  return (
+    <main className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="border-b border-surface-strong">
+        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="font-display text-xl font-semibold">
+            {{product_name_pascal}}
+          </Link>
+          <nav className="flex items-center gap-6 text-sm">
+            <Link href="/pricing" className="text-ink-muted hover:text-ink">Fiyatlandırma</Link>
+            <Link href="/about" className="text-ink-muted hover:text-ink">Hakkında</Link>
+            <Link href="/login" className="text-ink hover:text-ink-muted">Giriş</Link>
+            <Link
+              href="/register"
+              className="rounded-md bg-brand-500 px-4 py-2 text-ink-inverse hover:bg-brand-600 transition-colors"
+            >
+              Başla
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="flex-1 flex items-center">
+        <div className="mx-auto max-w-4xl px-6 py-24 text-center">
+          <h1 className="font-display text-5xl md:text-6xl font-semibold tracking-tight">
+            {{product_name_pascal}}
+          </h1>
+          <p className="mt-6 text-xl text-ink-muted max-w-2xl mx-auto">
+            Ulak OS tarafından scaffold edildi. Şimdi bu sayfayı kendi ürün mesajınızla güncelleyin.
+          </p>
+          <div className="mt-10 flex items-center justify-center gap-4">
+            <Link
+              href="/register"
+              className="rounded-md bg-brand-500 px-6 py-3 text-ink-inverse hover:bg-brand-600 transition-colors"
+            >
+              Hesap Oluştur
+            </Link>
+            <Link
+              href="/login"
+              className="rounded-md border border-surface-strong px-6 py-3 hover:bg-surface-muted transition-colors"
+            >
+              Giriş Yap
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-surface-strong">
+        <div className="mx-auto max-w-6xl px-6 py-8 flex items-center justify-between text-sm text-ink-muted">
+          <p>© {{year}} {{product_name_pascal}}</p>
+          <div className="flex gap-6">
+            <Link href="/privacy" className="hover:text-ink">Gizlilik</Link>
+            <Link href="/terms" className="hover:text-ink">Şartlar</Link>
+          </div>
+        </div>
+      </footer>
+    </main>
+  )
+}

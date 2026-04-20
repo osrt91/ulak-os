@@ -1,0 +1,44 @@
+import 'server-only'
+
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+
+// {{product_name_pascal}} — Supabase ADMIN client (SERVICE ROLE)
+// BYPASSES RLS by design. Use ONLY for:
+//   - Webhook processors that need cross-tenant writes
+//   - Cron jobs / scheduled tasks
+//   - Admin operations that are guarded by product-surface-split admin surface checks
+//
+// SECURITY DISCIPLINE:
+// - `import 'server-only'` on line 1 (AP-13 prevention — this file MUST NEVER reach browser)
+// - SUPABASE_SERVICE_ROLE_KEY never in NEXT_PUBLIC_* env vars
+// - Every admin-scope call wrapped by a surface-level auth check per docs/governance/product-surface-split.md
+//
+// If you see an import of this file from a Client Component, that's a CRITICAL
+// finding — the service-role key will leak into the browser bundle.
+
+let _admin: ReturnType<typeof createSupabaseClient> | null = null
+
+export function createAdminClient() {
+  if (_admin) return _admin
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!url || !serviceRoleKey) {
+    throw new Error(
+      'SUPABASE_SERVICE_ROLE_KEY is missing. Admin client cannot be created. ' +
+      'Verify .env.local has the key (from Supabase dashboard) and that this file ' +
+      'is NOT being imported from a Client Component.'
+    )
+  }
+
+  _admin = createSupabaseClient(url, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+  })
+
+  return _admin
+}

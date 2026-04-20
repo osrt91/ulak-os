@@ -1,0 +1,102 @@
+import type { Config } from 'tailwindcss'
+
+// {{product_name_pascal}} — Tailwind v4 config
+// Design tokens seeded from {{design_reference}} brand reference (see DESIGN.md)
+// Per `docs/runtime/anti-patterns.md` §Frontend — token drift + random shadows + random radii all banned
+
+const config: Config = {
+  content: [
+    './app/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './lib/**/*.{ts,tsx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        // Palette inherited from {{design_reference}} (see DESIGN.md §Color palette)
+        // Evolve over time; track changes in docs/architecture/design-evolution.md
+        brand: {
+          50:  'oklch(97% 0.01 260)',
+          100: 'oklch(94% 0.02 260)',
+          200: 'oklch(88% 0.05 260)',
+          300: 'oklch(80% 0.09 260)',
+          400: 'oklch(70% 0.14 260)',
+          500: 'oklch(60% 0.18 260)',  // primary
+          600: 'oklch(52% 0.20 260)',
+          700: 'oklch(44% 0.19 260)',
+          800: 'oklch(36% 0.16 260)',
+          900: 'oklch(28% 0.12 260)',
+          950: 'oklch(18% 0.08 260)',
+        },
+        surface: {
+          DEFAULT: 'oklch(99% 0.003 260)',
+          muted:   'oklch(96% 0.006 260)',
+          subtle:  'oklch(93% 0.008 260)',
+          strong:  'oklch(88% 0.010 260)',
+        },
+        ink: {
+          DEFAULT: 'oklch(18% 0.02 260)',
+          muted:   'oklch(40% 0.015 260)',
+          subtle:  'oklch(56% 0.010 260)',
+          inverse: 'oklch(98% 0.005 260)',
+        },
+      },
+      spacing: {
+        // 4px base unit (per {{design_reference}} rhythm)
+        '0.5': '2px',
+        '1':   '4px',
+        '2':   '8px',
+        '3':   '12px',
+        '4':   '16px',
+        '6':   '24px',
+        '8':   '32px',
+        '12':  '48px',
+        '16':  '64px',
+        '24':  '96px',
+      },
+      borderRadius: {
+        // Single coherent scale — AP §random radii prevention
+        'sm':  '4px',
+        'md':  '8px',
+        'lg':  '12px',
+        'xl':  '16px',
+        '2xl': '24px',
+        'full': '9999px',
+      },
+      boxShadow: {
+        // Single elevation scale — AP §random shadows prevention
+        'flat':  '0 0 0 1px oklch(0% 0 0 / 0.08)',
+        'raised': '0 1px 3px 0 oklch(0% 0 0 / 0.08), 0 1px 2px -1px oklch(0% 0 0 / 0.06)',
+        'overlay': '0 4px 8px -2px oklch(0% 0 0 / 0.10), 0 2px 4px -2px oklch(0% 0 0 / 0.06)',
+        'modal':   '0 16px 32px -4px oklch(0% 0 0 / 0.14), 0 4px 8px -4px oklch(0% 0 0 / 0.08)',
+      },
+      fontFamily: {
+        // Pick open-source alternatives that match the {{design_reference}} feel
+        sans: ['var(--font-sans)', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'var(--font-sans)', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+      },
+      fontSize: {
+        // Type scale — AP §weak typography prevention
+        'xs':   ['12px',  { lineHeight: '16px', letterSpacing: '0.01em' }],
+        'sm':   ['14px',  { lineHeight: '20px' }],
+        'base': ['16px',  { lineHeight: '24px' }],
+        'lg':   ['18px',  { lineHeight: '28px' }],
+        'xl':   ['20px',  { lineHeight: '30px' }],
+        '2xl':  ['24px',  { lineHeight: '32px' }],
+        '3xl':  ['32px',  { lineHeight: '40px', letterSpacing: '-0.01em' }],
+        '4xl':  ['40px',  { lineHeight: '48px', letterSpacing: '-0.02em' }],
+        '5xl':  ['56px',  { lineHeight: '64px', letterSpacing: '-0.02em' }],
+        '6xl':  ['72px',  { lineHeight: '80px', letterSpacing: '-0.03em' }],
+      },
+      transitionTimingFunction: {
+        // Motion language per {{design_reference}}
+        'out-expo':  'cubic-bezier(0.19, 1, 0.22, 1)',
+        'out-quart': 'cubic-bezier(0.25, 1, 0.5, 1)',
+      },
+    },
+  },
+  plugins: [],
+}
+
+export default config

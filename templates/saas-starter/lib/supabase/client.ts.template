@@ -1,0 +1,14 @@
+'use client'
+
+import { createBrowserClient } from '@supabase/ssr'
+
+// {{product_name_pascal}} — Supabase BROWSER client
+// Used only from Client Components. Never import this from server-only files.
+// This client carries the anon key (public) — safe to expose.
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}

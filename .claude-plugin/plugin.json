@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "ulak-os",
+  "displayName": "Ulak OS — Prompt Operating System",
+  "version": "2.3.0",
+  "description": "Vendor-neutral prompt operating system. Plan, audit, govern, and scaffold full-stack SaaS with Claude Code. 24 sector packs, 8 rule packs, 79 anti-patterns, 22 governance docs, 27 specialist agents, 9 slash-commands, 9 skills.",
+  "author": {
+    "name": "osrt91",
+    "url": "https://github.com/osrt91"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/osrt91/ulak-os.git"
+  },
+  "license": "UNLICENSED",
+  "keywords": [
+    "prompt-os",
+    "claude-code",
+    "saas-scaffolder",
+    "multi-agent",
+    "director",
+    "audit",
+    "governance",
+    "phase-0-to-5",
+    "turkish-first"
+  ],
+  "homepage": "https://github.com/osrt91/ulak-os#readme",
+  "bugs": {
+    "url": "https://github.com/osrt91/ulak-os/issues"
+  },
+  "entry": {
+    "claude_md": "CLAUDE.md",
+    "core_contract": "prompts/core/ulak-os-core-contract-2.0.0.md",
+    "commands_dir": ".claude/commands",
+    "agents_dir": ".claude/agents",
+    "skills_dir": ".claude/skills",
+    "settings": ".claude/settings.json"
+  },
+  "capabilities": {
+    "commands": 9,
+    "agents": 27,
+    "skills": 9,
+    "rule_packs": 8,
+    "sector_packs": 24,
+    "anti_patterns": 79,
+    "governance_docs": 22,
+    "runtime_rules": 33,
+    "scaffolder_templates": 15
+  },
+  "flagship_commands": [
+    "/director",
+    "/ulak-scaffold",
+    "/final-verdict",
+    "/intake",
+    "/frontend-war-room",
+    "/pack-gap-audit",
+    "/triage-build",
+    "/ulak-design-ref",
+    "/ulak-intake"
+  ],
+  "flagship_skills": [
+    "saas-scaffolder",
+    "fourteen-dimension-audit",
+    "god-module-decomposition",
+    "multi-agent-orchestration",
+    "final-validation",
+    "pack-gap-completion",
+    "project-intake",
+    "research-currency",
+    "ulak-design-ref"
+  ],
+  "vendors_supported": [
+    "claude-code",
+    "codex-cli",
+    "gemini-cli"
+  ],
+  "compatibility": {
+    "claude_code": ">=2.0.0",
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "install_notes": {
+    "method_a": "Clone: git clone https://github.com/osrt91/ulak-os.git && cd ulak-os",
+    "method_b": "As plugin (future): claude plugin install osrt91/ulak-os",
+    "method_c": "As submodule: git submodule add https://github.com/osrt91/ulak-os.git .ulak-os",
+    "quickstart": "After install, open Claude Code in any directory and run /director komple to audit OR /ulak-scaffold to start a new SaaS"
+  },
+  "license_note": "This pack is UNLICENSED (private operator toolkit). Open an issue to discuss commercial use."
+}

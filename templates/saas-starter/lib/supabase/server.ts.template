@@ -1,0 +1,32 @@
+import 'server-only'
+
+import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr'
+
+// {{product_name_pascal}} — Supabase SERVER client
+// Used from Server Components, Server Actions, and route handlers.
+// The `import 'server-only'` on line 1 ensures this file throws a build
+// error if imported from Client Components (AP-13 prevention).
+// Still uses the ANON key (RLS enforces tenant isolation).
+
+export async function createClient() {
+  const cookieStore = await cookies()
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll() },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          } catch {
+            // Set from a Server Component — Next.js will ignore; that's fine because
+            // middleware.ts is responsible for session cookie refreshes
+          }
+        },
+      },
+    }
+  )
+}

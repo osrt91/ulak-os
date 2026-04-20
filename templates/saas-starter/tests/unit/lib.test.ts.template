@@ -1,0 +1,36 @@
+import { describe, expect, it } from 'vitest'
+
+import { pathToSurface } from '@/lib/auth'
+
+// {{product_name_pascal}} — baseline unit test
+// CI blocks on test failure; scaffolder ships with THIS test passing so
+// commit 1 has a green CI run.
+//
+// Add more tests as you add features. Target 70%+ coverage for lib/ at v0.1.0.
+
+describe('pathToSurface', () => {
+  it('routes /admin paths to admin surface', () => {
+    expect(pathToSurface('/admin')).toBe('admin')
+    expect(pathToSurface('/admin/users')).toBe('admin')
+    expect(pathToSurface('/api/admin/users')).toBe('admin')
+  })
+
+  it('routes /partner paths to partner surface', () => {
+    expect(pathToSurface('/partner')).toBe('partner')
+    expect(pathToSurface('/partner/dashboard')).toBe('partner')
+    expect(pathToSurface('/api/partner/commissions')).toBe('partner')
+  })
+
+  it('routes /app paths to customer surface', () => {
+    expect(pathToSurface('/app')).toBe('customer')
+    expect(pathToSurface('/app/dashboard')).toBe('customer')
+    expect(pathToSurface('/api/customer/profile')).toBe('customer')
+  })
+
+  it('routes everything else to public surface', () => {
+    expect(pathToSurface('/')).toBe('public')
+    expect(pathToSurface('/pricing')).toBe('public')
+    expect(pathToSurface('/about')).toBe('public')
+    expect(pathToSurface('/api/public/status')).toBe('public')
+  })
+})

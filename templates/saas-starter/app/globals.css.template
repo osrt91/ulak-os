@@ -1,0 +1,31 @@
+@import 'tailwindcss';
+
+/* {{product_name_pascal}} — global styles (Tailwind v4) */
+
+@theme {
+  /* Tokens defined here mirror tailwind.config.ts theme.extend */
+  --font-sans: var(--font-sans, 'Inter', system-ui, sans-serif);
+}
+
+/* Focus ring — accessibility baseline */
+*:focus-visible {
+  outline: 2px solid theme('colors.brand.500');
+  outline-offset: 2px;
+  border-radius: theme('borderRadius.sm');
+}
+
+/* Typography baseline */
+body {
+  font-feature-settings: 'ss01', 'cv02';
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
