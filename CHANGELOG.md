@@ -1,5 +1,88 @@
 # Changelog
 
+## [2.2.0] — 2026-04-20 — Cross-project pattern absorption (Eksen A)
+
+### Context
+
+v2.1.3 absorbed 39 patterns from scanner-project.com. This release does a second absorption pass across 10+ other projects in the user's portfolio (growth-platform.com, erbilpetshop.com, game-platform.com, plastics-supplier.com, maliyet.app, oguzhansert.dev, oshiaz.com, recipe-platform.xyz, telegram.bot, trend-platform.com, community-platform.com). 3 parallel Explore agents surfaced 18 cross-project-reusable patterns; this release lands them.
+
+Scope is **Eksen A only** of the v2.2 plan. Eksen B (Wave 5 polish, 18 items) and Eksen C (ulak-design-intelligence-mcp, mode-loading conditional loader, eval warn→blocking) are deferred to subsequent patch releases.
+
+### New sector packs (5)
+
+- **SP-07 `admin-cms-hardening`** — Single auth helper reused at every admin entry point (AP-11 prevention); DB-sourced role with TTL cache (not `user_metadata`); CSRF on all mutations including multipart; rate limit on CRUD; per-mutation audit log; `server-only` guards on service-role clients (AP-13 prevention); upload magic-byte sniffing; Origin allowlist; dead-CRUD detection (AP-14). Evidence: oguzhansert.dev 13-specialist consensus + telegram.bot + community-platform.com.
+
+- **SP-08 `ai-relay-cost-control`** — Input length cap, explicit `maxOutputTokens`, per-user + per-session rate limit, streaming-first (SSE/ReadableStream), injection-resistant prompt construction, cost observability (token count + model + user_id to metrics), prompt-log privacy-scoped with TTL, (prompt, context) caching for deterministic queries, AI provider allowlist enforcement, graceful degradation on provider outage. Evidence: oguzhansert.dev + growth-platform.com + recipe-platform.xyz.
+
+- **SP-09 `telegram-bot`** — aiogram FSM with StatesGroup per domain; MemoryStorage vs RedisStorage decision (ephemeral OK if truly discardable, durable must DB); callback-query-driven navigation with stateless callback data; webhook for prod / long-polling for dev; i18n per-user-language in DB + `t()` per-message; Telegram Stars / TON Connect / Stripe / crypto payments; admin commands namespaced; never trust `message.from_user.id` alone for authz. Evidence: telegram.bot (aiogram 3.15 + Supabase + TON + multi-language catalog).
+
+- **SP-10 `member-gated-community-platform`** — Member-gated routes (public / member / admin); event model (event → RSVP → attendance → post-event artifacts); calendar + map discovery (see `docs/runtime/interactive-map-privacy.md`); gallery upload with moderation queue; notification subscriptions per member per type; club-branded email (Resend/SES/Postmark) with respected unsubscribe; role hierarchy audit-logged; RLS enforced at DB level; single-tenant by default. Evidence: community-platform.com.
+
+- **SP-11 `multi-app-nextjs-expo-monorepo`** — apps/admin, apps/web, apps/master, apps/mobile, apps/landing layout; pnpm/Turborepo/Nx workspace; shared packages for ui/schemas/lib; per-app independent deploy; shared auth session across apps via shared apex domain; apps communicate via shared DB schema or event bus (never inter-app HTTP). Evidence: trend-platform.com (5-app workspace).
+
+### New rule packs (4) — `docs/runtime/rule-packs/`
+
+- **`turkish-locale.md`** — `.toLocaleLowerCase('tr')` always; normalize for search separately from display; JSON `ensure_ascii:false`; HTML `lang="tr"`; DB collation `tr_TR.UTF-8`; `Intl.*` for dates/numbers. Activated by Turkish product language or operator locale.
+
+- **`localization-ssot.md`** — SSOT locale file (code + display + RTL + fallback); CI-gated missing-key enforcement; RTL handling with CSS logical properties; JSONB translation columns; machine-translation tagging; email/push/legal are locale-gated. Activated at ≥2 locales.
+
+- **`llm-streaming-context-aware.md`** — Context injection at request (route/session state); token cap server-side; input length cap; SSE/ReadableStream (never buffer); cost observability; rate limit per user AND per session; injection-resistant prompt construction; prompt-log TTL'd; (prompt, context) caching. Activated by LLM SDK + streaming API detection.
+
+- **`react-native-expo.md`** — Expo SDK ≥55, React Native ≥0.83; EAS profiles; shared auth with web; deep links + AASA + asset links; `expo-secure-store` for tokens; `expo-image` not RN Image; `expo-file-system` paths; OTA updates with channel per EAS profile; privacy manifests (iOS 17+). Activated by `app.json` + `eas.json` presence.
+
+### New runtime rules (2)
+
+- **`docs/runtime/webhook-ci-deploy-pattern.md`** — GitHub Actions → deploy webhook discipline: 202 async response with `X-Deploy-Id`; flock-guarded idempotent deploy script; post-deploy `/health` smoke check; CI polls `/deploy-status/<id>` until complete or timeout; CI fails on `failed`/`rolled-back`; 90-day log retention. Evidence: growth-platform.com `.github/workflows/deploy.yml` + scanner-project/community-platform deploys.
+
+- **`docs/runtime/interactive-map-privacy.md`** — No unsolicited `navigator.geolocation` on page load (explicit consent button only); marker clustering at ≥20 points; city-level zoom default + min-zoom to prevent world-zoom; tile provider declared in privacy policy; coordinates stored as PostGIS `geography`; event coordinates deleted N days after event; keyboard-navigable + non-map fallback for screen readers. Evidence: community-platform.com Leaflet event map.
+
+### New anti-patterns (7, AP-10..AP-16) — `docs/runtime/anti-patterns.md`
+
+- **AP-10 Multi-file schema drift** — same entity in SQL + ORM + Zod + TS type with divergent fields (oguzhansert.dev DIR-003)
+- **AP-11 Multi-layer auth bypass** — middleware + page + lib + route all independently flawed; compromised cookie walks through (oguzhansert.dev DIR-001)
+- **AP-12 Fake rollback deploy** — no pg_dump, no health check, exit code swallowed, CI green on broken state (oguzhansert.dev DIR-006)
+- **AP-13 `server-only` installed but never imported** — latent service-role leak (oguzhansert.dev)
+- **AP-14 Dead admin CRUD** — admin writes to tables nothing reads; silent contract lie to admin users (oguzhansert.dev DIR-008)
+- **AP-15 Drag-drop builder without concurrent-edit conflict resolution** — last-write-wins silent loss (trend-platform.com homepage_sections)
+- **AP-16 `.env.local` committed to git** — live evidence from community-platform.com 2026-04-20; working tree + history both exposure surfaces
+
+AP-03 "non-blocking CI gate" updated with **Resolved in Ulak OS v2.1.4** note — Ulak OS's own CI no longer ships the anti-pattern it teaches consumers to avoid.
+
+### Extensions
+
+- **`docs/runtime/rule-packs/api-security.md`** — transactional messaging section: multi-SMS provider abstraction with WhatsApp fallback, email-header spoofing prevention (SPF + DKIM + DMARC), unsubscribe mandate, bounce handling, per-recipient rate limit.
+
+- **`docs/governance/pattern-import-ledger.md`** — **IL-001 entry live**: Trend-Platform → scanner-project.com CMS + blog + site-settings + integration-definitions imports. v2.1.3 R4 residual-risk **closed**: T3 memory claim upgraded to T1 via Explore agent verification on 2026-04-20.
+
+- **`docs/runtime/active-variable-contract.md`** — new fields: `OUTPUT_LANGUAGE` (FIND-LOC-01), `RULE_PACKS_LOADED`, `RULE_PACKS_PROJECT_OVERRIDES`, `MCP_AUTHORIZED_TOOLS` (now director agent v2.1.3 AG-EXT-02 citations are real).
+
+### Pack counts delta (v2.1.4 → v2.2.0)
+
+- Sector packs: 16 → 21
+- Rule packs: 4 → 8
+- Runtime rule files: +2 (webhook-ci-deploy, interactive-map-privacy)
+- Anti-patterns: 69 → 76
+- Active-variable-contract fields: +4
+
+### Residual risk state
+
+- **R4 (Trend-Platform pattern-import T3 claim)** — **CLOSED** (T1 verified, IL-001 entry live)
+- **R1, R3** (CLI src/ + tests/ deep-scanned) — still open, needs v2.3+
+- **R6** (mode-loading deferred) — moved to v2.3 per deferred plan
+
+### Deferred to v2.2.1 or later
+
+- **Eksen B (Wave 5 polish, 18 items)**: 18 thin agent expansion, rule-collision-matrix worked examples, persona-dispatch refinements, guardrail hook, output-profiles locale field, PAT rotation runbook, README filler for empty dirs, canonical-as-of-version footers. None are release blockers.
+- **Eksen C (W6 deferrals)**: ulak-design-intelligence-mcp scaffolding (MCP SDK integration), mode-loading conditional loader (major runtime mechanism change), eval harness warn→blocking promotion (pending false-positive measurement).
+
+### Out-of-band (not in this release)
+
+- **community-platform.com .env.local key rotation** — flagged in v2.2.0 planning phase as URGENT. Live Supabase service-role key + Cloudflare API token + Resend key currently in working tree. Operator action required separately from Ulak OS repo: rotate all keys, verify gitignore, optionally purge history.
+
+### Package metadata
+
+- `package.json` version bump: 2.1.4 → 2.2.0
+
 ## [2.1.4] — 2026-04-20 — CI hardening (false-green surface closure)
 
 ### Context

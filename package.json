@@ -1,6 +1,6 @@
 {
   "name": "ulak-os",
-  "version": "2.1.4",
+  "version": "2.2.0",
   "description": "Vendor-neutral prompt operating system CLI",
   "type": "module",
   "bin": {
