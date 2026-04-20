@@ -1,5 +1,75 @@
 # Changelog
 
+## [2.2.2] — 2026-04-20 — SaaS scaffolder: "Ulak OS produces full-stack SaaS from commit 1"
+
+### Context
+
+v2.2.1 shipped rich governance + 23 sector packs + 8 rule packs + 79 anti-patterns. Capability was **audit / plan / govern**. Missing: **produce**. A user cloning the repo could check their projects but not start a new one with Ulak governance baked in from day 1.
+
+v2.2.2 closes that gap. `/ulak-scaffold` command + `saas-scaffolder` skill + `greenfield-saas-starter` (SP-14) sector pack + `templates/saas-starter/` templates materialize a full-stack SaaS starter directory where every discipline Ulak OS teaches is enforced from commit 1 — not as a retrofit later.
+
+This is the **v1.0 showcase promise**: someone cloning ulak-os from GitHub can produce a full-stack SaaS.
+
+### New command
+
+- **`/ulak-scaffold`** (`.claude/commands/ulak-scaffold.md`) — greenfield SaaS scaffolder. Prompts for product name, domain, stack, locale, payment provider, reseller tier, mobile workspace, hosting. Dispatches the `saas-scaffolder` skill which materializes a complete target directory.
+
+### New skill
+
+- **`saas-scaffolder`** (`.claude/skills/saas-scaffolder/SKILL.md`) — materializes the target tree from inputs. Writes Next.js 16 + TypeScript 5 strict + Tailwind v4 frontend, Supabase SSR + DB + storage backend, optional payment (Stripe / Iyzico / both), i18n SSOT, product-surface-split (customer / admin / optional partner-reseller / public), RLS templates, CI workflows (validate-imports + validate-schemas + gitleaks + dependabot + eval-smoke), pre-push parity scripts, webhook-triggered deploy with health probe + cron-poll fallback, tests (vitest + playwright stubs), `.gitignore` with Ulak's full discipline, `.env.example` with placeholders only, `.claude/` tree with Ulak OS core contract import. Refuses to run if `output_path` exists or if inputs contain real secrets.
+
+### New sector pack
+
+- **SP-14 `greenfield-saas-starter`** — the sector pack that activates when `intervention_mode: CREATE` + `project_state: GREENFIELD` + a SaaS domain match. Documents all the anti-patterns the scaffolder actively prevents by construction (AP-11, AP-12, AP-13, AP-16, AP-17, AP-18, AP-19) and the disciplines it imports from commit 1.
+
+### New runtime dimension
+
+- **15-dimension audit** (was 14) — `docs/runtime/audit-scoring-framework.md` extended with **Performance (web)** dimension. 0-40: no Core Web Vitals tracking; 41-70: CWV tracked in prod, p95 under Google thresholds; 71-100: CWV as SLO + Lighthouse CI per PR with performance budget that blocks regression. Integrates GoogleChrome/web-vitals + lighthouse-ci + harlan-zw/unlighthouse tooling recommendations.
+
+### Template directory
+
+`templates/saas-starter/` seeded with:
+
+- `README.md` — template-directory guide + variable catalog (`{{product_name}}`, `{{locale_primary}}`, etc.)
+- `CLAUDE.md.template` — target project's CLAUDE.md importing Ulak OS core contract + listing activated packs
+- `.env.example.template` — every env var the activated packs need; placeholders only; zero real secrets
+- `.gitignore.template` — full Ulak discipline (`.env.local`, `.claude/settings.local.json`, `.claude/scheduled_tasks.lock`, `.claude/worktrees/`, `reports/current/*`, etc.)
+- `package.json.template` — Next 16 + TypeScript 5 + pnpm + vitest + playwright; `postinstall` installs git hooks
+
+### Version synchronization
+
+Multi-surface drift that the QA agent flagged (README said 2.0.0, package.json said 2.2.1, pack.json said 2.0.0, etc.) is now resolved:
+
+- `package.json` → 2.2.2
+- `prompts/pack.json` → 2.2.2 (plus updated agent/command/skill counts + new fields: `rule_packs: 8`, `sector_packs: 24`, `anti_patterns: 79`, `governance_docs: 22`, `runtime_rules: 33`; added `scaffold-log` + `scaffold-verdict` to artefacts array)
+- `README.md` — full rewrite: quick-start in 5 minutes, two paths (audit existing OR scaffold new), release history current, architecture diagram, governance + anti-pattern list compact
+
+### Pack counts delta (v2.2.1 → v2.2.2)
+
+- Sector packs: 23 → 24 (+SP-14 greenfield-saas-starter)
+- Commands: 8 → 9 (+ulak-scaffold)
+- Skills: 7 → 8 (+saas-scaffolder)
+- Audit dimensions: 14 → 15 (+Performance web)
+- Templates directory: NEW (`templates/saas-starter/`)
+
+### First real scaffolder demo (intake produced)
+
+- `reports/current/wording-manager-intake.md` (gitignored, local-only) — operator's "wording manager" idea (content-ops SaaS for brand voice + multi-locale copy + AI tone check) intake'd using the ulak-intake + greenfield-saas-starter discipline. 9-section intake: product thesis, 5 personas, 4 surfaces, technical shape with scaffolder inputs, differentiators vs Contentful/Phrase/Lokalise, 14-day / 10-Wave MVP plan, validation gates, 6 open questions, next action = `/ulak-scaffold` command invocation.
+
+### Deferred (still)
+
+- Plugin packaging (`.claude-plugin/` + npm publish) — v2.3
+- Showcase UI / GitHub Pages landing (inspired by ringhyacinth/Star-Office-UI) — v2.3
+- Firecrawl MCP integration for market research engine — v2.3
+- LightRAG memory upgrade — v2.3
+- ADRs for v2.x architectural decisions — v2.2.3 polish
+- 18 thin specialist agent expansion — v2.2.3
+
+### Package metadata
+
+- `package.json` version: 2.2.1 → 2.2.2
+- `prompts/pack.json` version: 2.0.0 → 2.2.2 (was stale across 4 releases)
+
 ## [2.2.1] — 2026-04-20 — Deep-infrastructure absorption (post-v2.2 second scan)
 
 ### Context

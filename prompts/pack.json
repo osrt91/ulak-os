@@ -1,27 +1,38 @@
 {
   "name": "ulak-os",
-  "version": "2.0.0",
-  "description": "Vendor-neutral prompt operating system",
+  "version": "2.2.2",
+  "description": "Vendor-neutral prompt operating system — plan, audit, govern, scaffold full-stack SaaS",
   "core": "core/ulak-os-core-contract-2.0.0.md",
-  "agents": 20,
-  "commands": 7,
-  "skills": 4,
+  "agents": 27,
+  "commands": 9,
+  "skills": 8,
+  "rule_packs": 8,
+  "sector_packs": 24,
+  "anti_patterns": 79,
+  "governance_docs": 22,
+  "runtime_rules": 33,
   "artefacts": [
     "runtime-manifest",
     "assumptions",
     "intake",
     "inventory",
     "evidence-register",
+    "deep-scan-report",
+    "did-you-know",
     "research-notes",
     "analysis-findings",
     "target-state",
     "execution-roadmap",
     "validation-plan",
     "pack-gap-register",
-    "manager-verdict"
+    "live-probe-results",
+    "manager-verdict",
+    "scaffold-log",
+    "scaffold-verdict"
   ],
   "compatibility": {
     "cli": ">=2.0.0",
-    "vendors": ["claude", "codex", "gemini"]
-  }
+    "vendors": ["claude-code", "codex-cli", "gemini-cli"]
+  },
+  "updated": "2026-04-20"
 }

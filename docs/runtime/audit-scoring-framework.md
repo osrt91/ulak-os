@@ -1,4 +1,4 @@
-# Audit Scoring Framework — 14 Dimensions
+# Audit Scoring Framework — 15 Dimensions
 
 ## Why this exists
 
@@ -26,6 +26,7 @@ Each dimension is scored 0–100. Scoring rubric per dimension lives in `scripts
 | 12 | **Frontend** | Unstyled, no components, no system | Components but no design system | Design system + tokens + per-page overrides |
 | 13 | **Data validation** | No schema at any boundary | Schema at API, no DB constraint | Pydantic/zod at API + DB check constraints + contract tests |
 | 14 | **Documentation** | README only, stale | README + setup + some runbooks | README + setup + ADRs + runbooks + changelogs |
+| 15 | **Performance (web)** | No Core Web Vitals tracking; Lighthouse never run | CWV tracked in prod; p95 LCP/INP/CLS under Google thresholds | CWV as SLO + Lighthouse CI on every PR (harlan-zw/unlighthouse / GoogleChrome/lighthouse-ci); performance budget blocks regression |
 
 ## Aggregation
 

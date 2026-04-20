@@ -300,6 +300,24 @@ Focus areas:
 
 Evidence: a B2B multi-locale SaaS project + an EdTech AI platform project + a Telegram commerce bot project (DIY Supabase compose topology replicated across 3 projects).
 
+### `greenfield-saas-starter` (SP-14)
+Focus areas — activated when the router sees `intervention_mode: CREATE` + `project_state: GREENFIELD` + product domain that matches a SaaS shape (education, fintech, ecommerce, saas, community, content-ops):
+
+- Target structure materialized from day 1 with all Ulak governance imported — no retrofitting later
+- Product-surface-split (customer / admin / optional partner-reseller / public) wired into route prefixes from commit 1
+- Single auth helper (`lib/auth/index.ts`) reused at every entry point — prevents AP-11 multi-layer auth bypass by construction
+- `server-only` import at every server-role file (AP-13 prevention)
+- RLS policy templates for tenant isolation; cross-tenant verification protocol scheduled in first director audit
+- Payment integration (if activated) wired as transactional FSM from commit 1 — AP-08 + AP-18 prevention
+- CI workflows (validate-imports + validate-schemas + gitleaks + eval-smoke + dependabot) copied from Ulak OS's own disciplined set
+- Deploy pattern: webhook-triggered + post-deploy health probe + cron-poll fallback
+- i18n SSOT from commit 1 if `locales_supported` has ≥2 entries
+- `docs/governance/pattern-import-ledger.yaml` seeded so cross-project pattern imports are traceable from the start
+- `.env.example` with placeholders only; `.gitignore` blocks `.env.local` + `.claude/settings.local.json`
+- Tests scaffolded (`tests/unit/`, `tests/e2e/`) with one passing baseline test each — CI green on commit 1
+
+Derived from the aggregation of 23 sector packs + 8 rule packs + 79 anti-patterns + 22 governance docs applied to a single starter template (see `templates/saas-starter/` + `.claude/skills/saas-scaffolder/`).
+
 ### `multi-project-traefik-edge` (SP-13)
 Focus areas:
 - Single Traefik instance at edge of a VPS hosting N projects
