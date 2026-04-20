@@ -1,18 +1,23 @@
-# Gitleaks config for Ulak OS v2.1.4
+# Gitleaks config for Ulak OS v2.1.4+
 # Extends default ruleset; adds project-specific allowlist for known non-secrets.
 # See: https://github.com/gitleaks/gitleaks
+#
+# IMPORTANT: this allowlist MUST NOT contain real credential values or real
+# infrastructure identifiers. Use abstract patterns only. Real keys / tokens /
+# IPs / emails belong in operator-local config that is gitignored.
 
 [extend]
 # Use gitleaks' default rules as the base.
 useDefault = true
 
 # -----------------------------------------------------------------------------
-# Allowlist — known non-secrets that trigger false positives
+# Allowlist — documentation paths where secret-looking strings may legitimately
+# appear (example values, placeholder env vars, anti-pattern demonstrations).
 # -----------------------------------------------------------------------------
 [allowlist]
-description = "Ulak OS non-secret strings that look like secrets"
+description = "Ulak OS documentation paths where secret-shaped strings are legitimate"
 
-# Paths that are documentation or templates, not live secrets
+# Paths that are documentation or templates, not live secrets.
 paths = [
   '''\.gitleaks\.toml''',
   '''\.gitleaks\.baseline''',
@@ -25,22 +30,17 @@ paths = [
   '''reports/current/.*\.md''',
 ]
 
-# Regex patterns for known non-secret strings referenced in docs
+# Abstract patterns that should not be flagged anywhere:
+# - env var placeholders in .mcp.json and examples
+# - trust-tier enumerations like "T1|T2|...|T7"
+# - example commit SHAs in docs (c21204b etc.)
 regexes = [
-  # env var placeholders in .mcp.json and examples
   '''\$\{[A-Z_]+\}''',
-  # JWT-like example tokens in anti-pattern documentation (T1-T4 style tags appear in regex like T1|T2|...|T7)
   '''T1\|T2\|T3\|T4\|T5\|T6\|T7''',
-  # Example commit SHA referenced in docs (c21204b etc.)
   '''commit [0-9a-f]{7}''',
-  # Example IP in sample validation-plan (is documentation, not live)
-  '''72\.61\.178\.25''',
-  # Scanner-project evidence references
-  '''REDACTED_CF_TOKEN\.\.\.''',
-  '''REDACTED_RESEND_KEY''',
 ]
 
-# Stop words / keywords that should never be flagged even in suspicious contexts
+# Stop words / keywords that should never be flagged even in suspicious contexts.
 stopwords = [
   "TODO",
   "FIXME",
@@ -48,4 +48,6 @@ stopwords = [
   "placeholder",
   "example",
   "redacted",
+  "EXAMPLE_TOKEN",
+  "YOUR_KEY_HERE",
 ]
