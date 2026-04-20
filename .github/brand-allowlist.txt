@@ -1,0 +1,22 @@
+# Brand Allowlist — Historical File Regex Patterns
+# Files listed here are ALLOWED to contain "Claude Ulak" references because they
+# document historical / version-lineage / release-migration state. New docs must
+# use "Ulak OS" terminology; "Claude Ulak" residue outside these files is a CI failure.
+#
+# Format: one regex pattern per line; comments start with #.
+# Patterns are OR-joined at CI time by scripts/check-brand-consistency.sh
+#
+# Authoritative as of Ulak OS v2.1.4.
+
+docs/history/version-lineage\.md
+VERSION_DISTRIBUTION_MATRIX\.md
+RELEASE_NOTES_1\.0\.0\.md
+ROADMAP\.md
+docs/ecosystem/related-work\.md
+docs/ecosystem/related-work\.en\.md
+README\.md
+README\.en\.md
+releases/1\.9\.1/
+CHANGELOG\.md
+VERSIONING\.md
+docs/superpowers/(plans|specs)/(archive/)?

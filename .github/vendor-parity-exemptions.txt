@@ -1,0 +1,34 @@
+# Vendor Parity Exemptions
+# Commands that are intentionally NOT ported across all vendor adapters.
+# Format: <vendor>:<command_name>  (one per line; # for comments)
+# Vendors: claude | gemini | codex
+#
+# An "exemption" means: this command exists for vendor X but not vendor Y,
+# and that's a deliberate choice — not a gap. Usually due to:
+#   - Vendor-specific MCP (e.g. Figma MCP not available on Gemini CLI)
+#   - Naming drift from a predecessor (war-room vs frontend-war-room)
+#   - Feature-flagged rollout (Claude-first, Gemini catches up later)
+#
+# The file is read by scripts/validate-vendor-parity.sh.
+# Declared in v2.1.4 (W4.16) — pre-existing gaps marked, NEW gaps still fail CI.
+
+# ----------------------------------------------------------------------------
+# Naming-drift exemptions — same capability, different name across vendors.
+# TODO v2.2: rename Gemini commands to match Claude names (or vice versa).
+# ----------------------------------------------------------------------------
+
+# `frontend-war-room` (Claude) vs `war-room` (Gemini) — same command,
+# name-drift from early adapter implementation. Normalize in v2.2.
+gemini:frontend-war-room
+claude:war-room
+
+# ----------------------------------------------------------------------------
+# Deliberate vendor-specific commands
+# ----------------------------------------------------------------------------
+
+# `market-scan` is Gemini-only — early experiment; Claude uses market-researcher agent instead.
+# Evaluate in v2.2: promote to Claude as a wrapper around the agent, or drop from Gemini.
+claude:market-scan
+
+# `triage-build` (Claude, v2.1.3) — not yet ported to Gemini. Scheduled for v2.2 vendor-parity pass.
+gemini:triage-build

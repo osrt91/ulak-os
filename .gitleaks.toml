@@ -1,0 +1,51 @@
+# Gitleaks config for Ulak OS v2.1.4
+# Extends default ruleset; adds project-specific allowlist for known non-secrets.
+# See: https://github.com/gitleaks/gitleaks
+
+[extend]
+# Use gitleaks' default rules as the base.
+useDefault = true
+
+# -----------------------------------------------------------------------------
+# Allowlist — known non-secrets that trigger false positives
+# -----------------------------------------------------------------------------
+[allowlist]
+description = "Ulak OS non-secret strings that look like secrets"
+
+# Paths that are documentation or templates, not live secrets
+paths = [
+  '''\.gitleaks\.toml''',
+  '''\.gitleaks\.baseline''',
+  '''CHANGELOG\.md''',
+  '''docs/governance/settings-permissions-governance\.md''',
+  '''docs/governance/ai-provider-allowlist\.md''',
+  '''docs/examples/.*\.md''',
+  '''docs/runtime/rule-packs/.*\.md''',
+  '''\.claude/settings\.local\.example\.json''',
+  '''reports/current/.*\.md''',
+]
+
+# Regex patterns for known non-secret strings referenced in docs
+regexes = [
+  # env var placeholders in .mcp.json and examples
+  '''\$\{[A-Z_]+\}''',
+  # JWT-like example tokens in anti-pattern documentation (T1-T4 style tags appear in regex like T1|T2|...|T7)
+  '''T1\|T2\|T3\|T4\|T5\|T6\|T7''',
+  # Example commit SHA referenced in docs (c21204b etc.)
+  '''commit [0-9a-f]{7}''',
+  # Example IP in sample validation-plan (is documentation, not live)
+  '''72\.61\.178\.25''',
+  # Scanner-project evidence references
+  '''REDACTED_CF_TOKEN\.\.\.''',
+  '''REDACTED_RESEND_KEY''',
+]
+
+# Stop words / keywords that should never be flagged even in suspicious contexts
+stopwords = [
+  "TODO",
+  "FIXME",
+  "XXX",
+  "placeholder",
+  "example",
+  "redacted",
+]

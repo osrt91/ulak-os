@@ -1,0 +1,48 @@
+version: 2
+
+# Dependabot config for Ulak OS.
+# Added in v2.1.4 (W4.12) to close dependency-hygiene gap (FIND-INF-03).
+# Keeps npm + github-actions versions current via PR automation.
+# Review cadence: weekly; security alerts trigger immediately regardless.
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Istanbul"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      typescript-toolchain:
+        patterns:
+          - "typescript"
+          - "@types/*"
+          - "vitest"
+      lint-format:
+        patterns:
+          - "eslint*"
+          - "prettier"
+          - "@typescript-eslint/*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Istanbul"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"

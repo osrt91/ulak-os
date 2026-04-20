@@ -13,23 +13,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed for gitleaks history scan
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Validate JSON/TOML schemas
+      - name: Install Python deps
+        run: pip install jsonschema
+
+      - name: Validate JSON/TOML schemas ($schema-conforming where declared)
         run: bash scripts/validate-schemas.sh
 
-      - name: Validate @import chains
+      - name: Validate @import chains + cycle detection
         run: bash scripts/validate-imports.sh
 
-      - name: Brand consistency (Claude Ulak must not appear outside historical files)
+      - name: Brand consistency (read allowlist from file)
         run: |
-          # Historical references are allowed in lineage/release/migration documents.
-          # Find any "Claude Ulak" that is NOT in the approved historical file allowlist.
-          ALLOWED='docs/history/version-lineage\.md|VERSION_DISTRIBUTION_MATRIX\.md|RELEASE_NOTES_1\.0\.0\.md|ROADMAP\.md|docs/ecosystem/related-work\.md|docs/ecosystem/related-work\.en\.md|README\.md|README\.en\.md|releases/1\.9\.1/|CHANGELOG\.md|VERSIONING\.md|docs/superpowers/(plans|specs)/(archive/)?'
+          ALLOWLIST_FILE=".github/brand-allowlist.txt"
+          if [[ ! -f "$ALLOWLIST_FILE" ]]; then
+            echo "::error::$ALLOWLIST_FILE missing"
+            exit 1
+          fi
+          # Build regex from non-comment, non-empty lines
+          ALLOWED=$(grep -vE '^\s*(#|$)' "$ALLOWLIST_FILE" | paste -sd '|' -)
           OFFENDERS=$(grep -rn "Claude Ulak" --include="*.md" . | grep -vE "($ALLOWED)" || true)
           if [[ -n "$OFFENDERS" ]]; then
             echo "::error::'Claude Ulak' string found outside approved historical files:"
@@ -41,8 +50,8 @@ jobs:
       - name: Verify required artefact chain in AGENTS.md
         run: |
           count=$(grep -c "reports/current/" AGENTS.md)
-          if [[ "$count" -lt 12 ]]; then
-            echo "::error::AGENTS.md required artefact list has $count entries, expected 12."
+          if [[ "$count" -lt 14 ]]; then
+            echo "::error::AGENTS.md required artefact list has $count entries, expected at least 14 (v2.1.4 threshold)."
             exit 1
           fi
           echo "OK: AGENTS.md artefact chain has $count entries"
@@ -54,3 +63,41 @@ jobs:
             exit 1
           fi
           echo "OK: version-lineage.md contains 1.0.0 entry"
+
+      - name: Vendor parity check (claude / gemini / codex commands)
+        run: bash scripts/validate-vendor-parity.sh
+
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+          GITLEAKS_BASELINE_PATH: .gitleaks.baseline
+          GITLEAKS_ENABLE_SUMMARY: "true"
+
+  eval-smoke:
+    name: Eval harness smoke (warn-only in v2.1.4)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run eval harness (warn-only)
+        # v2.1.4 — warn only. v2.2.0 will promote to blocking via EVAL_BLOCKING=1.
+        # Reasoning: runner ships without false-positive rate measurements yet.
+        run: bash evals/run.sh
+        continue-on-error: false  # The script itself exits 0 in warn mode — it's not the CI that is non-blocking.
