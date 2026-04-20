@@ -1,5 +1,64 @@
 # Changelog
 
+## [2.1.4] — 2026-04-20 — CI hardening (false-green surface closure)
+
+### Context
+
+v2.1.3 self-audit surfaced four "false-green CI" findings (DY-01 no cycle detection in import validator; DY-02 schema validator was parse-only; DY-03 no vendor-parity check; DY-08 eval harness golden set but no runner). v2.1.3 shipped with these deferred to v2.1.4. This release closes them.
+
+### CI hardening
+
+- **W4.14 — `scripts/validate-imports.sh`** extended with DFS-based cycle detection. The validator now builds an @-import adjacency graph across all `.md` files and reports any cycles (file A @-imports B, B @-imports C, C @-imports A). Exit 1 on detection; file-existence check remains as Step 1.
+
+- **W4.15 — `scripts/validate-schemas.sh`** upgraded from parse-only (`python -m json.tool`) to actual `$schema` conformance using the `jsonschema` library. If a JSON file declares `$schema: <url>`, the validator fetches the schema (5s timeout) and validates. Fallback when jsonschema lib is unavailable prints an EXPLICIT WARNING (not silent pass). CI installs jsonschema via `pip install` in the workflow.
+
+- **W4.16 — `scripts/validate-vendor-parity.sh`** (new). Emits a per-command Claude / Gemini / Codex parity matrix. Reports missing commands as failures unless exempted in `.github/vendor-parity-exemptions.txt`. Initial exemptions declared for `frontend-war-room`↔`war-room` naming drift, `market-scan` Gemini-only, `triage-build` not-yet-ported-to-Gemini.
+
+- **W4.17 — `evals/run.sh`** (new) — eval harness runner in warn-only mode. Walks `evals/golden/*.md`, parses assertion blocks, validates structural expectations. v2.1.4 ships warn-only because the golden set was authored before the canonical assertion format was codified; runner surfaces the drift without blocking. v2.2.0 (W6.5) will promote to blocking after false-positive rate is measured.
+
+- **W4.12 — `.github/dependabot.yml`** (new) — weekly npm + github-actions updates with grouped PR limits. Scheduled Monday 09:00 Europe/Istanbul.
+
+- **W4.13 — `.gitleaks.toml` + `.gitleaks.baseline`** (new). Gitleaks config extends default ruleset with allowlist for doc paths (CHANGELOG, sample-validation-plan, etc.) and env-var placeholders like `${GITHUB_PERSONAL_ACCESS_TOKEN}`. Baseline is initially empty (repo was cleaned in v2.1.3).
+
+- **W4.11 — `.github/brand-allowlist.txt`** (new) — the historical-files regex list previously inline in `ci-validation.yml` is extracted. Workflow reads from file. Editable without touching CI YAML.
+
+- **W4.10 — `.github/workflows/ci-validation.yml`** updated:
+  - Artefact count threshold: 12 → 14 (AGENTS.md already has 16)
+  - Brand check reads from `.github/brand-allowlist.txt`
+  - New `gitleaks` job (actions/gitleaks-action@v2) with baseline + config
+  - New `eval-smoke` job runs `evals/run.sh` in warn-only mode
+  - Vendor-parity step added to main `validate` job
+  - Main validate job installs `jsonschema` for $schema conformance
+
+- **W4.18 — `.claude/settings.json`** — SessionStart hook added for log rotation:
+  - Rotates any `.claude/logs/*.log` exceeding 1MB into timestamped archive
+  - Deletes archives older than 30 days
+  - Runs at session start so daily rotation is automatic
+
+### Verification
+
+All four validation scripts pass locally:
+- `bash scripts/validate-imports.sh` → ✓ No cycles
+- `bash scripts/validate-schemas.sh` → ✓ (parse-only locally; $schema-conforming in CI)
+- `bash scripts/validate-vendor-parity.sh` → ✓ with 4 declared exemptions
+- `bash evals/run.sh` → warn mode reports golden-set drift (5 goldens need reformat in v2.2)
+
+### Meta-irony resolved
+
+Ulak OS v2.1.3 shipped anti-pattern **AP-03 "non-blocking CI gate"** in its own CI (`validate-schemas.sh` was parse-only, not $schema-conforming — exactly the false-green surface the anti-pattern names). v2.1.4 closes this meta-ironic gap. Ulak OS's own CI now demonstrably enforces the anti-patterns it teaches consumers to avoid.
+
+### Package metadata
+
+- `package.json` version bump: 2.1.3 → 2.1.4
+
+### Deferred to v2.2.0
+
+- W6.5: Promote `evals/run.sh` from warn-only to blocking (after false-positive rate is measured + goldens are reformatted to canonical assertion shape)
+- Cross-project pattern absorption (18 patterns from 10+ projects — see `C:\Users\osrt91\.claude\plans\d-edilmeyen-de-i-iklik-yapmam-z-gereken-glimmering-lightning.md`)
+- W5.1-W5.18 polish items (18 medium findings from v2.1.3 audit)
+- W6.1 ulak-design-intelligence-mcp (scaffolding)
+- W6.4 mode-loading conditional loader
+
 ## [2.1.3] — 2026-04-18 — scanner-project-pattern absorption release
 
 ### Context
