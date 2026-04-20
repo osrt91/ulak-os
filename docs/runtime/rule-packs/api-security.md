@@ -14,6 +14,16 @@ Activated when runtime-manifest detects any HTTP API surface (routes, endpoints,
 - CORS on authenticated endpoints is never `*` — allowlist explicit origins
 - Error responses in prod are generic; stack traces + internal paths stay in logs
 
+## Transactional messaging (added v2.2.0)
+
+- SMS: multi-provider abstraction with WhatsApp fallback (e.g. if primary provider returns 5xx, failover to secondary)
+- Provider fragmentation is real: Twilio, MessageBird, Vonage have different opt-out / delivery-receipt semantics
+- Email (Resend / SES / Postmark): explicit `From:` domain with SPF + DKIM + DMARC all passing
+- Prevent email-header spoofing: `From:`, `Reply-To:`, and `Return-Path:` use same verified domain; user-provided `name` sanitized
+- Unsubscribe link mandatory in every marketing / transactional email (transactional gets one-click, not full preferences)
+- Bounce handling: soft bounces retry with backoff; hard bounces mark address dead in DB
+- Rate limit: per-recipient cap per 24h to prevent reputation damage from compromised send-on-behalf accounts
+
 ## Collision rule
 
 Project `.claude/rules/security.md` overrides specific imperatives; unmatched inherit from this pack.

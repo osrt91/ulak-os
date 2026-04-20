@@ -118,8 +118,49 @@ Missing entries are findings, not blockers — the ledger builds over time.
 - `.claude/agents/architecture-lead.md` — the agent that runs the ledger audit
 - `docs/runtime/anti-patterns.md` — "Schema drift" and "Dead code" anti-patterns sometimes trace back to ledger entries with stale divergence
 
+## Canonical ledger (live)
+
+### IL-001: Trend-Platform → scanner-project.com (CMS + blog + site-settings + integration-definitions)
+
+```yaml
+id: IL-001
+pattern_name: "CMS + blog + site-settings + integration-definitions surface"
+source_project: trend-platform.com
+source_repo: "C:\\Users\\osrt91\\desktop\\proje\\trend-platform.com\\"
+source_commit: "(pre-2026-04-20 snapshot; exact SHA to be backfilled when Trend-Platform is audited)"
+source_files:
+  - "apps/admin/src/app/(dashboard)/blog/page.tsx:1-404"
+  - "apps/admin/src/app/api/settings/route.ts:1-49"
+  - "supabase/migrations/00011_site_settings.sql"
+  - "supabase/migrations/00036_homepage_sections.sql"
+  - "apps/master/src/lib/integration-definitions.ts:1-150+"
+target_files:
+  - "frontend/app/blog/page.tsx:1-60"
+  - "frontend/components/admin/ContentManager.tsx (line 16)"
+  - "frontend/app/admin/page.tsx:19 (IntegrationStatus)"
+  - "app/routers/tenant-integrations/route.ts"
+imported_on: 2025-11-04  # approximate; refine when Trend-Platform git log is cross-referenced
+imported_by: osrt91
+divergence_notes: |
+  - Database isolation: Trend-Platform uses tenant-scoped rows with tenant_id FK;
+    scanner-project stores per scan_id (different domain, both use schema isolation)
+  - Internationalization: Trend-Platform blog is bilingual TR/EN at schema level;
+    scanner-project blog is trilingual (TR/EN/AR) with i18n context
+  - Authorization: Trend-Platform uses Supabase RLS policies on settings;
+    scanner-project uses server-side verifyAdmin() check
+  - Scope: Trend-Platform's integrations are a configuration surface (B2B SaaS
+    enabling partners); scanner-project's integrations are a scanning capability surface
+  - Drag-drop builder (trend-platform homepage_sections) NOT ported to scanner-project
+upstream_fixes_pending: []
+v213_r4_status: UPHELD  # T3 memory claim confirmed with T1 evidence on 2026-04-20
+```
+
+### Verification metadata
+
+Verified via Phase A cross-project Explore agent on 2026-04-20 (v2.2.0 planning pass). T3→T1 tier upgrade applied. R4 residual-risk from v2.1.3 self-audit is **closed** as of v2.2.0.
+
+Future entries append below IL-001 with incremented id (IL-002, IL-003, ...).
+
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.1.3**. Evidence base: user memory naming Trend-Platform → scanner-project pattern migrations (T3). This doc was pattern G-03 in the scanner-project extraction.
-
-**Residual risk (R4 in v2.1.3 manager-verdict)**: the T3 memory claim about specific migrations was not verified against the actual Trend-Platform repo in the v2.1.3 audit cycle. Recommended for v2.2 — scan Trend-Platform and validate the ledger's claims about file-level imports.
+Authoritative as of Ulak OS **v2.2.0** (updated from v2.1.3 G-03 pattern introduction). Initial ledger entry IL-001 verified 2026-04-20.

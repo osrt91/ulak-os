@@ -215,6 +215,77 @@ Focus areas:
 
 Derived from scanner-project.com `docker-compose.prod.yml:15-23`, `infrastructure/kale-kapisi.sh`, `infrastructure/deploy-poll.sh`.
 
+### `admin-cms-hardening` (SP-07)
+Focus areas:
+- Single auth helper reused at every admin entry point (middleware + page + lib + API route) — AP-11 prevention
+- DB-sourced role check with TTL cache + explicit invalidation on role change (never `user_metadata`)
+- CSRF tokens on every mutation endpoint including multipart uploads
+- Rate limit extended to admin CRUD (compromised admin account DoS surface)
+- Per-mutation audit log row: actor, target, timestamp, diff, reason
+- `server-only` guards on service-role clients (AP-13 prevention)
+- Upload magic-byte sniffing (reject PDF-shaped .jpg, etc.)
+- Origin allowlist on admin endpoints; no wildcard CORS
+- Dead admin CRUD detection (AP-14): every admin write has an admin-external reader
+- Impersonation (admin-as-user) requires reason field + own audit row
+
+Evidence: oguzhansert.dev 13-specialist consensus + telegram.bot admin panel + community-platform.com admin surface.
+
+### `ai-relay-cost-control` (SP-08)
+Focus areas:
+- Input length cap before forwarding to model
+- Output token cap always set explicitly (no unbounded `maxOutputTokens`)
+- Per-user + per-session rate limit on AI endpoints
+- Streaming-first: SSE or ReadableStream; never full-response buffering server-side
+- Injection resistance: user input quoted/escaped, never templated
+- Cost observability: token count + model + user_id logged to metrics channel
+- Prompt logging to privacy-scoped table with TTL
+- Cache (prompt, context) pairs for deterministic queries
+- AI provider allowlist enforced (per `docs/governance/ai-provider-allowlist.md`)
+- Graceful degradation on provider outage: queue + retry or visible fallback
+
+Evidence: oguzhansert.dev + growth-platform.com + recipe-platform.xyz (Gemini / OpenAI / Google GenAI relays).
+
+### `telegram-bot` (SP-09)
+Focus areas:
+- aiogram 3.x (or python-telegram-bot, or Telegraf for Node) FSM for multi-step flows
+- `StatesGroup` + `State()` per domain (AddCategory, AddProduct, OnboardUser); each state waits for user message
+- `MemoryStorage()` vs `RedisStorage()` decision: ephemeral state is OK in memory IF conversation is truly discardable-on-restart; durable state (identity, preferences, payment status) MUST go to DB
+- Callback-query-driven navigation: `@router.callback_query(F.data == "menu:catalog")` with stateless callback data; never store session state in URL
+- Long-polling vs webhook: webhook for production (lower latency, lower poll cost); long-polling for dev
+- i18n per user: language preference in DB, translation function loads per-message (or cache with TTL)
+- Payment providers: Telegram Stars native, TON Connect, Stripe (via web-app), crypto (via invoice)
+- Admin commands namespaced under `/admin`, role gated, audit logged
+- Never trust `message.from_user.id` alone for authorization — always recheck from DB each sensitive action
+
+Evidence: telegram.bot (aiogram 3.15 + Supabase + TON + multi-language catalog).
+
+### `member-gated-community-platform` (SP-10)
+Focus areas:
+- Member-gated routes: public (marketing), member (authenticated), admin (role-gated)
+- Event model: event → RSVP (yes/no/maybe) → attendance check-in → post-event artifacts (gallery, summary)
+- Calendar + map discovery surface (see `docs/runtime/interactive-map-privacy.md`)
+- Gallery upload with member attribution, moderation queue for first-time uploaders
+- Notification subscriptions: per-member preferences per notification-type (events, announcements, mentions)
+- Club-branded email templates (Resend / SES / Postmark) with member unsubscribe respected
+- Member role hierarchy: admin / moderator / member / guest; role changes audit-logged
+- RLS policies enforced at DB level (not application-level-only)
+- Single-tenant by default (one club, not platform-of-clubs); if multi-tenant, activate `saas` pack too
+
+Evidence: community-platform.com (event + blog + gallery + notifications + admin for single club).
+
+### `multi-app-nextjs-expo-monorepo` (SP-11)
+Focus areas:
+- Monorepo layout: `apps/admin`, `apps/web`, `apps/master`, `apps/mobile`, `apps/landing` (Expo for mobile, Next.js for web)
+- Workspace manager: pnpm workspaces OR Turborepo OR Nx
+- Shared packages: `packages/ui` (design system), `packages/schemas` (Zod + types), `packages/lib` (utilities)
+- Per-app independence: each app has its own `tsconfig.json`, `next.config.ts`, `package.json` scripts
+- Single lockfile; dependabot config aware of workspace boundaries
+- Deploy independence: each app builds + ships on its own release cycle; no "deploy everything" lockstep
+- Shared auth session across apps (same Supabase / auth-provider instance; same cookies on shared apex domain)
+- Apps communicate via shared DB schema or event bus — never direct inter-app HTTP calls
+
+Evidence: trend-platform.com (5-app workspace with admin + landing + master + mobile + web).
+
 ## Activation rules
 
 A sector pack loads only when **ALL** of these are true:

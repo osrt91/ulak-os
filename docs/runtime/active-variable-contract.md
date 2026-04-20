@@ -57,10 +57,16 @@ ACTIVE_MODE: ""                          # see router-schema.md
 PROJECT_STATE: ""                        # greenfield | brownfield | hybrid
 INTERVENTION_MODE: ""                    # CREATE | REPAIR | EXTEND | REFACTOR | MIGRATE | RESCUE | REPACKAGE
 OUTPUT_PROFILE: ""                       # see output-profiles.md
-REQUIRED_PACKS: []                       # sector packs activated
+REQUIRED_PACKS: []                       # sector packs activated (canonical name: required_sector_packs per runtime-constants.md)
 REQUIRED_OVERLAYS: []                    # overlays activated
 BLOCKED_PATHS: []                        # paths the director must not read/write
 VALIDATION_DEPTH: "standard"             # light | standard | deep
+
+# ----- locale + output language (v2.2.0 addition — FIND-LOC-01) -----
+OUTPUT_LANGUAGE: "tr"                    # tr | en | de | ... — the language manager-verdict narrative + specialist artefacts use
+RULE_PACKS_LOADED: []                    # e.g. [typescript-nextjs, docker-compose, turkish-locale] — populated by Phase 0 toolchain-precheck
+RULE_PACKS_PROJECT_OVERRIDES: []         # e.g. [python] — if .claude/rules/python.md exists, it overrides ulak-shipped python-fastapi.md for matching imperatives
+MCP_AUTHORIZED_TOOLS: {}                 # per docs/governance/mcp-governance.md — justification + approved_at + scope per MCP server
 ```
 
 ## Default values
