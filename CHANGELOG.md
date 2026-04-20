@@ -1,5 +1,69 @@
 # Changelog
 
+## [2.2.1] — 2026-04-20 — Deep-infrastructure absorption (post-v2.2 second scan)
+
+### Context
+
+After v2.2.0 shipped, a user-directed second-pass deep-infrastructure scan ran across plastics-supplier.com, growth-platform.com, trend-platform.com, erbilpetshop.com, oguzhansert.dev, telegram.bot, recipe-platform.xyz. Three parallel Explore agents, with explicit "no real credentials in output" discipline, surfaced 10 infrastructure patterns that v2.2.0 did NOT cover — most notably the database-backup gap, monorepo root-env leak, static HMAC deploy webhook, cross-tenant RLS verification absence, and baseline observability gap across the entire portfolio.
+
+### Security fix (backported to tag HEAD)
+
+- **`.gitleaks.toml` scrubbed** — v2.1.4 shipped with real credential VALUES inline in the allowlist (full Resend key + partial Cloudflare token + real VPS IP). Previous commit `d1d05d6` removed them from HEAD. v2.1.4 tag history still has them. **Operator must rotate the Resend API key** — it was in public GitHub for ~2 hours between v2.1.4 push and v2.2.0 security fix.
+
+### New anti-patterns (3, AP-17..AP-19)
+
+- **AP-17 No database backup / disaster recovery plan** — Docker volumes alone are not a backup; no off-host dump, no retention, no tested restore. Cross-project finding in kismet + growth-platform.
+- **AP-18 Static HMAC over empty body in deploy webhook** — `openssl dgst -sha256 -hmac $SECRET` over `""`/`"{}"` produces constant signature; infinite replay. Cross-project finding in trend-platform + oguzhansert.
+- **AP-19 Root `.env.local` in monorepo** — Turbo/Next.js/Vite inheritance means root `.env.local` compromise leaks across every app. Finding from trend-platform.
+
+### New sector packs (2, SP-12..SP-13)
+
+- **SP-12 `self-hosted-supabase-orchestration`** — 9-service compose (postgres + gotrue + postgrest + realtime + storage + postgres-meta + kong + studio + reverse-proxy), dependency-gated startup, cross-tenant RLS verification required, backup discipline required. Evidence: kismet + dipten + telegram.bot.
+- **SP-13 `multi-project-traefik-edge`** — Single Traefik fronting N project compose files, shared `edge` network, Let's Encrypt automation, 127.0.0.1 app binding, TLS-terminated-at-edge, cross-project blast radius control. Evidence: 4+ projects on single VPS.
+
+### New runtime rules (2)
+
+- **`docs/runtime/cross-tenant-rls-verification.md`** — 7-step protocol for verifying Row-Level Security actually isolates tenants sharing a Postgres instance. Includes anon probe, authenticated-cross-tenant probe, service-role escape test, write-probe, automated runner spec. Closes a gap shared by trend-platform + erbilpetshop + kismet + dipten.
+- **`docs/runtime/transactional-fsm-payment.md`** — Finite state machine for multi-rail payment (Stripe + Iyzico + Telegram Stars + crypto) with explicit timeout + rollback at every transition, `external_id` idempotency, append-only transition audit log. Evidence: telegram.bot TON handler (reserve → connect → send → confirm + timeout rollback).
+
+### New governance docs (2)
+
+- **`docs/governance/secrets-rotation-policy.md`** — Rotation cadence matrix per secret class (JWT 90d, DB 180d, payment 30-90d, Cloudflare 90d, etc.), canonical 9-step rotation procedure, failed-rotation handling, shared-secret hazard tracking, CI enforcement design.
+- **`docs/governance/observability-baseline.md`** — Three pillars (structured JSON logs + RED metrics + automated error tracking) with per-stack setup recipes (Next.js/Python/Docker), Phase 5 §5c validation gates (`observability_logging/metrics/errors: pass|fail`), cost discipline, upgrade paths. Closes portfolio-wide "zero observability" gap.
+
+### Extensions
+
+- **`docs/runtime/webhook-ci-deploy-pattern.md`** extended with §6 "Post-deploy health-probe contract" — health endpoint 200 + sample read returns deployed-SHA + dependency liveness + automatic rollback on failure. Closes AP-12 (fake rollback) + AP-18 (static HMAC).
+
+### Core contract import additions
+
+- `@docs/governance/secrets-rotation-policy.md` added
+- `@docs/governance/observability-baseline.md` added
+
+### Pack counts delta (v2.2.0 → v2.2.1)
+
+- Sector packs: 21 → 23
+- Runtime rule files: +2 (cross-tenant-rls-verification, transactional-fsm-payment)
+- Anti-patterns: 76 → 79
+- Governance docs: 20 → 22
+
+### Deferred (still)
+
+- Wave 5 polish (18 items from v2.1.3 audit) — v2.2.2
+- W6.1 ulak-design-intelligence-mcp — v2.3
+- W6.4 mode-loading conditional loader — v2.3
+- W6.5 eval harness warn→blocking — after false-positive measurement
+- `cross-tenant-rls-verifier` agent implementation — v2.3 (spec in this release, agent file in next)
+
+### Package metadata
+
+- `package.json` version bump: 2.2.0 → 2.2.1
+
+### Out-of-band flags still live
+
+- **Operator action required**: rotate Resend API key (full key was in v2.1.4 tag `.gitleaks.toml` between tag time and `d1d05d6` HEAD cleanup)
+- **game-platform.com audit finding**: `eni_terminal.py` contains prompt-injection payload (identified by Explore agent 3 during v2.2.1 scan). No patterns extracted from game-platform per operator direction. Separate investigation recommended if source is unknown.
+
 ## [2.2.0] — 2026-04-20 — Cross-project pattern absorption (Eksen A)
 
 ### Context
