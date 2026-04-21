@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "ulak-os",
   "displayName": "Ulak OS — Prompt Operating System",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Vendor-neutral prompt operating system. Plan, audit, govern, and scaffold full-stack SaaS with Claude Code. 24 sector packs, 8 rule packs, 79 anti-patterns, 22 governance docs, 27 specialist agents, 9 slash-commands, 9 skills.",
   "author": {
     "name": "osrt91",
@@ -12,7 +12,7 @@
     "type": "git",
     "url": "https://github.com/osrt91/ulak-os.git"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "keywords": [
     "prompt-os",
     "claude-code",
