@@ -51,3 +51,17 @@ gemini:ulak-mcp-discover
 gemini:ulak-pattern-extract
 gemini:ulak-subagent-dispatch
 gemini:ulak-test-driven
+
+# ----------------------------------------------------------------------------
+# v1.1.0-cycle vision-fix slash commands (Claude-Code-specific by design).
+# These 6 commands realize the "don't search internet / don't write prompts /
+# talk naturally / see what it is" vision layer. They wrap existing Claude
+# Code primitives (slash-command dispatch, interactive prompts, file writes).
+# Gemini CLI adapter is deferred to v1.2 pending equivalent primitives.
+# ----------------------------------------------------------------------------
+gemini:ulak-ask
+gemini:ulak-hello
+gemini:ulak-locale
+gemini:ulak-packs
+gemini:ulak-search
+gemini:ulak-start

@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.1.0-unreleased] — Post-v1.0.0 operator-facing polish
+
+### Added — slash commands
+- `/ulak-ask` — natural-language intent router (plain-language query → best existing command/skill/agent)
+- `/ulak-packs` — pack catalog browser across commands, skills, agents, hooks, MCPs
+- `/ulak-search` — content search across runtime rules, governance, and prompt surface
+- `/ulak-start` — 6-question interactive wizard that invokes `/ulak-scaffold` with resolved flags
+- `/ulak-hello` — first-touch onboarding greeter for brand-new operators
+- `/ulak-locale` — TR/EN active-locale toggle with `show` / `tr` / `en` sub-commands; state persisted at `.claude/state/locale.txt`
+
+### Added — runtime and governance docs
+- `docs/runtime/intent-router.md` — routing table used by `/ulak-ask`
+- `docs/runtime/catalog.md` — enumerated pack catalog consumed by `/ulak-packs`
+- `docs/runtime/wizard-defaults.md` — default answers + SaaS archetype matrix for `/ulak-start`
+- `docs/governance/localization-governance.md` — bilingual policy (6 rules, enforcement chain, change control)
+- `scripts/validate-bilingual.sh` — CI gate that enforces `localization-governance.md` (PASS/FAIL)
+
+### Changed
+- `CLAUDE.md` — adds `@docs/runtime/localization-strategy.md` import and a "locale aware komutlar" runtime default
+- Locale state now has a single source of truth (`.claude/state/locale.txt`); reading from `$LANG` or CLAUDE.md frontmatter is forbidden as primary source
+
+### Notes
+- No breaking changes; all pre-v1.0.0 behavior preserved.
+- Default locale when `.claude/state/locale.txt` is absent = `tr` (project origin).
+- Slash command frontmatter: `description` TR-primary, `description_en` EN-secondary (soft check in validator for backward compatibility).
+
+---
+
 ## [1.0.0] — 2026-04-21 — First public launch (semver reset for marketplace submission)
 
 ### Why the version dropped from 3.0.0 → 1.0.0

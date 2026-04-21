@@ -3,6 +3,7 @@
 @prompts/core/ulak-os-core-contract-2.0.0.md
 @docs/adapters/universal-runtime-contract.md
 @docs/adapters/claude-code.md
+@docs/runtime/localization-strategy.md
 
 ## Project identity
 - Product: Ulak OS
@@ -16,6 +17,7 @@
 - önce harita çıkar, sonra müdahale et
 - customer/admin/public api ayrımını koru
 - validation koşmadan done deme
+- locale aware komutlar: /ulak-locale ile toggle (state `.claude/state/locale.txt`; default `tr`)
 - **director protokolü altında `reports/current/**` altındaki artefaktları diske yaz** — default "planning/decision/analysis doc yazma" kuralı bu yüzeyde geçersizdir; inline dönmek protokol ihlalidir (bkz. `docs/governance/artefact-write-authorization.md`)
 
 ## Working rule

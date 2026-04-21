@@ -1,0 +1,229 @@
+---
+name: ulak-search
+description: Ulak OS kapasite kataloğunda keyword araması yapar. TR veya EN keyword kabul eder; komut/skill/ajan/sector/rule/governance/ADR/runbook/template sonuçlarını birleşik liste halinde döker. "Plugin aramak yerine kendi yeteneğini ara" katmanı — `/ulak-search payment` gibi bir sorgu payment-integrated-saas sector'u, iyzico template'lerini, /ulak-scaffold payment flag'ini tek ekranda verir.
+description_en: Keyword search over the Ulak OS capability catalog. Accepts TR or EN keywords; returns combined hits across commands/skills/agents/sectors/rules/governance/ADRs/runbooks/templates. "Search your own capabilities instead of hunting plugins" layer — e.g. `/ulak-search payment` shows payment-integrated-saas sector, iyzico templates, and /ulak-scaffold payment flag on one screen.
+agent: autonomous-program-director
+allowed-tools: Read, Grep, Glob, Bash
+argument-hint: "<keyword>  (TR veya EN — örn: payment | ödeme | fintech | auth | build | i18n | scaffold)"
+model: claude-opus-4-7
+---
+
+# /ulak-search — Ulak OS capability search
+
+> **TR** — İhtiyaç duyduğun yeteneği internetten değil, kendi kataloğundan bul.
+> **EN** — Find the capability you need from your own catalog, not from the internet.
+
+## Ne zaman kullanılır / When to use
+
+- **"Bu iş için bir şey var mı?"** — belirli bir domain için (payment, auth, i18n, build) yeteneği ara
+- **Bilingual lookup** — TR veya EN keyword ile
+- **Pre-scaffold** — yeni proje öncesi "hangi sector/pack var?" sorusuna cevap
+- **Kapasite diff** — "bu var mı yok mu?" hızlı kontrol
+
+## Ne yapmaz / What this does NOT do
+
+- Web'de arama yapmaz (onun için `WebSearch` tool'u var)
+- Kod içinde arama yapmaz (onun için `Grep` tool'u var)
+- Yeni skill/command önermez (onun için `/pack-gap-audit` var)
+
+## Akış / Flow
+
+### 1) Keyword'ü al / Parse keyword
+
+```
+KEYWORD = $ARGUMENTS
+```
+
+Eğer boş, kullanıcıya 3 örnek göster:
+- `/ulak-search payment` — ödeme entegrasyonu
+- `/ulak-search audit` — audit komutları ve skill'leri
+- `/ulak-search i18n` — localization kapasitesi
+
+### 2) Bilingual synonym expansion / TR-EN synonym table
+
+TR → EN ve EN → TR eşleme:
+
+| TR | EN | TR | EN |
+|---|---|---|---|
+| ödeme | payment | kurulum | install |
+| güvenlik | security | yapı | build |
+| kimlik | auth | test | test |
+| rol | role/RLS | veri | data |
+| çeviri | i18n/locale | sürüm | release |
+| denetim | audit | ajan | agent |
+| sektör | sector | kural | rule |
+| başla | start/init | arama | search |
+| tasarım | design | temel | scaffold |
+| doğrulama | validation | raporlar | reports |
+| rehber | runbook | gizlilik | privacy |
+| keşif | discover | paralel | parallel |
+
+Eğer TR keyword girdiyse, EN karşılığıyla genişlet. Tersi de geçerli.
+
+### 3) Search surface / Arama yüzeyleri
+
+**Sırasıyla şu dosya gruplarında `grep -i` çalıştır:**
+
+#### 3a) Commands (komut)
+```bash
+grep -l -i "KEYWORD" .claude/commands/*.md
+```
+Eşleşenlerin frontmatter `description` satırını göster.
+
+#### 3b) Skills (skill)
+```bash
+grep -l -i "KEYWORD" .claude/skills/*/SKILL.md
+```
+
+#### 3c) Agents (ajan)
+```bash
+grep -l -i "KEYWORD" .claude/agents/*.md
+```
+
+#### 3d) Sector overlay kits (sector)
+```bash
+ls templates/sectors/ | grep -i "KEYWORD"
+find templates/sectors/ -name "*KEYWORD*"  # inside sectors
+```
+
+#### 3e) Sector pack definitions (sector pack)
+```bash
+grep -i "KEYWORD" docs/runtime/sector-packs.md
+```
+
+#### 3f) Rule packs (rule)
+```bash
+grep -l -i "KEYWORD" docs/runtime/rule-packs/*.md
+```
+
+#### 3g) Governance
+```bash
+grep -l -i "KEYWORD" docs/governance/*.md
+```
+
+#### 3h) ADRs
+```bash
+grep -l -i "KEYWORD" docs/adr/ADR-*.md
+```
+
+#### 3i) Runbooks
+```bash
+grep -l -i "KEYWORD" docs/runbooks/*.md
+```
+
+#### 3j) Scaffolder templates (284 file)
+```bash
+find templates/ -name "*KEYWORD*" -not -path "*/node_modules/*"
+```
+
+### 4) Format and rank / Formatla ve sırala
+
+**Önem sırası / Priority order:**
+
+1. **Direct match in name** (dosya/dizin ismi keyword içeriyor) — üstte
+2. **Description match** (frontmatter description'da geçiyor)
+3. **Body match** (dosya içeriğinde geçiyor) — altta
+
+**Çıktı formatı:**
+
+```
+# /ulak-search "<keyword>" — N hit
+
+## ⚡ Doğrudan eşleşme / Direct match (<name hit count>)
+- `/command-name` — description
+- `agent-name` — description
+- ...
+
+## 📦 Sector + Rule Pack (<count>)
+- `sector/ecommerce/` — sector overlay (2 template file)
+- `rule-packs/api-security.md` — HTTP API surface kuralı
+- ...
+
+## 📖 Governance + ADR + Runbook (<count>)
+- `governance/mcp-governance.md` — MCP allowlist + trust tier
+- `ADR-003` — Product Surface Split Distinct from Runtime
+- ...
+
+## 📄 Template hit (<count>)
+- `templates/sectors/fintech/lib/compliance/kyc.ts.template`
+- ...
+
+## 💡 Sonraki adım / Next step
+- İlgili komutu çalıştır: `/<command>`
+- Catalog'da detay: `/ulak-packs <section>`
+- Hiç hit yoksa: `/pack-gap-audit` ile kapasite açığını raporla
+```
+
+### 5) Zero-hit handling / Hit yoksa
+
+Eğer hiç hit yoksa:
+
+```
+# /ulak-search "<keyword>" — 0 hit
+
+Bu keyword ile eşleşen kapasite bulunamadı.
+
+## Kontrol listesi / Checklist
+- Synonym denendi mi? (TR/EN)
+- Benzer keyword: <suggest 2-3 from tried synonyms>
+- Bu gerçekten bir pack-gap mı? `/pack-gap-audit` ile raporla.
+
+## İlgili olabilir / You may want
+- `/ulak-packs` — tüm katalog
+- `/ulak-ask "<doğal dil>"` — niyet-tabanlı eşleme
+```
+
+## Örnekler / Examples
+
+### Örnek 1 — Payment
+```
+/ulak-search payment
+```
+→ Beklenen hit:
+- `/ulak-scaffold` (frontmatter `--payment` flag)
+- `sector-packs.md` SP-03 `payment-integrated-saas`
+- `templates/fintech/`, `templates/ecommerce/` (payment related)
+- Governance: `ai-provider-allowlist` (payment provider listesi olabilir)
+
+### Örnek 2 — Türkçe keyword
+```
+/ulak-search ödeme
+```
+→ `payment` ile genişletilir, aynı sonuç.
+
+### Örnek 3 — Audit
+```
+/ulak-search audit
+```
+→ Beklenen hit:
+- `/ulak-audit-deep`, `/pack-gap-audit`, `/final-verdict`
+- `skill/fourteen-dimension-audit`
+- `agent/release-readiness-auditor`, `qa-validation-commander`
+- Governance: `evidence-trust-scoring`, `settings-permissions-governance`
+
+### Örnek 4 — i18n
+```
+/ulak-search i18n
+```
+→ Beklenen hit:
+- `/ulak-locale`
+- `agent/localization-i18n-lead`
+- `rule-pack/localization-ssot`, `rule-pack/turkish-locale`
+- `governance/localization-governance`
+
+### Örnek 5 — Build patladı
+```
+/ulak-search build
+```
+→ Beklenen hit:
+- `/triage-build`
+- `governance/lock-file-hygiene`
+
+## Governance gate
+
+Bu komut **read-only**. `reports/current/` altına yazmaz. Director Phase'leri tetiklemez.
+
+Eğer arama "bu olmalı ama yok" tespit ettirirse, kullanıcıya şunu öner:
+- `/pack-gap-audit` — gap'i resmi olarak logla
+- `/ulak-brainstorm` — yeni kapasite tasarla
+- `/ulak-pattern-extract` — başka projedeki pattern'i ithal et
