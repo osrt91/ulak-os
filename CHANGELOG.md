@@ -1,5 +1,80 @@
 # Changelog
 
+## [2.0.0] — 2026-04-21 — Phase C: hybrid-systems scaffolding (monorepo + FastAPI + Expo + Telegram + Traefik)
+
+### Context
+
+Single-stack to multi-service. v1.1 shipped a Next.js+Supabase SaaS; v2.0 turns `/ulak-scaffold` into a hybrid-monorepo generator. When an operator passes `--hybrid-backend fastapi`, `--has-mobile`, `--has-bot telegram`, or `--deploy docker-compose-traefik`, the scaffolder stops writing a flat Next.js project and instead materializes a pnpm-workspaces monorepo with up to four deployable services + three shared packages + a production-ready edge proxy.
+
+This release is the "Ulak OS can produce hybrid systems from scratch" capability closing the v1.0.0 red-team Hybrid gap in full.
+
+### What landed (77 new template files)
+
+**Monorepo root (8 files, templates/monorepo-root/)**:
+
+- `package.json` — pnpm workspaces + Turborepo scripts (`dev`, `dev:web`, `dev:api`, `dev:mobile`, `dev:bot`, `build`, `test`, `compose:up`, `compose:prod`, `db:migrate`)
+- `pnpm-workspace.yaml` + `turbo.json` — build pipeline with dependency graph
+- `.gitignore` — monorepo-aware (AP-16 + AP-19 prevention at every app level)
+- `README.md` — structure map + onboarding
+- `infrastructure/docker-compose.hybrid.yml` — 5-service dev stack (web + api + bot + postgres + redis + mailhog + traefik), profiles for opt-in services
+- `infrastructure/traefik/{traefik,dynamic}.yml` — production-ready edge: HTTPS redirect + HSTS 2y + CSP + X-Frame-Options + Permissions-Policy + rate-limit middleware + Let's Encrypt
+
+**FastAPI backend (24 files, templates/backends/fastapi/)** — for `--hybrid-backend fastapi`:
+
+- `app/main.py` — FastAPI 0.115+ app factory with CORS + request-id + JWT middleware + routers
+- `app/auth.py` — Supabase JWKS JWT verify (RS256) with in-process cache + HS256 fallback for tests; role re-read from `user_role_assignments` per request (AP-06 parity with Next.js `getAuthContext({ force_refresh: true })`)
+- `app/config.py` — pydantic-settings with `SecretStr` for every credential
+- `app/db.py` — SQLAlchemy 2.0 async engine + `get_db()` dependency
+- `app/routes/{health,customer,admin,partner,webhooks}.py` — full REST surface; admin routes include `?page&limit&role&q` pagination with max-limit enforcement; tenant isolation via explicit `.where(Model.tenant_id == auth.tenant_id)` in every query
+- `app/models/{base,schemas}.py` — read-only SQLAlchemy views matching Supabase schema (tenants, user_role_assignments, subscriptions, payment_events, audit_log, processed_webhook_events)
+- `alembic/` — async migrations pinned to same DB as Next.js (additive only; Supabase canonical)
+- `tests/conftest.py + test_health + test_customer` — httpx AsyncClient over ASGITransport, transactional rollback per test, JWT mock, tenant-isolation assertions (customer of tenant A cannot see tenant B data)
+- `Dockerfile + pyproject.toml` — Python 3.12-slim non-root; deps: fastapi, uvicorn, sqlalchemy[asyncio], asyncpg, alembic, pydantic-settings, python-jose, httpx, pytest, slowapi
+
+**Expo mobile (16 files, templates/apps/mobile-expo/)** — for `--has-mobile`:
+
+- `app/_layout.tsx` — Expo Router v4 root: GestureHandlerRootView + SafeAreaProvider + QueryClientProvider + AuthGate + RootErrorBoundary + Inter font loading
+- `app/(auth)/{login,register,forgot-password}.tsx` — email/password + magic-link + Google/Apple OAuth via Supabase; AP-08 forgot-password enumeration prevention
+- `app/(tabs)/{index,explore,notifications,profile}.tsx` — Home greeting + pull-to-refresh; Explore search + category chips; Notifications with Swipeable dismiss + Expo Notifications push-token registration; Profile with bottom-sheet editor + theme/locale/push toggles
+- `app/+not-found.tsx` — 404 fallback
+- `lib/{supabase,auth,api}.ts` — Zustand session store with `hydrated` flag (prevents auth-gate flicker), TanStack Query with 30s staleTime + JWT auto-inject + Zod-parsed responses
+- `app.json + eas.json` — Expo config with bundle IDs, permissions, deep-link scheme; EAS build profiles (development/preview/production)
+
+**Telegram bot (15 files, templates/apps/bot-telegram/)** — for `--has-bot telegram`:
+
+- `bot.py` — aiogram 3.x Dispatcher with Memory|Redis storage + polling|webhook mode (HMAC-verified inbound); `aiohttp` app for webhook mode with `secret_token`
+- `config.py` — pydantic-settings with `SecretStr` for `BOT_TOKEN` + `API_SERVICE_TOKEN`; `ALLOWED_USERS` CSV parsed into int set
+- `handlers/{start,help,settings,link_account,notifications,errors}.py` — 6 routers with FSM flows for locale + account-linking + rate-limited inbound notifications + global error handler with optional Sentry
+- `services/{api_client,hmac_auth,i18n}.py` — signed service-to-service calls to FastAPI (HMAC-SHA256 over `METHOD|PATH|BODY`); shared i18n dict
+- `keyboards/inline.py + states/user_states.py` — reusable InlineKeyboard builders + FSM `StatesGroup` declarations
+- `Dockerfile + pyproject.toml` — Python 3.12-slim non-root; deps: aiogram >=3.3, redis, pydantic-settings, httpx, sentry-sdk
+
+**Shared packages (12 files, templates/shared-packages/)**:
+
+- `shared/` (6 files) — canonical cross-app types (`Role`, `Surface`, `SubscriptionStatus`, `UserProfile`, `Tenant`, `Subscription`, `PaymentEvent`, `AuditLogEntry`, `Notification`, `Paginated<T>`, `ApiError`), Zod schemas for every API payload + query, constants (`LEGAL_TRANSITIONS` FSM, `PLAN_CAPABILITIES`, `API_PATHS`, `RATE_LIMITS`), `tsconfig.json`
+- `ui/` (6 files) — `cn()` className merger, Intl formatters (`formatCurrency` / `formatDate` / `formatRelativeTime` / `formatNumber`), design tokens (spacing/typography/motion/z-index), variant label system (`Variant`, `Size`, `VARIANT_SEMANTICS`)
+- `config/` (2 files) — shared `tsconfig.base.json` with strict + isolatedModules + noUncheckedIndexedAccess + exactOptionalPropertyTypes
+
+### Anti-patterns prevented by construction (Phase C additions)
+
+- **AP-06** (user_metadata as authz): FastAPI `get_auth_context()` re-reads role from `user_role_assignments` per request, never trusts JWT `role` claim — parity with Next.js `getAuthContext({ force_refresh: true })`
+- **AP-08** (user-enumeration): Expo forgot-password, web forgot-password both return generic success regardless of whether email exists in DB
+- **AP-10** (schema drift): `@{{product_name}}/shared/types` is SSOT; FastAPI models are read-only views; Supabase migrations are canonical writes
+- **AP-11** (multi-layer auth bypass): every FastAPI route uses `Depends(require_role(...))`; every Next.js server component uses `getAuthContext()`; both paths land at the same tenant-scoped query shape
+- **AP-16 + AP-19** (.env.local committed): monorepo `.gitignore` covers root + every `apps/*/.env.*` explicitly
+- **AP-18** (static HMAC no-body): service-to-service (bot → api) signs `METHOD|PATH|BODY` + timestamp; inbound webhook verification uses `hmac.compare_digest`
+
+### Package metadata
+
+- `package.json` / `prompts/pack.json` / `.claude-plugin/plugin.json` — all three 1.1.0 → 2.0.0
+
+### Deferred to v2.0.1+ / later phases
+
+- **Skill rewrite (C.8)**: scaffolder skill needs to wire `--hybrid-backend`, `--has-mobile`, `--has-bot`, `--deploy` input flags to their overlay directories. Plumbing documented in `saas-scaffolder/SKILL.md` v1.1 determinism contract; implementation lands in v2.0.1.
+- **infrastructure/Dockerfile for web** (caller-note from B.1c): missing; apps/web/Dockerfile lands when scaffolder wraps saas-starter into apps/web/ in v2.0.1.
+- **Sector overlays** (Phase E, v2.2): 17 sector-specific overlays (education LMS, fintech KYC/AML, ecommerce cart/checkout, marketplace two-sided, enterprise-b2b SSO, health HIPAA, ai-copilot LLM relay, pwa-desktop, admin-cms-hardening, ai-relay-cost-control, member-gated-community, self-hosted-supabase, regulated, container-k8s)
+- **Community ecosystem fetch** (Phase D, v2.1): awesome-claude-code + superpowers + MCP registry integration
+
 ## [1.1.0] — 2026-04-21 — Phase B: scaffolder completion (Next.js+Supabase SaaS ship-ready)
 
 ### Context
