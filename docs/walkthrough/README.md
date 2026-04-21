@@ -4,9 +4,11 @@ Her walkthrough, gerçek bir kullanıcı profilini alıp sıfırdan canlı sitey
 
 ## Mevcut walkthroughlar
 
-| # | Başlık | Süre | Zorluk | Ne öğretir |
-|---|---|---|---|---|
-| 01 | [Sıfırdan ilk SaaS'a uçtan uca](01-first-saas-end-to-end.md) | 75-90 dk | Başlangıç | Ev temizlik marketplace + Supabase + GitHub + Vercel + Resend + Iyzico |
+| # | Başlık | Vendor | Süre | Zorluk | Ne öğretir |
+|---|---|---|---|---|---|
+| 01 | [Sıfırdan ilk SaaS'a uçtan uca](01-first-saas-end-to-end.md) | Claude Code | 75-90 dk | Başlangıç | Ev temizlik marketplace + Supabase + GitHub + Vercel + Resend + Iyzico (slash dispatch) |
+| 01-codex | [Sıfırdan ilk SaaS'a uçtan uca — Codex CLI variant](01-first-saas-end-to-end-codex.md) | Codex CLI | 75-90 dk | Başlangıç | Aynı senaryo, `/slash` yerine doğal dil ile Codex NL trigger map |
+| 01-copilot | [Sıfırdan ilk SaaS'a uçtan uca — GitHub Copilot Chat variant](01-first-saas-end-to-end-copilot.md) | Copilot Chat (VS Code) | 75-90 dk | Başlangıç | Aynı senaryo, `.github/copilot-instructions.md` NL trigger map + VS Code terminal akışı |
 
 ## Nasıl okunur
 

@@ -3,6 +3,7 @@
 @prompts/core/ulak-os-core-contract-2.0.0.md
 @docs/adapters/universal-runtime-contract.md
 @docs/adapters/claude-code.md
+@docs/governance/vendor-capability-matrix.md
 @docs/runtime/localization-strategy.md
 
 ## Project identity

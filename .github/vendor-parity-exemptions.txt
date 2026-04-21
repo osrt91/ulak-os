@@ -11,80 +11,33 @@
 #
 # The file is read by scripts/validate-vendor-parity.sh.
 # Declared in v2.1.4 (W4.16) — pre-existing gaps marked, NEW gaps still fail CI.
+#
+# -----------------------------------------------------------------------------
+# v3.0.x Gemini sync pass: the previous 17 `gemini:<name>` exemptions (ulak-ask,
+# ulak-audit-deep, ulak-brainstorm, ulak-demo, ulak-explain, ulak-hello,
+# ulak-locale, ulak-mcp-discover, ulak-next-steps, ulak-packs,
+# ulak-pattern-extract, ulak-scaffold, ulak-search, ulak-start,
+# ulak-subagent-dispatch, ulak-test-driven, triage-build, and the earlier
+# `gemini:frontend-war-room` name-drift entry) are removed. All 18 commands
+# are now shipped as native Gemini .toml files via scripts/sync-gemini-commands.sh.
+# The sync is generated from the Claude-side .md source of truth.
+# -----------------------------------------------------------------------------
 
 # ----------------------------------------------------------------------------
 # Naming-drift exemptions — same capability, different name across vendors.
-# TODO v2.2: rename Gemini commands to match Claude names (or vice versa).
+# TODO: retire `war-room/` alias once Gemini users migrate to /frontend-war-room.
 # ----------------------------------------------------------------------------
 
-# `frontend-war-room` (Claude) vs `war-room` (Gemini) — same command,
-# name-drift from early adapter implementation. Normalize in v2.2.
-gemini:frontend-war-room
+# `war-room` (Gemini hand-authored alias) has no Claude counterpart — the
+# canonical name on Claude is `frontend-war-room`. Kept as a Gemini-only
+# alias for back-compat with pre-sync muscle memory.
 claude:war-room
 
 # ----------------------------------------------------------------------------
 # Deliberate vendor-specific commands
 # ----------------------------------------------------------------------------
 
-# `market-scan` is Gemini-only — early experiment; Claude uses market-researcher agent instead.
-# Evaluate in v2.2: promote to Claude as a wrapper around the agent, or drop from Gemini.
+# `market-scan` is Gemini-only — early experiment; Claude uses market-researcher
+# agent instead. Evaluate in a future pass: promote to Claude as a wrapper
+# around the agent, or drop from Gemini.
 claude:market-scan
-
-# `triage-build` (Claude, v2.1.3) — not yet ported to Gemini. Scheduled for v2.2 vendor-parity pass.
-gemini:triage-build
-
-# `ulak-scaffold` (Claude, v2.2.2) — scaffolder requires Claude Code's Write + subagent
-# dispatch semantics with superpowers:saas-scaffolder skill. Gemini CLI adapter deferred to
-# post-v1.0.0 (requires skill-equivalent abstraction in the Gemini runtime).
-gemini:ulak-scaffold
-
-# ----------------------------------------------------------------------------
-# v1.0.0-cycle community-ecosystem wrappers (added post-internal-v2.1 batch).
-# These 6 commands wrap superpowers disciplines (TDD, brainstorming,
-# subagent-driven-development, fourteen-dimension-audit, MCP governance,
-# pattern extraction). Gemini CLI adapter is deferred to v1.1 — the underlying
-# skills are Claude-Code-specific runtime constructs.
-# ----------------------------------------------------------------------------
-gemini:ulak-audit-deep
-gemini:ulak-brainstorm
-gemini:ulak-mcp-discover
-gemini:ulak-pattern-extract
-gemini:ulak-subagent-dispatch
-gemini:ulak-test-driven
-
-# ----------------------------------------------------------------------------
-# v1.1.0-cycle vision-fix slash commands (Claude-Code-specific by design).
-# These 6 commands realize the "don't search internet / don't write prompts /
-# talk naturally / see what it is" vision layer. They wrap existing Claude
-# Code primitives (slash-command dispatch, interactive prompts, file writes).
-# Gemini CLI adapter is deferred to v1.2 pending equivalent primitives.
-# ----------------------------------------------------------------------------
-gemini:ulak-ask
-gemini:ulak-hello
-gemini:ulak-locale
-gemini:ulak-packs
-gemini:ulak-search
-gemini:ulak-start
-
-# ----------------------------------------------------------------------------
-# v1.3.0-cycle post-scaffold onboarding command (Claude-Code-specific).
-# `/ulak-next-steps` auto-chains after `/ulak-scaffold` to produce an 8-10
-# step personalized runbook on screen (no disk writes). Relies on Claude
-# Code's in-session chain dispatch after a successful scaffold. Gemini CLI
-# adapter scheduled for v1.3 once equivalent primitive exists.
-# ----------------------------------------------------------------------------
-gemini:ulak-next-steps
-
-# ----------------------------------------------------------------------------
-# v3.0.x beginner-expansion slash commands (Claude-Code-specific).
-# `/ulak-explain` — 5-field schema term explainer; lookup source is
-#   `docs/runtime/beginner-glossary.md`, with Grep fallback across
-#   `docs/catalog.md` + `docs/runtime/*.md` + `docs/governance/*.md`.
-# `/ulak-demo`    — 3-project tour with measured file counts
-#   (`find templates/... | wc -l`) and dev-day comparison. Relies on Claude
-#   Code's Read+Grep+Bash(find) primitives. Gemini adapter post-v1.1.
-# Both commands are inline-only (no disk writes) and join `/ulak-ask`,
-# `/ulak-hello`, `/ulak-search` as the "talk naturally" surface.
-# ----------------------------------------------------------------------------
-gemini:ulak-explain
-gemini:ulak-demo

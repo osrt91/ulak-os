@@ -34,33 +34,35 @@
 ## A) Komutlar (24) / Commands (24)
 
 > Slash komutları — `/komut arg` ile çağrılır. / Invoked as `/command arg`.
+>
+> **Vendor support** kolonu: Claude / Gemini / Codex / Copilot sırayla. OK = native, P = partial (NL/serial fallback), X = missing. Tam matrix: `docs/governance/vendor-capability-matrix.md`.
 
-| Komut / Command | TR açıklama | EN description | Ne zaman / When |
-|---|---|---|---|
-| `/director` | Otonom Program Director — tam end-to-end rescue/greenfield/brownfield koşusu | Autonomous Program Director — full end-to-end rescue/greenfield/brownfield run | "komple", tam denetim, rescue |
-| `/intake` | Intake + inventory önce — derinlemesine okumadan önce | Intake + inventory first — before deeper work | Proje yeniyse, "oku önce" |
-| `/frontend-war-room` | Premium redesign ve görsel sistem temizliği | Premium redesign + visual system cleanup | UI/UX elden geçirme |
-| `/pack-gap-audit` | Eksik komut/skill/ajan/hook/MCP raporu | Missing command/skill/agent/hook/MCP report | Kapasite açığı denetimi |
-| `/final-verdict` | Final doğrulama + tek birleşik manager verdict | Final validation + single merged manager verdict | Release öncesi kapı |
-| `/triage-build` | Kırık build'i toolchain-precheck ile triaj et | Triage broken build via toolchain-precheck | Build/test kırmızı |
-| `/ulak-ask <query>` | Doğal dil niyeti mevcut kapasiteye yönlendirir | Natural-language intent router to existing capability | "Konuşur gibi" kullanım |
-| `/ulak-start` | İnteraktif SaaS sihirbazı (→ /ulak-scaffold → /ulak-next-steps) + Q0 dual-mode toggle [t]eknik/[b]asit | Interactive SaaS wizard (→ /ulak-scaffold → /ulak-next-steps) + Q0 dual-mode toggle [t]echnical/[b]eginner | Yeni SaaS, flag ezberlemeden — ilk kez SaaS yapıyorsan `[b]` basit mod |
-| `/ulak-scaffold` | Flag'li tam SaaS scaffolder (Next.js + Supabase + payment) | Full SaaS scaffolder with flags (Next.js + Supabase + payment) | Yeni SaaS, parametrik |
-| `/ulak-next-steps` | Scaffold sonrası 8-10 adımlık çalıştırma rehberi (env.local + Supabase/Iyzico/Resend + ilk admin) | Post-scaffold 8-10 step runbook (env.local + Supabase/Iyzico/Resend + first admin) | Scaffold bitti, "şimdi ne?" |
-| `/ulak-intake` | Ulak intake artefaktı + opsiyonel brainstorming | Ulak intake artefact + optional brainstorming | Ulak-özgü ilk halka |
-| `/ulak-brainstorm` | Kod yazmadan önce yapılandırılmış ideation | Structured ideation before any code | Büyük karar/feature öncesi |
-| `/ulak-audit-deep` | 14-dimension scorecard (Arch, Tests, Secrets...) + A-F grade | 14-dimension scorecard + A-F grade | Kalite barı, quarterly health |
-| `/ulak-design-ref <brand>` | awesome-design-md'den marka tasarım referansı çek | Pull brand design reference from awesome-design-md | Frontend inspiration |
-| `/ulak-pattern-extract` | Başka projeden pattern çıkar, import ledger'a kaydet | Extract pattern from another project, log to import ledger | Portföyde pattern yay |
-| `/ulak-mcp-discover` | Public registry'den MCP keşfet, trust tier ile sınıfla | Discover MCP from public registry, classify by trust tier | Yeni MCP değerlendirme |
-| `/ulak-subagent-dispatch` | N bağımsız subagent'ı paralel dispatch et | Dispatch N independent subagents in parallel | Büyük paralel iş |
-| `/ulak-test-driven` | Red-Green-Refactor TDD + Ulak evals | Red-Green-Refactor TDD + Ulak evals | Ship'lenecek feature/fix |
-| `/ulak-locale <tr\|en\|show>` | Aktif locale yönet (TR/EN toggle) | Manage active locale (TR/EN toggle) | Dil değiştirme |
-| `/ulak-hello` | 30-saniye onboarding tour | 30-second onboarding tour | İlk kullanıcı, "bu nedir?" |
-| `/ulak-explain <term>` | Teknik terimi 5-alanlı şemada açıklar (Basit/Teknik/Analoji/Ulak'ta/İlgili) | Explains technical term in 5-field schema | ".env.local ne yazayım?" anı |
-| `/ulak-demo [1\|2\|3]` | 3 örnek proje (Minimal SaaS / Marketplace / LMS) — gerçek scaffold komutu + dosya sayısı + dev süre | 3 example projects with real scaffold command + file count + dev-day estimate | "Çalıştırmadan göreyim" |
-| `/ulak-packs` | Tüm kapasiteleri inline döker (docs/catalog.md) | Inline dump of all capabilities (docs/catalog.md) | "Her şeyi göster" |
-| `/ulak-search <keyword>` | Kapasite kataloğunda TR/EN keyword araması | TR/EN keyword search across capability catalog | "Aradığım şey var mı?" |
+| Komut / Command | TR açıklama | EN description | Ne zaman / When | Vendor support (C / G / X / P) |
+|---|---|---|---|---|
+| `/director` | Otonom Program Director — tam end-to-end rescue/greenfield/brownfield koşusu | Autonomous Program Director — full end-to-end rescue/greenfield/brownfield run | "komple", tam denetim, rescue | OK / OK / P / P |
+| `/intake` | Intake + inventory önce — derinlemesine okumadan önce | Intake + inventory first — before deeper work | Proje yeniyse, "oku önce" | OK / OK / P / P |
+| `/frontend-war-room` | Premium redesign ve görsel sistem temizliği | Premium redesign + visual system cleanup | UI/UX elden geçirme | OK / OK / P / P |
+| `/pack-gap-audit` | Eksik komut/skill/ajan/hook/MCP raporu | Missing command/skill/agent/hook/MCP report | Kapasite açığı denetimi | OK / OK / P / P |
+| `/final-verdict` | Final doğrulama + tek birleşik manager verdict | Final validation + single merged manager verdict | Release öncesi kapı | OK / OK / P / P |
+| `/triage-build` | Kırık build'i toolchain-precheck ile triaj et | Triage broken build via toolchain-precheck | Build/test kırmızı | OK / OK / P / P |
+| `/ulak-ask <query>` | Doğal dil niyeti mevcut kapasiteye yönlendirir | Natural-language intent router to existing capability | "Konuşur gibi" kullanım | OK / OK / P / P |
+| `/ulak-start` | İnteraktif SaaS sihirbazı (→ /ulak-scaffold → /ulak-next-steps) + Q0 dual-mode toggle [t]eknik/[b]asit | Interactive SaaS wizard (→ /ulak-scaffold → /ulak-next-steps) + Q0 dual-mode toggle [t]echnical/[b]eginner | Yeni SaaS, flag ezberlemeden — ilk kez SaaS yapıyorsan `[b]` basit mod | OK / OK / P / P |
+| `/ulak-scaffold` | Flag'li tam SaaS scaffolder (Next.js + Supabase + payment) | Full SaaS scaffolder with flags (Next.js + Supabase + payment) | Yeni SaaS, parametrik | OK / OK / P / P |
+| `/ulak-next-steps` | Scaffold sonrası 8-10 adımlık çalıştırma rehberi (env.local + Supabase/Iyzico/Resend + ilk admin) | Post-scaffold 8-10 step runbook (env.local + Supabase/Iyzico/Resend + first admin) | Scaffold bitti, "şimdi ne?" | OK / OK / OK / OK |
+| `/ulak-intake` | Ulak intake artefaktı + opsiyonel brainstorming | Ulak intake artefact + optional brainstorming | Ulak-özgü ilk halka | OK / OK / P / P |
+| `/ulak-brainstorm` | Kod yazmadan önce yapılandırılmış ideation | Structured ideation before any code | Büyük karar/feature öncesi | OK / OK / P / P |
+| `/ulak-audit-deep` | 14-dimension scorecard (Arch, Tests, Secrets...) + A-F grade | 14-dimension scorecard + A-F grade | Kalite barı, quarterly health | OK / OK / P / P |
+| `/ulak-design-ref <brand>` | awesome-design-md'den marka tasarım referansı çek | Pull brand design reference from awesome-design-md | Frontend inspiration | OK / OK / P / X |
+| `/ulak-pattern-extract` | Başka projeden pattern çıkar, import ledger'a kaydet | Extract pattern from another project, log to import ledger | Portföyde pattern yay | OK / OK / P / P |
+| `/ulak-mcp-discover` | Public registry'den MCP keşfet, trust tier ile sınıfla | Discover MCP from public registry, classify by trust tier | Yeni MCP değerlendirme | OK / OK / P / X |
+| `/ulak-subagent-dispatch` | N bağımsız subagent'ı paralel dispatch et | Dispatch N independent subagents in parallel | Büyük paralel iş | OK / P / P / P |
+| `/ulak-test-driven` | Red-Green-Refactor TDD + Ulak evals | Red-Green-Refactor TDD + Ulak evals | Ship'lenecek feature/fix | OK / OK / P / P |
+| `/ulak-locale <tr\|en\|show>` | Aktif locale yönet (TR/EN toggle) | Manage active locale (TR/EN toggle) | Dil değiştirme | OK / OK / P / P |
+| `/ulak-hello` | 30-saniye onboarding tour | 30-second onboarding tour | İlk kullanıcı, "bu nedir?" | OK / OK / OK / OK |
+| `/ulak-explain <term>` | Teknik terimi 5-alanlı şemada açıklar (Basit/Teknik/Analoji/Ulak'ta/İlgili) | Explains technical term in 5-field schema | ".env.local ne yazayım?" anı | OK / OK / OK / OK |
+| `/ulak-demo [1\|2\|3]` | 3 örnek proje (Minimal SaaS / Marketplace / LMS) — gerçek scaffold komutu + dosya sayısı + dev süre | 3 example projects with real scaffold command + file count + dev-day estimate | "Çalıştırmadan göreyim" | OK / OK / OK / OK |
+| `/ulak-packs` | Tüm kapasiteleri inline döker (docs/catalog.md) | Inline dump of all capabilities (docs/catalog.md) | "Her şeyi göster" | OK / OK / OK / OK |
+| `/ulak-search <keyword>` | Kapasite kataloğunda TR/EN keyword araması | TR/EN keyword search across capability catalog | "Aradığım şey var mı?" | OK / OK / P / P |
 
 ---
 
