@@ -1,6 +1,21 @@
 # 06 — Yönetişim
 
-Ulak OS'un "governance" (yönetişim) katmanı 22 dosyadan oluşur ve `docs/governance/` altında yaşar. Bu katman runtime rules ile çakışırsa **governance kazanır** (bkz. [rule-collision-matrix.md](../../governance/rule-collision-matrix.md)). Bu bölüm 22 dosyayı kategori kategori özetler, en sık kullanılan şemaları (trust tiers, finding schema, artefact authorization) açıklar.
+> **v1.6 güncellemesi:** Governance katmanı **20 → 22 dosya**'ya (yeni: `vendor-capability-matrix.md`, `localization-governance.md`), ADR **6 → 7** (ADR-000 → ADR-005 + newer), runbook **3 → 4** oldu. Ek olarak Layer 1 yüzeyine **4 tutorial** (Supabase/Vercel/GitHub/Resend) ve **3 walkthrough** (first-SaaS × 3 vendor variant) katmanları eklendi. Beginner-glossary (47 term) artık governance ile paralel disiplin kuralı taşır.
+
+Ulak OS'un "governance" (yönetişim) katmanı 22 dosyadan oluşur ve `docs/governance/` altında yaşar. Bu katman runtime rules ile çakışırsa **governance kazanır** (bkz. [rule-collision-matrix.md](../../governance/rule-collision-matrix.md)). Bu bölüm 22 dosyayı kategori kategori özetler, en sık kullanılan şemaları (trust tiers, finding schema, artefact authorization) açıklar, ve v1.6'da eklenen iki governance dosyasını + beginner-glossary disiplinini anlatır.
+
+## Governance katmanının genişliği (v1.6)
+
+| Kategori | Dosya / öğe |
+|---|---|
+| Governance docs | 22 (v1.6'da eklenenler: `vendor-capability-matrix.md`, `localization-governance.md`) |
+| ADR | 7 (ADR-000 → ADR-005 + newer, bkz. `docs/adr/`) |
+| Runbook | 4 (first-hour-with-ulak-os, install-methods, troubleshooting, upgrading-from-v2.x) |
+| Tutorial (v1.6) | 4 (Supabase, Vercel, GitHub, Resend — `docs/tutorials/`) |
+| Walkthrough (v1.6) | 3 (first-SaaS Claude / Codex / Copilot variant — `docs/walkthrough/`) |
+| Beginner-glossary (v1.6) | 47 term (`docs/runtime/beginner-glossary.md`) |
+
+Governance, runtime-rules + sector-packs + rule-packs katmanları üstüne oturur. Bir runtime dosyası governance ile çelişirse governance geçerlidir.
 
 ## Kategori 1 — Trust ve finding disiplini (4 dosya)
 
@@ -24,41 +39,44 @@ Bu grup, iddiaların (claim'lerin) nasıl kanıt taşıyacağını ve nasıl sı
 
 Uygulamanın customer / admin / public-API / partner ayrımlarının nasıl korunacağı.
 
-- **[surface-split.md](../../governance/surface-split.md)** — Public runtime surface vs hidden maintainer surface ayrımı (Layer 1 vs Layer 2). Hidden core, public runtime'a sızmamalıdır.
-- **[product-surface-split.md](../../governance/product-surface-split.md)** — Ürün içi surface ayrımı: customer UI, admin UI, partner/reseller API, public API. Bir handler birden fazla surface'e bakarsa finding üretilir.
-- **[autonomy-pressure-layer.md](../../governance/autonomy-pressure-layer.md)** — Executive agent'ın alt-agent'lara ne kadar otonomi tanıyacağı, hangi durumda operatöre geri dönüleceği.
+- **[surface-split.md](../../governance/surface-split.md)** — Public runtime surface vs hidden maintainer surface ayrımı (Layer 1 vs Layer 2).
+- **[product-surface-split.md](../../governance/product-surface-split.md)** — Ürün içi surface ayrımı: customer UI, admin UI, partner/reseller API, public API.
+- **[autonomy-pressure-layer.md](../../governance/autonomy-pressure-layer.md)** — Executive agent'ın alt-agent'lara ne kadar otonomi tanıyacağı.
 
 ## Kategori 3 — Artefact ve prompt supply chain (4 dosya)
 
-Agent'ın diske ne zaman yazabileceği, prompt zincirinin nasıl güvence altına alınacağı.
-
-- **[artefact-write-authorization.md](../../governance/artefact-write-authorization.md)** — Default Claude Code prompt kuralı "planning doc yazma" der. Director protokolü `reports/current/**` altına yazma yetkisini override eder. Bu dosya o override'ın metnini taşır; her specialist brief'ine override-block eklenir.
-- **[prompt-supply-chain.md](../../governance/prompt-supply-chain.md)** — Prompt içeriğinin hangi kaynaklardan gelebileceği, hangilerinin supply-chain saldırısı riski taşıdığı.
-- **[memory-hygiene.md](../../governance/memory-hygiene.md)** — Claude'un long-lived memory'sini proje state'i için kullanma — her şey diske yazılır (reports/current/, repo source tree).
-- **[hidden-maintainer-surface-template.md](../../governance/hidden-maintainer-surface-template.md)** — Layer 2 dosyaları için şablon: hangi frontmatter field'ları olacak, hangi uyarılar eklenecek.
+- **[artefact-write-authorization.md](../../governance/artefact-write-authorization.md)** — Director protokolü `reports/current/**` altına yazma yetkisinin override metni.
+- **[prompt-supply-chain.md](../../governance/prompt-supply-chain.md)** — Prompt içeriğinin hangi kaynaklardan gelebileceği, supply-chain saldırısı riski.
+- **[memory-hygiene.md](../../governance/memory-hygiene.md)** — Claude'un long-lived memory'sini proje state'i için kullanma — her şey diske yazılır.
+- **[hidden-maintainer-surface-template.md](../../governance/hidden-maintainer-surface-template.md)** — Layer 2 dosyaları için şablon.
 
 ## Kategori 4 — Secrets, lock files, permissions (4 dosya)
 
-- **[secrets-rotation-policy.md](../../governance/secrets-rotation-policy.md)** — API key, database password, JWT secret'larının rotasyon cadansı, `.env.example` disiplin'i.
-- **[lock-file-hygiene.md](../../governance/lock-file-hygiene.md)** — `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `poetry.lock` kural setleri; kırık lock file auto-detect.
-- **[settings-permissions-governance.md](../../governance/settings-permissions-governance.md)** — `.claude/settings.json` için izin / ret listeleri; `settings.local.json` override kuralları.
-- **[ai-provider-allowlist.md](../../governance/ai-provider-allowlist.md)** — Hangi model sağlayıcılarına hangi surface'de güven verilir.
+- **[secrets-rotation-policy.md](../../governance/secrets-rotation-policy.md)** — API key, database password, JWT secret rotasyon cadansları.
+- **[lock-file-hygiene.md](../../governance/lock-file-hygiene.md)** — package-lock/pnpm/yarn/poetry lock file kural setleri.
+- **[settings-permissions-governance.md](../../governance/settings-permissions-governance.md)** — `.claude/settings.json` izin/ret listeleri.
+- **[ai-provider-allowlist.md](../../governance/ai-provider-allowlist.md)** — Hangi model sağlayıcılarına hangi surface'de güven.
 
 ## Kategori 5 — Hook ve MCP governance (2 dosya)
 
-- **[hook-governance.md](../../governance/hook-governance.md)** — Pre-commit / pre-push / post-commit hook'ların Ulak OS disiplini nasıl zorladığı, bypass token kullanımı (development sırasında geçici atlatma), token rotation.
-- **[mcp-governance.md](../../governance/mcp-governance.md)** — Model Context Protocol connector'larının allowlist enforcement'ı (GitHub, Jira, Figma). Env var yoksa connector sessizce skip edilir; allowlist dışında bir connector hata verir.
+- **[hook-governance.md](../../governance/hook-governance.md)** — Pre-commit / pre-push / post-commit hook'ların Ulak disiplinini zorlaması, bypass token.
+- **[mcp-governance.md](../../governance/mcp-governance.md)** — MCP connector allowlist enforcement (GitHub, Jira, Figma, Context7). Env var yoksa connector sessizce skip edilir.
 
 ## Kategori 6 — Observability ve release (2 dosya)
 
 - **[observability-baseline.md](../../governance/observability-baseline.md)** — Her scaffold edilen projeye zorunlu metrics + log + tracing baseline'ı.
-- **[rule-pack-governance.md](../../governance/rule-pack-governance.md)** — Rule pack'lerin (7. unit type) nasıl üretileceği, bilingual parity, trust tier gereksinimleri.
+- **[rule-pack-governance.md](../../governance/rule-pack-governance.md)** — Rule pack'lerin nasıl üretileceği, bilingual parity, trust tier gereksinimleri.
 
 ## Kategori 7 — Pattern import ve plugin/skill decision (3 dosya)
 
-- **[pattern-import-ledger.md](../../governance/pattern-import-ledger.md)** — Cross-project pattern absorbe kayıtları. Her kayıt ≥2 proje kanıtı + trust tier ≥ T2 gerektirir.
-- **[plugin-skill-decision.md](../../governance/plugin-skill-decision.md)** — Yeni bir yetenek için command mi, skill mi, agent mi, hook mi üretileceği karar ağacı.
+- **[pattern-import-ledger.md](../../governance/pattern-import-ledger.md)** — Cross-project pattern absorbe kayıtları. Her kayıt ≥2 proje kanıtı + trust tier ≥ T2.
+- **[plugin-skill-decision.md](../../governance/plugin-skill-decision.md)** — Yeni bir yetenek için command/skill/agent/hook karar ağacı.
 - **[README.md](../../governance/README.md)** — Governance klasörünün indeksi.
+
+## Kategori 8 — Vendor parity ve localization (2 dosya, v1.6'da eklendi)
+
+- **[vendor-capability-matrix.md](../../governance/vendor-capability-matrix.md)** — 4 vendor × 24 komut support matrisi. İki tabloyu sabitler: (A) primitive matrix — her vendor'ın sağladığı runtime primitiveler (file ops, bash, grep, subagent dispatch, skill, MCP); (B) command → vendor support matrix — 24 komutun hangi vendor'da `OK` / `PARTIAL` / `MISSING` / `N/A` olduğu + gerekçe. 8 kapasite kriteri ile vendor "FULL / FULL-MINUS / CORE / LIMITED" statüsü atar. `bash scripts/validate-vendor-parity.sh` her CI'da bu matrisi reconcile eder. Exemption olmayan gap CI'ı kırar.
+- **[localization-governance.md](../../governance/localization-governance.md)** — TR/EN bilingual parity kuralları. Hangi dosyaların iki dilde de bulunması zorunlu, `/ulak-locale` state dosyasının nasıl davrandığı, README-first locale selection mantığı. `bash scripts/validate-bilingual.sh` her CI'da TR/EN parity'yi zorlar.
 
 ## Sık kullanılan şemalar
 
@@ -67,7 +85,7 @@ Agent'ın diske ne zaman yazabileceği, prompt zincirinin nasıl güvence altın
 ```yaml
 id: SEC-CU-03
 severity: Critical           # Critical | High | Medium | Low | Cosmetic
-priority: P1                 # P1..P4 (eyleme geçilme sırası)
+priority: P1                 # P1..P4
 trust: T2                    # T1..T7
 surface: customer            # customer | admin | partner | public-api | infra
 evidence:
@@ -82,7 +100,7 @@ remediation: |
   rotate existing secret in production.
 ```
 
-Tam şema ve örnekler: [finding-schema.md](../../governance/finding-schema.md).
+Tam şema: [finding-schema.md](../../governance/finding-schema.md).
 
 ### Validation-result YAML şeması
 
@@ -127,34 +145,62 @@ Tam şema: [router.md](../../runtime/router.md).
 
 ## Hook governance — bypass token
 
-Pre-commit hook'lar Ulak OS disiplinini zorlar: örn. `reports/current/` altındaki finding-schema YAML'ı geçerli değilse commit reddedilir. Bir development oturumunda geçici atlatma gerekiyorsa:
+Pre-commit hook'lar Ulak OS disiplinini zorlar. Geçici atlatma gerekiyorsa:
 
 ```bash
-# 15 dakika süreli bypass token:
 export ULAK_BYPASS_TOKEN=$(ulak bypass --duration 15m --reason "wip debugging")
 git commit -m "wip: ..."
-# Token süresi dolunca hook yine aktif.
 ```
 
-Token kullanımı audit log'a düşer. Production branch'e merge sırasında bypass sayısı checked olur. Detay: [hook-governance.md](../../governance/hook-governance.md).
+Token kullanımı audit log'a düşer. Detay: [hook-governance.md](../../governance/hook-governance.md).
 
 ## MCP governance — allowlist enforcement
 
 ```yaml
-# docs/governance/mcp-governance.md içinden alıntı
 allowed_mcps:
-  - github         # zorunlu env: GITHUB_TOKEN
-  - jira           # opsiyonel env: JIRA_API_TOKEN
-  - figma          # opsiyonel env: FIGMA_TOKEN
-  - filesystem     # local, env gerektirmez
-  - context7       # docs fetching
+  - github          # zorunlu env: GITHUB_TOKEN
+  - jira            # opsiyonel env: JIRA_API_TOKEN
+  - figma           # opsiyonel env: FIGMA_TOKEN
+  - filesystem      # local, env gerektirmez
+  - context7        # docs fetching
 
 blocked_mcps:
-  - "*:cloud-shell"      # rastgele cloud shell'lere bağlanamaz
-  - "*:db-write"         # DB write MCP'leri manuel whitelist ister
+  - "*:cloud-shell"
+  - "*:db-write"
 ```
 
-Env var yoksa MCP sessizce skip edilir; allowlist dışı bir MCP çağrısı hata verir.
+`/ulak-mcp-discover` komutu community MCP server'ları trust tier'a göre sınıflandırır; operatör manuel allowlist güncellemesi yapar.
+
+## Vendor-capability-matrix — 8 kapasite kriteri (v1.6)
+
+Bir vendor "Ulak OS full runtime" sayılabilmesi için şu 8 kapasiteyi sağlamalı:
+
+1. File Read + Grep + Glob
+2. File Write veya Edit
+3. Bash/shell execute
+4. Multi-turn session memory (context file)
+5. MCP veya equivalent external service integration
+6. Skill/named-capability invocation (veya NL equivalent)
+7. Slash command dispatch (veya reading-order NL equivalent)
+8. Settings-level permission governance
+
+| Vendor | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | Statü |
+|---|---|---|---|---|---|---|---|---|---|
+| Claude Code | Y | Y | Y | Y | Y | Y | Y | Y | **FULL** |
+| Gemini CLI | Y | Y | P | Y | Y | P | Y | P | **FULL-MINUS** |
+| Codex CLI | Y | Y | Y | Y | Y | N | N | N | **CORE** |
+| Copilot Chat | Y | P | P | P | N | N | N | N | **LIMITED** |
+
+Exemption olmayan gap CI'ı kırar (DY-03 vendor-parity silent-drift finding). Detay: [vendor-capability-matrix.md](../../governance/vendor-capability-matrix.md).
+
+## Localization-governance — bilingual disiplin (v1.6)
+
+Ulak OS TR-first veya EN-first çalışabilir. `localization-governance.md` aşağıdaki kuralları sabitler:
+
+- **Bilingual zorunluluk:** `docs/user-manual/{tr,en}/`, `docs/walkthrough/`, `docs/tutorials/`, `docs/runbooks/`, README dosyaları TR + EN paritede tutulur.
+- **Locale state:** `/ulak-locale` komutu `.claude/state/locale.txt`'yi günceller. README ilk satırı bu dosyaya bakarak TR-first veya EN-first render edilir.
+- **CI enforcement:** `bash scripts/validate-bilingual.sh` her PR'da iki dilin line-count delta'sı + heading parity'si + cross-link'leri kontrol eder. Parity kaybında CI red.
+- **Beginner-glossary:** 47 term TR + EN kabul eder (alias tablosu); case-insensitive lookup.
 
 ## Secrets rotation policy — özet
 
@@ -168,7 +214,7 @@ Env var yoksa MCP sessizce skip edilir; allowlist dışı bir MCP çağrısı ha
 
 Detay: [secrets-rotation-policy.md](../../governance/secrets-rotation-policy.md).
 
-## Pattern-import-ledger (7. unit type — cross-project absorption)
+## Pattern-import-ledger
 
 Cross-project pattern kayıtları minimum T2 ve ≥2 kaynak kanıtı gerektirir:
 
@@ -185,19 +231,19 @@ Cross-project pattern kayıtları minimum T2 ve ≥2 kaynak kanıtı gerektirir:
   abstracted_to: docs/runtime/rule-packs/transactional-fsm-payment.md
 ```
 
-Kayıt olmadan bir anti-pattern veya sector pack eklenemez — CI `validate-schemas.sh` pattern-import-ledger disiplinini uygular. Detay: [pattern-import-ledger.md](../../governance/pattern-import-ledger.md).
+Kayıt olmadan anti-pattern veya sector pack eklenemez — CI `validate-schemas.sh` pattern-import-ledger disiplinini uygular.
 
-## Rule-pack governance (7. unit type)
+## Rule-pack governance
 
-Rule pack, bir teknolojiye özgü kuralların paketi (Next.js, FastAPI, React Native, API Security vb.). Yeni bir rule pack:
+Yeni bir rule pack:
 
 1. ≥2 proje kanıtı ile evidence
-2. Bilingual (TR + EN) doküman
+2. Bilingual (TR + EN) doküman (validate-bilingual.sh geçmeli)
 3. Trust tier ≥ T2
 4. `docs/runtime/rule-packs/<pack>.md` dosyası
 5. `pattern-import-ledger.md`'ye kayıt
 6. `validate-schemas.sh` geçer
-7. ADR (Architecture Decision Record) gerekiyorsa `docs/adr/` altında
+7. ADR gerekiyorsa `docs/adr/` altında
 
 Detay: [rule-pack-governance.md](../../governance/rule-pack-governance.md).
 
@@ -209,13 +255,17 @@ Proje devraldığınızda veya yeni başladığınızda:
 2. `surface-split.md` + `product-surface-split.md` — ürününüzün surface'lerini anlayın
 3. `finding-schema.md` — denetim raporu okurken hangi alanlara bakacağınızı öğrenin
 4. `evidence-trust-scoring.md` — T1–T7 tier'larını ezberleyin
-5. `secrets-rotation-policy.md` — mevcut projenin rotation uyumunu kontrol edin
-6. `pattern-import-ledger.md` — zaten hangi pattern'lerin import edildiğini görün
+5. `vendor-capability-matrix.md` — hangi vendor'da neyi kullanabileceğinizi bilin
+6. `localization-governance.md` — TR/EN parity yönergelerini görün
+7. `secrets-rotation-policy.md` — mevcut projenin rotation uyumunu kontrol edin
+8. `pattern-import-ledger.md` — zaten hangi pattern'lerin import edildiğini görün
 
 ## İlgili belgeler
 
 - [docs/governance/README.md](../../governance/README.md) — 22 dosyalık governance indeksi
 - [docs/runtime/validation-result-schema.md](../../runtime/validation-result-schema.md) — Phase 5 signoff şeması
 - [docs/runtime/router.md](../../runtime/router.md) — Phase 0 router decision şeması
+- [docs/adr/](../../adr/) — 7 ADR (ADR-000 → ADR-005 + newer)
+- [docs/runtime/beginner-glossary.md](../../runtime/beginner-glossary.md) — 47 temel terim
 
 Sonraki bölüm: [07 — Katkı](./07-katki.md)

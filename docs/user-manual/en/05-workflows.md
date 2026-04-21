@@ -1,22 +1,97 @@
 # 05 — Workflows
 
-This chapter walks through **five end-to-end workflows**. Each section gives the usage scenario, the command sequence, the expected output, and an honest note on when the workflow is insufficient and what to reach for instead.
+This chapter walks through **five canonical workflows** for Ulak OS v1.6. Each section gives the usage scenario, the command sequence, the expected output, and an honest note on when the workflow is insufficient.
 
-Text-based walkthroughs with more detail (terminal output, sample artefacts, annotated phases) live in [`../../showcase/`](../../showcase/README.md).
+Text-based walkthroughs with more detail (terminal output, sample artefacts, annotated phases) live in [`../../showcase/`](../../showcase/README.md). Beginner-oriented external-service tutorials live in [`../../tutorials/`](../../tutorials/README.md).
 
 ## Workflow index
 
-| # | Workflow | Entry command | Time |
+| # | Workflow | Entry | Time |
 |---|---|---|---|
-| 1 | [Brownfield audit](#workflow-1--brownfield-audit) | `/director komple` | 15–40 min |
-| 2 | [Greenfield scaffold](#workflow-2--greenfield-scaffold) | `/ulak-scaffold` | 10–20 min |
-| 3 | [Multi-persona audit](#workflow-3--multi-persona-audit) | `/director dispatch=persona` | 20–40 min |
-| 4 | [Pattern import](#workflow-4--pattern-import) | Manual edit + `/pack-gap-audit` | variable |
-| 5 | [Re-audit / follow-up](#workflow-5--re-audit--follow-up) | `/final-verdict` | 5–10 min |
+| 1 | [First-time SaaS](#workflow-1--first-time-saas-beginner-path) | `hi ulak` → `/ulak-start` → `/ulak-scaffold` → `/ulak-next-steps` | 30–60 min |
+| 2 | [Existing-project audit](#workflow-2--existing-project-audit) | `/director komple` | 15–40 min |
+| 3 | [Learn a specific service or term](#workflow-3--learn-a-specific-service-or-term) | `/ulak-explain` or `docs/tutorials/*.md` | 5–20 min |
+| 4 | [Pack expansion](#workflow-4--pack-expansion) | `/pack-gap-audit` + `/ulak-pattern-extract` | variable |
+| 5 | [Cross-project pattern lift](#workflow-5--cross-project-pattern-lift) | `/ulak-pattern-extract` + ledger | variable |
 
 ---
 
-## Workflow 1 — Brownfield audit
+## Workflow 1 — First-time SaaS (beginner path)
+
+### Usage scenario
+
+You have never used Ulak OS. You want to ship a working SaaS skeleton today, without reading the whole manual first. You may not know what RLS, JWT, or idempotency mean — that is fine.
+
+### Command sequence
+
+```bash
+# 1. Install Ulak OS (one-liner)
+curl -fsSL https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install.sh | sh
+
+# 2. Open your AI coding CLI in an empty directory
+cd ~/projects
+claude      # or: codex, copilot, gemini
+
+# 3. Natural-language onboarding
+```
+
+Inside the CLI:
+
+```
+hi ulak
+```
+
+This triggers `/ulak-hello`: 3-sentence intro, 3 example commands, "what do you want to do?" question.
+
+Reply with your intent, for example:
+
+```
+I want to build a new SaaS
+```
+
+`/ulak-ask` routes you to `/ulak-start`. Answer the 27-question wizard (pick `[b]` beginner mode if you want plain-language explanations). On confirmation, `/ulak-scaffold` runs automatically and writes a complete project to the output path.
+
+Then:
+
+```
+/ulak-next-steps
+```
+
+This produces a personalized 8–10-step runbook: `pnpm install`, fill `.env.local`, create Supabase project (→ [tutorial 1](../../tutorials/supabase.md)), push first migration, create admin user, `pnpm dev`, open `localhost:3000`, log in.
+
+### Where to go when stuck
+
+- "What does this term mean?" → `/ulak-explain <term>`
+- "How do I set up Supabase?" → [`docs/tutorials/supabase.md`](../../tutorials/supabase.md)
+- "How do I deploy to Vercel?" → [`docs/tutorials/vercel.md`](../../tutorials/vercel.md)
+- "How do I send email via Resend?" → [`docs/tutorials/resend.md`](../../tutorials/resend.md)
+- "How do I push to GitHub?" → [`docs/tutorials/github.md`](../../tutorials/github.md)
+
+### Expected output
+
+A working scaffold under your chosen `output_path/`, plus:
+
+```
+reports/current/
+├── scaffold-inputs.yaml
+├── scaffold-manifest.md
+├── scaffold-plan.md
+└── next-steps.md          ← the runbook /ulak-next-steps wrote
+```
+
+After following `next-steps.md`, `localhost:3000` is running, admin login works, payment sandbox is configured, i18n switcher toggles between English and Turkish.
+
+### When this workflow is insufficient
+
+- **You do not want a SaaS.** The wizard is SaaS-first.
+- **Your stack is not Next.js.** Remix and SvelteKit are experimental; other stacks require manual wiring via `/ulak-scaffold` overrides or post-scaffold modifications.
+- **You want total control over file structure.** Use manual clone (Method 2 of install) + hand-writing your own scaffold.
+
+Full walkthrough: [`../../showcase/02-scaffold-walkthrough.md`](../../showcase/02-scaffold-walkthrough.md).
+
+---
+
+## Workflow 2 — Existing-project audit
 
 ### Usage scenario
 
@@ -25,39 +100,35 @@ You inherited a codebase. Your team needs a structured understanding of what is 
 ### Command sequence
 
 ```bash
-# 1. Make sure Ulak OS is wired into the project's CLAUDE.md
 cd /path/to/your-project
-ulak init .            # append the @-import if Ulak OS is installed on your machine
+ulak init .                # append the @-import if Ulak OS is installed
+claude                     # or: codex, copilot, gemini
+```
 
-# 2. Open your AI coding CLI in the project
-claude   # or: codex, gemini
+Inside the CLI:
 
-# 3. Inside the CLI, run the full program
+```
 /director komple
 ```
 
+Or, if you prefer natural-language:
+
+```
+hi ulak
+# then: "audit this project end to end"
+```
+
+`/ulak-ask` routes to `/director komple`.
+
 ### What happens, phase by phase
 
-1. **Phase 0 — Environment lock.** The director reads your git state, detects stacks (Next.js, Supabase, Python, Docker, and more), pins the 9-field router decision, writes `runtime-manifest.md` and `assumptions.md`.
-2. **Phase 1 — Deep inventory.** The `cartographer` agent walks the project and writes `inventory.md` with file:line citations for every surface (customer, admin, public API, partner), every route, every config file, every migration, every i18n key per locale.
-3. **Phase 2 — Parallel specialist evidence.** The director dispatches multiple specialists at once (security-hardening-lead, backend-api-architect, data-database-governor, design-system-architect, infra-release-sre, localization-i18n-lead, privacy-compliance-counsel, and others as relevant). Each writes its section to `evidence-register.md`.
-4. **Phase 3 — Did-you-know.** The director assembles the non-obvious findings layer: unused imports inflating bundle size, RLS asymmetry across sibling tables, missing locale keys, rate-limit gaps, deploy scripts without rollback. Empty or trivial output is rejected and Phase 2 is widened.
+1. **Phase 0 — Environment lock.** Reads git state, detects stacks, pins 9-field router decision, writes `runtime-manifest.md` and `assumptions.md`.
+2. **Phase 1 — Deep inventory.** `cartographer` writes `inventory.md` with file:line citations for every surface, route, config, migration, i18n key.
+3. **Phase 2 — Parallel specialist evidence.** Multiple specialists dispatch in parallel (security-hardening-lead, backend-api-architect, data-database-governor, design-system-architect, infra-release-sre, localization-i18n-lead, privacy-compliance-counsel, etc.).
+4. **Phase 3 — Did-you-know.** Non-obvious findings layer (unused imports, RLS asymmetry, missing locale keys, rate-limit gaps, deploy scripts without rollback). Empty or trivial output is rejected and Phase 2 is widened.
 5. **Phase 4 — Synthesis.** Five files: `analysis-findings.md`, `target-state.md`, `execution-roadmap.md`, `validation-plan.md`, `pack-gap-register.md`.
-6. **Phase 4.5 — Live probes (conditional).** Runs if `validation-plan.md §6` requires probes. Outputs `live-probe-results.md`.
-7. **Phase 5 — Manager verdict.** Writes `manager-verdict.md` and `validation-result.yaml`. If any Critical finding is unresolved, `signoff_status: blocked`; if all pass, `signoff_status: ready`.
-
-### How to read the manager verdict
-
-Open `reports/current/manager-verdict.md`. The canonical structure:
-
-1. **Runtime decision** — the router's 9-field pinning.
-2. **Phase status** — per-phase artefact state (`complete`, `weak-evidence`, `missing`).
-3. **Critical / High / Medium findings** — severity-ranked.
-4. **Top 3 did-you-know highlights** — non-obvious findings inline.
-5. **Residual risks** — what remains unresolved and why.
-6. **Next execution lane** — the suggested follow-up (execute roadmap wave 1, run `/frontend-war-room`, open a specific investigation).
-
-If `signoff_status: ready` with unresolved Critical findings, the verdict is by contract invalid — re-run with `/final-verdict` to force re-validation.
+6. **Phase 4.5 — Live probes (conditional).** Runs if `validation-plan.md §6` requires probes.
+7. **Phase 5 — Manager verdict.** Writes `manager-verdict.md` and `validation-result.yaml` with `signoff_status: ready | conditional | blocked`.
 
 ### Expected output
 
@@ -72,277 +143,205 @@ reports/current/
 ├── evidence-register.md
 ├── deep-scan-report.md
 ├── specialists/
-│   ├── security-hardening-lead.md
-│   ├── backend-api-architect.md
-│   ├── data-database-governor.md
-│   └── ...
 ├── did-you-know.md
 ├── analysis-findings.md
 ├── target-state.md
 ├── execution-roadmap.md
 ├── validation-plan.md
 ├── pack-gap-register.md
-├── live-probe-results.md           (if Phase 4.5 ran)
+├── live-probe-results.md   (if Phase 4.5 ran)
 ├── manager-verdict.md
 └── validation-result.yaml
 ```
 
-### When this workflow is insufficient
+### Persona-split variant
 
-- **You only need a map, not an audit.** Use `/intake` — it runs Phase 0–2 only.
-- **You already have artefacts from a prior run and want to refresh the verdict.** Use `/final-verdict` (Workflow 5).
-- **You need a frontend redesign, not a full audit.** Use `/frontend-war-room`.
-- **The codebase is so large that a single director run exceeds your context budget.** Split by surface: run `/director mode=EXTEND scope=<specific-surface>`.
+For multi-tenant products with customer / admin / partner / support surfaces:
 
-Full walkthrough with sample output: [`../../showcase/01-audit-walkthrough.md`](../../showcase/01-audit-walkthrough.md).
-
----
-
-## Workflow 2 — Greenfield scaffold
-
-### Usage scenario
-
-You are starting a new SaaS product. You want the governance, the discipline, the anti-pattern gates, and the stack wiring applied from commit 1 — not retrofitted later.
-
-### Command sequence
-
-```bash
-# 1. Open your AI coding CLI from the Ulak OS repo (or any directory — the command is vendor-agnostic)
-cd ~/.ulak-os         # or wherever you installed
-claude                # or: codex, gemini
-
-# 2. Run the scaffolder with inline arguments
-/ulak-scaffold product_name=example-saas product_domain=saas locale_primary=en payment_provider=stripe output_path=../example-saas
 ```
-
-If you omit arguments, the command prompts for required fields interactively.
-
-### What happens
-
-1. **Phase 0 — Router decision.** Writes `reports/current/scaffold-manifest.md` with your inputs plus derived activations (which sector packs will load in the generated project's `CLAUDE.md`, which rule packs will load, which anti-patterns the CI gates will enforce).
-2. **Phase 4 — Plan synthesis.** Writes `scaffold-plan.md` listing every file the scaffolder will create. You review this before Phase 5.
-3. **Phase 5 — Materialization.** The `saas-scaffolder` skill:
-   - Creates the target directory (refuses if non-empty).
-   - Writes `package.json`, `tsconfig.json`, `next.config.ts`, `tailwind.config.ts`.
-   - Writes `app/` structure with public / auth / customer / admin (and partner if `has_reseller_tier=true`).
-   - Writes `supabase/` migrations with RLS policy templates.
-   - Writes `infrastructure/` with docker-compose + prod override + Traefik labels + VPS hardening script.
-   - Writes `.github/workflows/` with validate-imports, validate-schemas, gitleaks, dependabot, eval-smoke (warn-only initially).
-   - Writes `tests/` with vitest + playwright stubs.
-   - Writes `scripts/preflight.sh` and `scripts/install-hooks.sh`.
-   - Writes `.env.example` (placeholders only, zero real secrets).
-   - Writes `.gitignore` with Ulak's discipline patterns.
-   - Writes `.claude/` with scoped settings + local example.
-   - Writes `CLAUDE.md` importing the Ulak OS core contract.
-   - Runs `git init` and creates commit 1.
-
-### Anti-patterns gated by construction
-
-Eight anti-patterns the scaffolded project cannot contain at commit 1:
-
-- **AP-16** — `.env.local` committed (it is gitignored from day one)
-- **AP-19** — Root `.env.local` in a monorepo (per-app env files if `has_mobile=true`)
-- **AP-11** — Multi-layer auth bypass (single auth helper, all entry points route through it)
-- **AP-12** — Fake rollback deploy (deploy template includes health-probe contract)
-- **AP-18** — Static HMAC over empty body (deploy webhook template signs full body + timestamp)
-- **AP-06** — `user_metadata` as the source of truth for role (DB-sourced role only)
-- **AP-13** — Missing `server-only` guards on server modules
-- **AP-RLS-asymmetry** — RLS templates are symmetric across sibling tables by default
-
-### Post-scaffold checklist
-
-```bash
-cd ../example-saas
-pnpm install
-cp .env.example .env.local
-# Fill .env.local with real values (Stripe test keys, Supabase URL, and so on)
-pnpm dev                    # verify baseline works
-./scripts/install-hooks.sh  # pre-push parity hook
-git log --oneline -5        # confirm commit 1 is pristine
-```
-
-Then optionally run `/director komple` from Ulak OS against the new project to validate the baseline health score.
-
-### When this workflow is insufficient
-
-- **You want something that is not a SaaS.** The scaffolder is SaaS-first. For CLI tools, libraries, games, or embedded projects, use your stack's native starter and add Ulak governance via `ulak init`.
-- **Your stack is not covered.** The primary stack is Next.js + Supabase. Remix, SvelteKit, and FastAPI hybrids are experimental (flagged in the scaffolder docs).
-- **You need a different payment provider.** Stripe and Iyzico are supported; others require manual wiring via the payment-integrated-saas sector pack.
-
-Full walkthrough: [`../../showcase/02-scaffold-walkthrough.md`](../../showcase/02-scaffold-walkthrough.md).
-
----
-
-## Workflow 3 — Multi-persona audit
-
-### Usage scenario
-
-You run a multi-tenant SaaS with distinct user surfaces (customer, admin, partner / reseller, support). You want to know how the product looks through each persona's lens and where the surfaces disagree with each other.
-
-### Command sequence
-
-```bash
-cd /path/to/your-project
-claude                 # or: codex, gemini
-
 /director komple dispatch=persona persona_set=customer,admin,partner,support
 ```
 
-Or combine discipline-based and persona-based dispatch:
-
-```
-/director komple dispatch=both parallel_dispatch=9
-```
-
-### What happens
-
-The director dispatches **persona agents** in Phase 2 instead of (or in addition to) discipline agents:
-
-- `customer-persona` — the end user view
-- `admin-persona` — the operator / moderator view
-- `bayi-persona` (partner / reseller view — Turkish "bayi" means dealer/partner)
-- `support-persona` — the support agent view
-- `developer-persona` — the internal developer view
-- `compliance-persona` — the legal / compliance view
-- `security-redteam` — the adversarial view
-
-Each persona produces a section in `evidence-register.md`. The director then merges them in `deep-scan-report.md`, making **contradictions explicit** instead of silently resolving them.
-
-### Typical contradictions this surfaces
-
-- Admin surface has a bulk-delete action; compliance persona flags it as a GDPR right-to-be-forgotten gap.
-- Customer persona expects order-history export; support persona expects the same data, but at a per-customer granularity the backend does not provide.
-- Partner persona wants a sub-account model; security red-team flags it as an IDOR / BOLA expansion.
-
-Contradictions become **residual risks** in `manager-verdict.md`, not silent winners. The operator then decides.
-
-### Expected output
-
-Same 15-file artefact chain as Workflow 1, but with a richer `evidence-register.md` (per-persona sections), a `deep-scan-report.md` that calls out contradictions, and a `manager-verdict.md` that lists contradictions under Residual Risks.
+Persona agents dispatch in Phase 2 (instead of or in addition to discipline agents). The director makes contradictions explicit instead of silently resolving them. Full walkthrough: [`../../showcase/03-persona-audit.md`](../../showcase/03-persona-audit.md).
 
 ### When this workflow is insufficient
 
-- **Single-surface product.** Persona dispatch is overhead when all your users see the same app.
-- **You only have 2 personas.** Just run `/director komple` — the default dispatch picks up the obvious ones.
-- **Contradictions need legal review.** Ulak OS surfaces the contradiction; a human counsel resolves it.
+- **You only need a map, not an audit.** Use `/intake`.
+- **You want a second opinion via 14-dimension scorecard.** Use `/ulak-audit-deep`.
+- **You need a frontend redesign, not a full audit.** Use `/frontend-war-room`.
+- **Codebase is so large that a single run exceeds context.** Split by surface or run `/director skip_phase_1=true` after a one-time `/intake`.
 
-Full walkthrough: [`../../showcase/03-persona-audit.md`](../../showcase/03-persona-audit.md).
+Full walkthrough: [`../../showcase/01-audit-walkthrough.md`](../../showcase/01-audit-walkthrough.md).
 
 ---
 
-## Workflow 4 — Pattern import
+## Workflow 3 — Learn a specific service or term
 
 ### Usage scenario
 
-You noticed a defect (or a good pattern) in one project. You want to lift it into Ulak OS so every future project — yours or a teammate's — inherits the lesson.
+Post-scaffold, you see `SUPABASE_URL`, `STRIPE_WEBHOOK_SECRET`, or `RLS policy` in a file and want a quick explanation. Or you need to open a Supabase account for the first time and do not know where to click.
 
 ### Command sequence
 
-Pattern import is **manual documentation**, not a command. The flow:
+For a term:
 
-```bash
-# 1. In the source project, identify the pattern with file:line evidence
-# Example: a webhook that signs an empty body instead of the full payload
-
-# 2. Open the Ulak OS repo
-cd ~/.ulak-os
-
-# 3. Add an entry to the pattern-import ledger
-vim docs/governance/pattern-import-ledger.md
+```
+/ulak-explain rls
 ```
 
-Append an entry:
+Returns a 5-field entry: **Simple** (one sentence for a non-technical reader), **Technical** (precise definition), **Analogy** (everyday comparison), **In Ulak** (how Ulak OS uses the term), **Related** (cross-linked terms in the glossary). Source: `docs/runtime/beginner-glossary.md` (47 terms).
 
-```yaml
-- id: AP-20
-  title: "Webhook signs empty body"
-  source_project: "payment-integrated SaaS with Stripe webhook"
-  source_files:
-    - infrastructure/webhook-handler.ts:45-67
-  trust_tier: T2       # T1 if directly observed, T2 if inferred from config
-  rationale: "Empty-body HMAC is trivially replayable; attacker resends
-              arbitrary payloads with the captured signature."
-  fix_summary: "Sign full body + timestamp; server verifies both."
-  cross_project_occurrences: 2
-```
+For a service:
 
-Pattern import requires **≥2 real-project citations** (abstract descriptors if the projects are private). Trust tier must be T2 or stronger. See [chapter 07](./07-contributing.md) for the full contribution contract.
+- Supabase → [`docs/tutorials/supabase.md`](../../tutorials/supabase.md) — account + project + API keys + migration push + first admin (15 minutes)
+- Vercel → [`docs/tutorials/vercel.md`](../../tutorials/vercel.md) — account + GitHub connection + env vars + deploy + custom domain (10 minutes)
+- GitHub → [`docs/tutorials/github.md`](../../tutorials/github.md) — account + repo creation + SSH key + first push (10 minutes)
+- Resend → [`docs/tutorials/resend.md`](../../tutorials/resend.md) — account + API key + domain verify + first email (5 minutes)
+
+### Expected output
+
+For `/ulak-explain`: inline 5-field entry in the CLI.
+
+For tutorials: side-by-side reading while completing the setup steps in the service's web UI.
+
+### When this workflow is insufficient
+
+- **You need a deep-dive conceptual doc.** Read the service's own documentation; the tutorial covers only the Ulak-relevant setup.
+- **Your term is not in the 47-term glossary.** Open an issue to add it, or ask `/ulak-ask` for a broader search.
+
+---
+
+## Workflow 4 — Pack expansion
+
+### Usage scenario
+
+Running `/director` surfaced a gap — "we needed a sector pack for healthcare SaaS but none exists", or "the scaffolder should have a Laravel template but it's Next-only". You want to close the gap.
+
+### Command sequence
 
 ```bash
-# 4. Add the corresponding anti-pattern entry
-vim docs/runtime/anti-patterns.md
-
-# 5. Run the pack-gap audit to confirm wiring
+cd ~/.ulak-os         # or wherever Ulak OS is installed
 claude
+
 /pack-gap-audit
 ```
 
-### What happens
+Produces `reports/current/pack-gap-register.md` listing missing units.
 
-- The new anti-pattern entry becomes part of the public runtime surface. Every director run from this point forward checks projects against it.
-- The ledger entry provides provenance: anyone reading Ulak OS can see where this pattern came from, at what trust tier, and in how many projects it has been observed.
-- The `/pack-gap-audit` run confirms the new entry is reachable from `anti-patterns.md` and the ledger.
+Then for each gap, propose a fix. See [chapter 07](./07-contributing.md) for the contribution contract. If the gap is a pattern you observed in ≥2 real projects:
+
+```
+/ulak-pattern-extract source=./other-repo pattern="healthcare-hipaa-audit-log"
+```
+
+Writes a `pattern-import-ledger.md` entry plus a draft rule-pack / sector-pack / anti-pattern file.
+
+### Expected output
+
+- `reports/current/pack-gap-register.md` — ranked gap list
+- New entries in `docs/governance/pattern-import-ledger.md`
+- Optional new files under `docs/runtime/rule-packs/` or `docs/runtime/sector-packs.md`
+
+### When this workflow is insufficient
+
+- **Only one real-project occurrence.** Below the evidence bar. Wait for a second occurrence before importing.
+- **Stack-specific guardrail, not a cross-cutting pattern.** Belongs in a rule pack, not an anti-pattern.
+
+---
+
+## Workflow 5 — Cross-project pattern lift
+
+### Usage scenario
+
+You noticed a defect or a good pattern in one project; you want to lift it into Ulak OS so every future project inherits the lesson. This is how the pack accumulates institutional memory.
+
+### Command sequence
+
+```bash
+# 1. In the source project, identify the pattern with file:line evidence
+# Example: webhook handler signs empty body (AP-18 precedent)
+
+# 2. Run pattern-extract
+cd ~/.ulak-os
+claude
+
+/ulak-pattern-extract source=/path/to/source-project pattern="webhook-signs-empty-body"
+```
+
+Ulak OS generates a ledger entry template. Fill in:
+
+```yaml
+- id: AP-NN
+  title: "<short title>"
+  source_projects:
+    - descriptor: "abstract descriptor 1"
+    - descriptor: "abstract descriptor 2"
+  source_files:
+    - path/to/file.ts:45-67
+    - path/to/other-file.ts:120-145
+  trust_tier: T2          # T1 if directly observed, T2 if inferred
+  rationale: "<one-line why>"
+  fix_summary: "<one-line fix>"
+  cross_project_occurrences: 2
+```
+
+Minimum: **≥2 real-project citations** and **trust tier ≥ T2**.
+
+Then:
+
+```bash
+bash scripts/validate-schemas.sh
+git add docs/governance/pattern-import-ledger.md docs/runtime/anti-patterns.md
+git commit -m "feat(patterns): import AP-NN — webhook-signs-empty-body"
+```
 
 ### Expected output
 
 - Updated `docs/governance/pattern-import-ledger.md`
-- Updated `docs/runtime/anti-patterns.md`
-- `reports/current/pack-gap-register.md` showing any wiring gaps
+- Updated `docs/runtime/anti-patterns.md` (or new rule-pack / sector-pack file)
+- `validate-schemas.sh` green
+- From the next run onward, every `/director` and `/ulak-scaffold` checks projects against this pattern
 
 ### When this workflow is insufficient
 
-- **Only one real-project observation.** Below the evidence bar. Wait for a second occurrence before importing.
-- **Pattern is stack-specific (e.g., "always use React.memo here").** Belongs in a **rule pack**, not an anti-pattern. See [chapter 07](./07-contributing.md) § Rule pack.
-- **Pattern is a full architectural shape.** Belongs in a **sector pack**.
+- **Only one source project.** Rejected by CI. Wait for a second occurrence.
+- **Pattern is project-specific, not generalizable.** Keep it in the source repo; do not import.
+- **Pattern is positive (good practice) not an anti-pattern.** Same flow but the ledger entry targets `docs/runtime/rule-packs/` or `docs/runtime/sector-packs.md`.
 
 Full walkthrough: [`../../showcase/04-cross-project-absorption.md`](../../showcase/04-cross-project-absorption.md).
 
 ---
 
-## Workflow 5 — Re-audit / follow-up
+## Decision tree summary
 
-### Usage scenario
-
-You ran `/director` a week ago. You executed part of the roadmap. You want to re-evaluate the artefacts and refresh the verdict.
-
-### Command sequence
-
-```bash
-cd /path/to/your-project
-claude                # or: codex, gemini
-
-/final-verdict
+```
+What do I need?
+├── First time, starting a new SaaS                   → Workflow 1  (hi ulak → /ulak-start)
+├── Existing codebase, need full audit                 → Workflow 2  (/director komple)
+├── Persona-split audit                                → Workflow 2, variant
+├── Want a 14-dimension scorecard second opinion       → /ulak-audit-deep
+├── Need to understand a term or service               → Workflow 3  (/ulak-explain, tutorials/)
+├── Pack is missing a capability                       → Workflow 4  (/pack-gap-audit)
+├── Want to add a cross-project pattern to Ulak OS     → Workflow 5  (/ulak-pattern-extract)
+├── Only need intake / inventory                       → /intake
+├── CI is red, do not know why                         → /triage-build
+├── Frontend redesign                                  → /frontend-war-room
+└── Re-validate a prior /director run                  → /final-verdict
 ```
 
-### What happens
+## Tips
 
-`/final-verdict` dispatches four agents (`qa-validation-commander`, `release-readiness-auditor`, `red-team-challenger`, `autonomous-program-director`) plus the `final-validation` skill. The flow:
+**Archive runs before a re-audit.** Before each `/director` run, move the current reports dir into `reports/archive/<date>/`. The audit trail stays intact and you can diff runs.
 
-1. Read existing artefacts under `reports/current/`.
-2. Re-run Phase 4.5 live probes if `validation-plan.md §6` has any, or if any Critical finding rested on T2/T3 evidence.
-3. Red-team challenges the existing verdict. If the existing `signoff_status: ready` is unsupported, the red-team flips it.
-4. Writes a merged `manager-verdict.md` with fresh residual risk counting.
+**State persona explicitly in multi-surface SaaS.** `dispatch=persona persona_set=customer,admin,partner` saves the router from guessing.
 
-### Expected output
+**Never flip `signoff_status` to `ready` manually.** If the verdict is blocked, read `validation-plan.md §6`, execute the probes, run `/final-verdict` to refresh.
 
-- Updated `reports/current/validation-plan.md`
-- Updated `reports/current/manager-verdict.md`
-- Updated `reports/current/live-probe-results.md` if probes ran
+**Force a sector pack when needed.** If the router picks the wrong sector in Phase 0, override in `active-variables.yaml` with `sector: fintech` (or the correct slug).
 
-### When this workflow is insufficient
+**Read a walkthrough before your first run.** [`docs/showcase/`](../../showcase/) contains four annotated runs (audit, scaffold, persona, cross-project) — spend 15 minutes there before your first real run.
 
-- **You made big changes since the prior run.** The inventory is stale — re-run `/director komple` instead.
-- **The prior run was incomplete.** `/final-verdict` cannot synthesize from missing artefacts; it only re-validates.
-- **You want to add new specialist evidence.** Use `/director komple skip_phase_1=true parallel_dispatch=...` to resume from the existing inventory with wider specialist dispatch.
-
----
-
-## Further reading
-
-- [`../../showcase/README.md`](../../showcase/README.md) — all four showcase walkthroughs with sample output
-- [`../../runbooks/first-hour-with-ulak-os.md`](../../runbooks/first-hour-with-ulak-os.md) — clone → first audit → first scaffold → first commit in 60 minutes
-- [`../../runtime/waves-pattern.md`](../../runtime/waves-pattern.md) — how `execution-roadmap.md` turns into sequenced execution
-- [`../../runtime/persona-dispatch-pattern.md`](../../runtime/persona-dispatch-pattern.md) — Workflow 3 detail
+**If you are new, use beginner mode.** `/ulak-start` picks `[t]` technical by default. `[b]` beginner mode replaces jargon with plain language and pulls glossary entries inline.
 
 ---
 

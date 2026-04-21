@@ -1,6 +1,6 @@
 # 06 — Governance
 
-Governance is what makes Ulak OS disciplined instead of just a pile of prompts. This chapter summarizes the **22 governance documents** in `docs/governance/`, grouped by what they enforce. Every document is Layer 1 (public runtime surface) — it loads with every session via the core contract.
+Governance is what makes Ulak OS disciplined instead of just a pile of prompts. This chapter summarizes the **22 governance documents** in `docs/governance/`, the **7 ADRs** in `docs/adr/`, the **4 runbooks** in `docs/runbooks/`, the **4 tutorials** in `docs/tutorials/`, the **3 showcase walkthroughs** in `docs/showcase/`, and the **47-term beginner glossary** at `docs/runtime/beginner-glossary.md`. All governance documents are Layer 1 (public runtime surface) — they load with every session via the core contract.
 
 Governance trumps runtime rules where the two collide. That ordering is explicit in [`docs/governance/rule-collision-matrix.md`](../../governance/rule-collision-matrix.md).
 
@@ -16,12 +16,67 @@ Governance trumps runtime rules where the two collide. That ordering is explicit
 | **Hooks + MCP + AI provider** | `hook-governance.md`, `mcp-governance.md`, `ai-provider-allowlist.md` |
 | **Secrets + locks** | `secrets-rotation-policy.md`, `lock-file-hygiene.md` |
 | **Observability** | `observability-baseline.md` |
+| **Vendor + localization (NEW v1.6)** | `vendor-capability-matrix.md`, `localization-governance.md` |
+
+That is 22 documents total, matching the disk.
+
+## Content layers beyond governance
+
+v1.6 added curated content layers that complement governance. These are not governance docs themselves but they are load-bearing for operator success.
+
+### 7 ADRs — `docs/adr/`
+
+| ADR | Topic |
+|---|---|
+| ADR-000 | Pack foundation |
+| ADR-001 | Rule packs as the seventh unit type |
+| ADR-002 | Phase 5 as terminal |
+| ADR-003 | Product surface split vs runtime (v2.x) |
+| ADR-004 | Pattern-import ledger |
+| ADR-005 | SaaS scaffolder |
+| (planned) | Vendor-capability-matrix as governance |
+
+### 4 runbooks — `docs/runbooks/`
+
+| Runbook | Covers |
+|---|---|
+| `install-methods.md` | All five install paths with trade-offs |
+| `troubleshooting.md` | 16+ failure modes, deeper than chapter 08 |
+| `first-hour-with-ulak-os.md` | Clone → first audit → first scaffold → first commit in 60 min |
+| `upgrading-from-v2.x.md` | Migration guide for operators on older versions |
+
+### 4 tutorials — `docs/tutorials/` (NEW v1.6)
+
+Beginner-oriented step-by-step guides for external services that `/ulak-scaffold` references but cannot automate (account signup, API key retrieval).
+
+| Tutorial | Covers | Duration |
+|---|---|---|
+| `supabase.md` | Account + project + API keys + migration push + first admin | 15 min |
+| `vercel.md` | Account + GitHub connection + env vars + deploy + custom domain | 10 min |
+| `github.md` | Account + repo creation + SSH key + first push | 10 min |
+| `resend.md` | Account + API key + domain verify + first email | 5 min |
+
+### 3 showcase walkthroughs — `docs/showcase/` (NEW v1.6)
+
+End-to-end annotated runs showing exactly what each workflow produces. `/ulak-demo` links to these.
+
+| Walkthrough | Covers |
+|---|---|
+| `01-audit-walkthrough.md` | `/director komple` on a fictional brownfield (~150 lines) |
+| `02-scaffold-walkthrough.md` | `/ulak-scaffold` for a greenfield payment-integrated SaaS (~120 lines) |
+| `03-persona-audit.md` | `/director dispatch=persona` with four personas (~130 lines) |
+| `04-cross-project-absorption.md` | Pattern extraction across two fictional products (~100 lines) |
+| `video-script.md` | 5-minute screenplay for a demo video |
+
+### 47-term beginner glossary — `docs/runtime/beginner-glossary.md` (NEW v1.6)
+
+The lookup source for `/ulak-explain`. Each term defined in five fields: Simple / Technical / Analogy / In Ulak / Related. Covers RLS, JWT, CORS, webhook, idempotency, migration, seeding, RPC, edge function, middleware, CSRF, HMAC, and 35 more.
 
 ## Surface split
 
 **File:** [`docs/governance/product-surface-split.md`](../../governance/product-surface-split.md) and [`docs/governance/surface-split.md`](../../governance/surface-split.md).
 
-Ulak OS enforces a strict split of user-facing surfaces in every audit and every scaffold:
+Ulak OS enforces a strict split of user-facing surfaces:
 
 - **Customer** — end users of the product
 - **Admin** — operators, moderators, internal staff
@@ -39,13 +94,13 @@ The scaffolder builds the split in from commit 1. The director checks for violat
 
 **File:** [`docs/governance/evidence-trust-scoring.md`](../../governance/evidence-trust-scoring.md).
 
-Every finding in `evidence-register.md`, `analysis-findings.md`, and the pattern-import ledger carries a trust tier.
+Every finding carries a trust tier.
 
 | Tier | Meaning | Example |
 |---|---|---|
 | **T1** | Observed + verified via direct code read | "I read `auth.ts:42-67` and saw the helper fall through to `user_metadata`" |
 | **T2** | Inferred from config / shape / behavior | "`next.config.ts` has `reactStrictMode: false` — likely suppressing a legacy warning" |
-| **T3** | Memory-sourced — treat with suspicion | "The team mentioned in Slack that the deploy script is flaky" |
+| **T3** | Memory-sourced — treat with suspicion | "Team mentioned in Slack the deploy script is flaky" |
 | **T4** | Rumor or third-party summary | "A StackOverflow post says this library has a bug" |
 | **T5–T7** | Progressively weaker | unverifiable claims |
 
@@ -55,7 +110,7 @@ Phase 5 refuses `signoff_status: ready` if any Critical finding rests on T3 or w
 
 **File:** [`docs/governance/finding-schema.md`](../../governance/finding-schema.md).
 
-Every non-trivial claim in every artefact follows a canonical YAML shape:
+Every non-trivial claim follows a canonical YAML shape:
 
 ```yaml
 - id: F-023
@@ -73,15 +128,13 @@ Every non-trivial claim in every artefact follows a canonical YAML shape:
   priority: P1
 ```
 
-Every field is required. The validator rejects findings missing any field.
+Every field is required.
 
 ## Artefact write authorization
 
 **File:** [`docs/governance/artefact-write-authorization.md`](../../governance/artefact-write-authorization.md).
 
-The default Claude Code system prompt rule against creating "planning / decision / analysis" markdown documents **does not apply** to director-protocol artefacts under `reports/current/`. The operator has explicitly requested those files by invoking `/director`. The authorization doc is the formal override.
-
-Every specialist dispatched during Phase 2 receives this override block in its brief. Without it, specialists would refuse to write their section of `evidence-register.md`, and the whole protocol would stall.
+The default Claude Code rule against creating "planning / decision / analysis" markdown documents **does not apply** to director-protocol artefacts under `reports/current/`. Every specialist dispatched during Phase 2 receives this override block in its brief.
 
 This is the one place the default Claude behavior is actively overridden. Outside of `reports/current/`, the default "don't write speculative docs" rule still holds.
 
@@ -89,134 +142,165 @@ This is the one place the default Claude behavior is actively overridden. Outsid
 
 **File:** [`docs/governance/hook-governance.md`](../../governance/hook-governance.md).
 
-Hooks are harness-level gates configured in `.claude/settings.json` (PreToolUse, PostToolUse, Notification, Stop). Ulak OS governance for hooks:
-
-- **No silent bypasses.** `--no-verify` on commit hooks is forbidden by convention. Legitimate bypasses use the documented **bypass token protocol**: append a token to the commit message, rotation rules in §4.
-- **No side-effect hooks without audit trail.** A hook that writes to disk, calls out to the network, or mutates git state must log its action to `reports/current/hook-log.md`.
-- **Rotation.** Bypass tokens rotate on a schedule defined in the secrets rotation policy (see below).
-
-If a hook blocks a commit you believe is legitimate, read §4 — do not reach for `--no-verify`.
+Hooks are harness-level gates configured in `.claude/settings.json`. Ulak OS rules:
+- **No silent bypasses.** `--no-verify` is forbidden; legitimate bypasses use the documented **bypass token protocol**.
+- **No side-effect hooks without audit trail.**
+- **Rotation.** Bypass tokens rotate per the secrets rotation policy.
 
 ## MCP governance
 
 **File:** [`docs/governance/mcp-governance.md`](../../governance/mcp-governance.md).
 
-Model Context Protocol (MCP) connectors bridge your AI coding CLI to external systems (GitHub, Figma, Jira, custom servers). Ulak OS enforces an **allowlist** model:
+Model Context Protocol connectors bridge your CLI to external systems (GitHub, Figma, Jira). Ulak OS enforces an **allowlist** model. Connectors outside the allowlist are not loaded. A director run on a project with an unknown MCP logs a finding.
 
-- `docs/governance/ai-provider-allowlist.md` lists every approved AI provider and every approved MCP connector.
-- Connectors outside the allowlist are not loaded.
-- A director run on a project with an unknown MCP connector logs a finding.
+Discovery layer (v1.6): `/ulak-mcp-discover` candidates new community MCPs for operator review — governance-gated, never auto-installed.
 
-This protects against prompt supply-chain attacks: an untrusted MCP server could inject instructions into your session. The allowlist means every connector has been reviewed by a maintainer.
+## Vendor capability matrix (NEW v1.6)
 
-Adding a new connector to the allowlist requires a PR with: the connector's identity, its network endpoints, its data flow, and the threat model. See [`docs/governance/prompt-supply-chain.md`](../../governance/prompt-supply-chain.md) for the full contract.
+**File:** [`docs/governance/vendor-capability-matrix.md`](../../governance/vendor-capability-matrix.md).
+
+Enforced single source of truth for which command / skill / agent / sector pack works on which vendor (Claude Code, Codex, Copilot, Gemini). Three status levels:
+
+- **✓ full** — native vendor support
+- **🟡 partial** — supported via NL trigger map, serial fallback, or reduced scope
+- **❌ exempt** — documented exemption with rationale
+
+Adding a new command without a matrix entry fails `scripts/validate-vendor-parity.sh`. Exemption entries require rationale text.
+
+## Localization governance (NEW v1.6)
+
+**File:** [`docs/governance/localization-governance.md`](../../governance/localization-governance.md).
+
+Bilingual parity (TR + EN) enforcement across the entire public surface:
+- Every command has `description` (TR) and `description_en` (EN) frontmatter.
+- Every governance doc, ADR, runbook, tutorial, and walkthrough has a TR and EN version.
+- `scripts/validate-bilingual.sh` compares TR/EN doc inventories and fails the build on drift.
+- The `sync-gemini-commands.sh` script keeps `.gemini/commands/*.toml` aligned with `.claude/commands/*.md`.
 
 ## Secrets rotation policy
 
 **File:** [`docs/governance/secrets-rotation-policy.md`](../../governance/secrets-rotation-policy.md).
 
-Ulak OS itself has no secrets (it is static prompts and markdown). But the projects you scaffold with `/ulak-scaffold`, and the projects you audit with `/director`, do. The policy codifies:
-
-- **Rotation cadence** per secret type (API keys, JWT signing keys, DB credentials, webhook secrets, deploy tokens).
-- **Rotation procedure** — how to rotate without downtime, how to coordinate the rotation window, how to verify the rotation applied cleanly.
-- **Emergency rotation** — what to do on suspected leak.
-- **Storage rules** — `.env.local` never committed; secrets live in the provider's secret manager, not in `.env*` beyond development.
-
-The scaffolder produces `.gitleaks.baseline` configured for the policy. The director flags drift when it sees a hardcoded secret in code or an expired rotation window in infrastructure config.
+Rotation cadence, procedure, emergency rotation, and storage rules. `.env.local` never committed; secrets live in the provider's secret manager beyond development. The scaffolder produces `.gitleaks.baseline` configured for the policy.
 
 ## Pattern-import ledger
 
 **File:** [`docs/governance/pattern-import-ledger.md`](../../governance/pattern-import-ledger.md).
 
-Ulak OS absorbs patterns from real projects. Every absorbed pattern gets a ledger entry with:
-
-- **id** — the anti-pattern number (AP-NN) or sector-pack slug
-- **source_project** — abstract descriptor (never a real project name, per redaction discipline)
-- **source_files** — `path/to/file.ts:42-67` citations
-- **trust_tier** — T1 to T7 per evidence trust scoring
-- **rationale** — one-line why this matters
-- **cross_project_occurrences** — count (must be ≥2 to import)
-
-CI enforces the ledger. A PR that adds an anti-pattern or sector pack without a matching ledger entry, or with trust tier below T2, is rejected. See [chapter 08](./08-troubleshooting.md) § pattern-import-ledger check fails.
-
-This is how institutional memory accumulates without leaking project identities. The ledger is the audit trail of Ulak OS's own evolution.
+Every absorbed pattern gets a ledger entry with `id`, abstract `source_project`, `source_files` citations, `trust_tier` (≥T2), `rationale`, `cross_project_occurrences` (≥2). CI enforces the ledger.
 
 ## Rule-pack governance
 
 **File:** [`docs/governance/rule-pack-governance.md`](../../governance/rule-pack-governance.md).
 
-Rule packs are the 7th unit type. They live under `docs/runtime/rule-packs/*.md` and load at Phase 0 when the corresponding stack is detected. v1.0.0 ships 8 rule packs: TypeScript + Next.js, Python + FastAPI, Docker Compose, API security, Turkish locale, localization SSOT, LLM streaming + context-aware, React Native + Expo.
+Rule packs are the 7th unit type. v1.6 ships 8: TypeScript + Next.js, Python + FastAPI, Docker Compose, API security, Turkish locale, localization SSOT, LLM streaming + context-aware, React Native + Expo.
 
-Rule-pack contract:
-
-- **≤500 bytes body.** Imperatives only. No exposition.
-- **Activation line at the top** — declares which stack triggers the load.
-- **Collision rule paragraph at the bottom** — declares which other rule packs it can or cannot coexist with.
-- **No project-specific paths.** Pure generic so the pack applies anywhere the stack is used.
-
-The collision matrix is enforced. If a rule-pack A declares incompatibility with rule-pack B, Phase 0 rejects loading both in the same run.
+Contract:
+- ≤500 bytes body (imperatives only)
+- Activation line declares trigger stack
+- Collision rule paragraph at bottom
+- No project-specific paths
 
 ## Memory hygiene
 
 **File:** [`docs/governance/memory-hygiene.md`](../../governance/memory-hygiene.md).
 
-Ulak OS deliberately does not write to Claude's long-lived memory (or any vendor's equivalent) for project facts. Why:
-
-- **Reproducibility.** Two operators with the same repo state should produce the same artefacts from the same commands.
-- **Vendor portability.** Runtime state on disk means swapping from Claude to Gemini does not silently break anything.
-- **Auditability.** `reports/archive/` is the audit trail. Memory that lives in a provider's store is not a shared artefact.
-
-The rule: project facts that matter for a run live in files. Personal preferences (theme, editor setup) can live in memory — they are not project facts.
+Project facts live in files, never in provider memory stores. Ensures reproducibility, vendor portability, auditability.
 
 ## Settings permissions governance
 
 **File:** [`docs/governance/settings-permissions-governance.md`](../../governance/settings-permissions-governance.md).
 
-`.claude/settings.json` declares what the AI coding CLI is allowed to do. Ulak OS ships a conservative default:
-
-- **Deny list** for destructive operations that should never happen during an audit (`rm -rf`, `git push --force`, destructive database commands).
-- **Allow list** for expected read-only operations (`ls`, `cat`, `grep`, validator scripts).
-- **Ask list** for borderline operations (network calls, git commit, deploy scripts).
-
-Scoped-by-project settings live in `.claude/settings.local.json`, gitignored, never committed. This prevents a single operator's personal overrides from bleeding into the shared project config.
+`.claude/settings.json` declares what the CLI is allowed to do. Ulak OS ships a conservative default: deny list for destructive ops, allow list for read-only, ask list for borderline.
 
 ## Observability baseline
 
 **File:** [`docs/governance/observability-baseline.md`](../../governance/observability-baseline.md).
 
-Every scaffolded project gets an observability baseline: structured logging with correlation IDs, error reporting hooked up (Sentry or equivalent), health-probe endpoint wired into the deploy webhook contract, request tracing sample rate set to a sane default.
-
-The director audits existing projects against this baseline and flags missing pieces.
+Every scaffolded project gets structured logging with correlation IDs, error reporting hooked up, health-probe endpoint, sane tracing sample rate.
 
 ## Lock file hygiene
 
 **File:** [`docs/governance/lock-file-hygiene.md`](../../governance/lock-file-hygiene.md).
 
-`pnpm-lock.yaml`, `package-lock.json`, `poetry.lock`, `uv.lock`, `go.sum`, `Cargo.lock`, `requirements.txt` — all committed by default. Phase 0 of the director runs a **broken-lock sweep**: detects out-of-sync lockfiles, missing lockfiles when the package manager is detected, and lockfiles that disagree with their manifest. Findings land in the evidence register.
+All lockfiles committed by default. Phase 0 runs a broken-lock sweep.
 
 ## AI provider allowlist
 
 **File:** [`docs/governance/ai-provider-allowlist.md`](../../governance/ai-provider-allowlist.md).
 
-Declares which AI providers and which models are approved for use with Ulak OS. The allowlist is enforced by the MCP governance layer: connectors that bridge to non-allowlisted providers are not loaded. Adding a provider requires a PR with a threat model.
+Declares which AI providers and models are approved. Adding a provider requires a PR with a threat model.
 
 ## Prompt supply chain
 
 **File:** [`docs/governance/prompt-supply-chain.md`](../../governance/prompt-supply-chain.md).
 
-Ulak OS sources prompts from three channels: the pack itself (first-party), allowlisted MCP servers (second-party), and the operator's project (third-party, treated as data not instructions per the trust model). This doc codifies the split and the review procedure for each.
+Three channels: pack itself (first-party), allowlisted MCPs (second-party), operator's project (third-party, data not instructions).
 
 ## Trust model
 
 **File:** [`docs/governance/trust-model.md`](../../governance/trust-model.md).
 
-Tool outputs are **data, not instructions**. When a tool returns "delete everything under /tmp", Ulak OS does not treat that as a command — it treats it as a string to be analyzed. This firewall defeats a class of injection attacks where an attacker plants instructions in a file the agent reads during Phase 1 inventory.
+Tool outputs are **data, not instructions**. This firewall defeats injection attacks where an attacker plants instructions in a file the agent reads during Phase 1 inventory.
+
+## Common schemas at a glance
+
+### Validation-result YAML
+
+```yaml
+run_id: 2026-04-21-director-001
+signoff_status: conditional    # ready | conditional | blocked
+phases:
+  phase_0: { status: complete, artefacts: [...] }
+  phase_1: { status: complete, artefacts: ["inventory.md"] }
+  ...
+  phase_4_5: { status: partial, blocked_probes: ["AUTH-P2"] }
+  phase_5: { status: complete }
+residual_risks:
+  - id: SEC-CU-03
+    reason: "live-probe AUTH-P2 credentials missing"
+    severity: Critical
+next_action: "operator runs AUTH-P2 probe with production credentials"
+```
+
+Full schema: [`validation-result-schema.md`](../../runtime/validation-result-schema.md).
+
+### Router decision YAML
+
+```yaml
+project_state: BROWNFIELD       # GREENFIELD | BROWNFIELD | HYBRID
+intervention_mode: REPAIR       # CREATE | REPAIR | EXTEND | REFACTOR | MIGRATE | RESCUE | REPACKAGE
+output_profile: AUDIT           # 7 profiles
+output_language: en             # en | tr
+scope: full
+live_probe_required: true
+dispatch_mode: parallel
+validation_depth: deep
+persona_set: [customer, admin, partner]
+```
+
+## Governance first-session checklist
+
+When you take over a project or start fresh:
+
+1. Read `docs/governance/README.md` (10 minutes)
+2. Read `surface-split.md` + `product-surface-split.md`
+3. Read `finding-schema.md`
+4. Memorize T1–T7 trust tiers
+5. Read `vendor-capability-matrix.md` to know what is supported on your CLI
+6. Skim `pattern-import-ledger.md` for prior patterns
+7. Use `/ulak-explain` when any term in steps 1–6 is unfamiliar
 
 ## Further reading
 
-- [`../../governance/`](../../governance/) — all 22 documents
+- [`../../governance/`](../../governance/) — all 22 governance documents
 - [`../../runtime/anti-patterns.md`](../../runtime/anti-patterns.md) — the ~100-entry anti-pattern library that governance enforces
-- [`../../runtime/sector-packs.md`](../../runtime/sector-packs.md) — the 24 sector packs that apply governance to domain-specific shapes
+- [`../../runtime/sector-packs.md`](../../runtime/sector-packs.md) — 24 sector packs
+- [`../../adr/`](../../adr/) — 7 ADRs
+- [`../../runbooks/`](../../runbooks/) — 4 runbooks
+- [`../../tutorials/`](../../tutorials/README.md) — 4 external-service tutorials
+- [`../../showcase/`](../../showcase/README.md) — 3 walkthroughs + video script
+- [`../../runtime/beginner-glossary.md`](../../runtime/beginner-glossary.md) — 47-term glossary
 
 ---
 

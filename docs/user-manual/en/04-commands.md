@@ -1,369 +1,395 @@
 # 04 — Commands
 
-Ulak OS v1.0.0 ships with **nine slash commands**. Each command is an operator entry point that dispatches a specific agent (or chain of agents) to produce a defined set of artefacts. This chapter covers what each command does, when to use it, the arguments it accepts, an example invocation, and the expected output.
+Ulak OS v1.6 ships with **24 slash commands**. Each command is an operator entry point that dispatches a specific agent (or chain of agents) to produce a defined set of artefacts or to help you discover what the system can do.
 
-All commands live as markdown files under `.claude/commands/` in the pack. For Gemini CLI, equivalent `.toml` files live under `.gemini/commands/`. Vendor-parity notes are at the end of this chapter.
+Commands are organized into three categories:
 
-## Command index
+1. **Onboarding + discovery** — the v1.6 vision layer. No prior knowledge required.
+2. **Project lifecycle** — scaffold, audit, frontend, testing, pattern extraction, gap analysis.
+3. **Meta / governance** — locale management and similar system-wide toggles.
 
-| Command | Primary purpose | Typical run time |
-|---|---|---|
-| [`/director`](#director) | Full Phase 0 → 5 program — the executive audit | 15–40 minutes |
-| [`/final-verdict`](#final-verdict) | Re-validate existing artefacts and produce a merged verdict | 5–10 minutes |
-| [`/frontend-war-room`](#frontend-war-room) | Premium redesign + visual system cleanup | 20–30 minutes |
-| [`/intake`](#intake) | Phase 0–2 only: read the project, produce intake + inventory | 8–15 minutes |
-| [`/pack-gap-audit`](#pack-gap-audit) | Inspect the operating pack, list missing units | 5–10 minutes |
-| [`/triage-build`](#triage-build) | Diagnose a failing build by stack | 5–15 minutes |
-| [`/ulak-design-ref`](#ulak-design-ref) | Fetch a public brand's design reference | under 1 minute |
-| [`/ulak-intake`](#ulak-intake) | Produce the Ulak intake artefact (optionally via superpowers) | 3–8 minutes |
-| [`/ulak-scaffold`](#ulak-scaffold) | Generate a full-stack SaaS starter | 10–20 minutes |
+All commands live as markdown files under `.claude/commands/` in the pack. For Gemini CLI, equivalent `.toml` files live under `.gemini/commands/`. For Codex and Copilot CLIs, commands are reached via natural-language trigger phrases mapped in `AGENTS.md` (the **NL trigger map**). Vendor-parity notes accompany every command.
+
+## `hi ulak` — the natural-language entry (v1.6)
+
+You do not have to memorize slash-command names. In any AI coding CLI with Ulak OS imported, typing:
+
+```
+hi ulak
+```
+
+triggers `/ulak-hello`. From there, free-form descriptions of what you want ("scaffold a SaaS", "audit my project", "what does RLS mean?") route through `/ulak-ask` to the matching canonical command. The NL trigger map in `AGENTS.md` provides the same entry for Codex and Copilot CLIs that lack literal slash-command syntax.
+
+## Full command index (24 commands)
+
+Legend: ✓ = full support, 🟡 = partial (serial fallback or via NL trigger), ❌ = exempt / unsupported.
+
+### Category 1 — Onboarding + discovery (9 commands)
+
+| Command | What it does | Claude | Codex | Copilot | Gemini |
+|---|---|---|---|---|---|
+| [`/ulak-hello`](#ulak-hello) | 30-second onboarding tour; explains Ulak OS, shows 3 example commands, asks what you want to do | ✓ | 🟡 | 🟡 | ✓ |
+| [`/ulak-ask`](#ulak-ask) | Natural-language router; state intent in plain language, get the right command suggested | ✓ | 🟡 | 🟡 | ✓ |
+| [`/ulak-packs`](#ulak-packs) | Dumps full capability catalog (24 commands, 10 skills, 27 agents, packs) inline | ✓ | ✓ | ✓ | ✓ |
+| [`/ulak-search`](#ulak-search) | Keyword search (TR or EN) across commands, skills, agents, sectors, rules, governance, ADRs, runbooks, templates | ✓ | ✓ | ✓ | ✓ |
+| [`/ulak-demo`](#ulak-demo) | Shows 3 example SaaS projects (Minimal, Marketplace, LMS) with real scaffold commands and file counts | ✓ | ✓ | ✓ | ✓ |
+| [`/ulak-explain`](#ulak-explain) | Beginner-friendly 5-field glossary lookup (Simple / Technical / Analogy / In Ulak / Related) | ✓ | ✓ | ✓ | ✓ |
+| [`/ulak-design-ref`](#ulak-design-ref) | Download a public brand's design reference (awesome-design-md) and hand it to frontend agents | ✓ | 🟡 | 🟡 | 🟡 |
+| [`/ulak-mcp-discover`](#ulak-mcp-discover) | Discover MCP servers from public registry, classify by trust tier, propose allowlist additions (governance-gated) | ✓ | 🟡 | 🟡 | 🟡 |
+| [`/ulak-intake`](#ulak-intake) | Produce the Ulak intake artefact (optionally via superpowers:brainstorming) | ✓ | 🟡 | 🟡 | 🟡 |
+
+### Category 2 — Project lifecycle (14 commands)
+
+| Command | What it does | Claude | Codex | Copilot | Gemini |
+|---|---|---|---|---|---|
+| [`/ulak-start`](#ulak-start) | 5-phase, 27-question interactive SaaS wizard (technical or beginner mode); auto-dispatches `/ulak-scaffold` on confirm | ✓ | 🟡 | 🟡 | ✓ |
+| [`/ulak-scaffold`](#ulak-scaffold) | Greenfield full-stack SaaS scaffolder; produces ship-ready Next.js + Supabase + payment + i18n starter with governance pre-wired | ✓ | ✓ | ✓ | ✓ |
+| [`/ulak-next-steps`](#ulak-next-steps) | Post-scaffold runbook; 8–10 concrete steps from `pnpm install` to first admin login | ✓ | ✓ | ✓ | ✓ |
+| [`/director`](#director) | Full Phase 0 → 5 audit program; the executive director | ✓ | 🟡 | 🟡 | 🟡 |
+| [`/ulak-audit-deep`](#ulak-audit-deep) | 14-dimension audit scorecard (Architecture, Testing, Secrets, Observability, CI/CD, etc.); 0-100 per dimension + A-F grade | ✓ | ✓ | ✓ | ✓ |
+| [`/ulak-brainstorm`](#ulak-brainstorm) | Pre-implementation ideation for a new feature; wraps superpowers:brainstorming with Ulak governance | ✓ | 🟡 | 🟡 | 🟡 |
+| [`/ulak-test-driven`](#ulak-test-driven) | TDD workflow; writes failing test first, implements, refactors; wraps superpowers:test-driven-development | ✓ | 🟡 | 🟡 | 🟡 |
+| [`/ulak-pattern-extract`](#ulak-pattern-extract) | Extract reusable pattern from a source project; register in pattern-import-ledger with T1/T2 evidence | ✓ | 🟡 | 🟡 | 🟡 |
+| [`/ulak-subagent-dispatch`](#ulak-subagent-dispatch) | Dispatch N independent subagents in parallel for bounded scope (superpowers:dispatching-parallel-agents) | ✓ | ❌ | ❌ | 🟡 |
+| [`/triage-build`](#triage-build) | Triage a failing build by stack; toolchain-precheck + subsystem dispatch | ✓ | ✓ | ✓ | ✓ |
+| [`/frontend-war-room`](#frontend-war-room) | Premium redesign + visual system cleanup | ✓ | ❌ | ❌ | ❌ |
+| [`/intake`](#intake) | Run Phase 0–2 only; intake + inventory + initial evidence | ✓ | ✓ | ✓ | ✓ |
+| [`/final-verdict`](#final-verdict) | Re-validate existing artefacts; merged manager verdict | ✓ | ✓ | ✓ | ✓ |
+| [`/pack-gap-audit`](#pack-gap-audit) | Inspect current operating pack; list missing commands, skills, agents, hooks, MCP, docs, eval | ✓ | ✓ | ✓ | ✓ |
+
+### Category 3 — Meta / governance (1 command)
+
+| Command | What it does | Claude | Codex | Copilot | Gemini |
+|---|---|---|---|---|---|
+| [`/ulak-locale`](#ulak-locale) | Manage active Ulak OS locale (TR/EN toggle); persistent state in `.claude/state/locale.txt` | ✓ | ✓ | ✓ | ✓ |
 
 ---
 
-## /director
+## Onboarding + discovery
 
-**Source:** `.claude/commands/director.md`
+### /ulak-hello
 
-### What it does
+**Source:** `.claude/commands/ulak-hello.md`
 
-Dispatches the `autonomous-program-director` subagent to run the complete Phase 0 → 5 protocol. This is the canonical "read everything, audit everything, give me a verdict" command.
+**Does.** 30-second onboarding tour. Explains what Ulak OS does in 3 sentences, shows 3 example commands, and asks "what do you want to do?". Also triggered by typing `hi ulak` in any CLI with Ulak OS loaded.
 
-### When to use
+**When.** First contact. A new user just installed Ulak OS or opened a project for the first time.
 
-- First pass on a brownfield project
-- Rescue mission on a broken or unfamiliar codebase
-- Periodic health check on a project already governed by Ulak OS
-- Before a major release when you want a structured signoff
+**Example.** `/ulak-hello` — no arguments needed.
 
-### Arguments
+**Output.** Inline terminal text: 3-sentence intro, 3 example commands with descriptions, open-ended question.
 
-Positional (operator intent, free-form):
-- `komple` / `full` / `complete` — full Phase 0 → 5 program
-- `brownfield audit`, `brownfield rescue` — state hints
-- `mode=<intervention>` — one of CREATE, REPAIR, EXTEND, REFACTOR, MIGRATE, RESCUE, REPACKAGE
+### /ulak-ask
 
-Keyword:
-- `mode=<intervention>` — pre-set intervention mode, bypass router inference
-- `entry=<file-path>` — resume from a prior handoff plan
-- `skip_phase_1=true` — skip deep inventory if `reports/current/inventory.md` is fresh
-- `skip_phase_2=<comma-list>` — skip specific specialist dispatches
-- `parallel_dispatch=<N>` — override the Phase 2 default dispatch cap (default 6)
-- `dispatch=<specialist|persona|both>` — discipline-based vs user-role-based specialists
-- `validation_depth=<light|standard|deep>` — Phase 5 validation gate depth
-- `profile=<AUDIT_PROFILE|GREENFIELD_BUILDER_PROFILE|...>` — pre-select output profile
+**Source:** `.claude/commands/ulak-ask.md`
 
-### Example invocation
+**Does.** Natural-language router. You state what you want in plain language; Ulak OS matches keyword + intent to the right existing command/skill/agent and suggests it. If ambiguous, returns a "did you mean?" disambiguation list.
 
-```
-/director komple
-```
+**When.** You know what you want to accomplish but do not know which command to type. The "converse with Ulak instead of memorizing syntax" layer.
 
-Or with keywords:
+**Example.** `/ulak-ask I want to audit my existing SaaS` → suggests `/director komple` plus context.
 
-```
-/director komple mode=RESCUE dispatch=persona parallel_dispatch=9
-```
+**Output.** Inline suggestion(s) with rationale.
 
-### Expected output
+### /ulak-packs
 
-Fifteen artefact files under `reports/current/`, chained across the six phases. The terminal-facing summary prints the manager verdict at the end, plus a pointer to `reports/current/manager-verdict.md` for the full narrative.
+**Source:** `.claude/commands/ulak-packs.md`
 
-See [chapter 05](./05-workflows.md) § Workflow 1 for the complete walkthrough.
+**Does.** Shows all Ulak OS capabilities in one place: 24 commands, 10 skills, 27 agents, 15 sector overlays, 24 sector packs, 8 rule packs, 22 governance docs, 7 ADRs, 4 runbooks. Reads `docs/catalog.md` and dumps it inline.
 
----
+**When.** Instead of hunting for plugins online. Operational embodiment of the "no plugin hunting" vision.
 
-## /final-verdict
+**Example.** `/ulak-packs` or `/ulak-packs category=agents`.
 
-**Source:** `.claude/commands/final-verdict.md`
+**Output.** Inline catalog, optionally filtered.
 
-### What it does
+### /ulak-search
 
-Runs only the validation gate. Dispatches `qa-validation-commander`, `release-readiness-auditor`, `red-team-challenger`, and `autonomous-program-director` together to re-evaluate existing artefacts under `reports/current/` and produce a merged `manager-verdict.md`.
+**Source:** `.claude/commands/ulak-search.md`
 
-### When to use
+**Does.** Keyword search over the Ulak OS capability catalog. Accepts TR or EN keywords. Returns combined hits across commands, skills, agents, sectors, rules, governance, ADRs, runbooks, templates.
 
-- After executing the roadmap produced by `/director`, to re-validate
-- When you want an independent challenge from the red-team agent
-- Before a release, to refresh the validation gate with fresh probes
+**When.** You remember a concept but not the exact command. For example `/ulak-search payment` surfaces the payment-integrated-saas sector, Iyzico templates, and the `/ulak-scaffold` payment flag on one screen.
 
-### Arguments
+**Example.** `/ulak-search rls` or `/ulak-search ödeme`.
 
-Inherits director keyword arguments (`validation_depth`, `profile`). No positional arguments needed in the common case.
+**Output.** Ranked match list with type + path.
 
-### Example invocation
+### /ulak-demo
 
-```
-/final-verdict
-```
+**Source:** `.claude/commands/ulak-demo.md`
 
-### Expected output
+**Does.** Introduces 3 example SaaS projects buildable with Ulak OS (Minimal SaaS, Marketplace, LMS). For each: real scaffold command, generated file count (measured on disk), activated sector + rule packs, "how many days without Ulak" estimate.
 
-Updated `reports/current/validation-plan.md` and a refreshed `reports/current/manager-verdict.md` with `signoff_status` re-computed against fresh evidence. If live probes were required by `validation-plan.md §6`, `live-probe-results.md` is updated too.
+**When.** A beginner says "show me what I can build before I run anything".
 
----
+**Example.** `/ulak-demo` or `/ulak-demo project=marketplace`.
 
-## /frontend-war-room
+**Output.** Per-example card with scaffold line, file count, pack activation, time saved.
 
-**Source:** `.claude/commands/frontend-war-room.md`
+### /ulak-explain
 
-### What it does
+**Source:** `.claude/commands/ulak-explain.md`
 
-Runs the frontend / mobile redesign protocol. Dispatches `frontend-ios-flutter-director`, `design-system-architect`, and `educational-ux-specialist`. Produces a design-system master document plus per-page overrides, analysis findings, target state, and an execution roadmap scoped to frontend work.
+**Does.** Explains a technical term in a beginner-friendly 5-field schema: Simple / Technical / Analogy / In Ulak / Related. Lookup source is `docs/runtime/beginner-glossary.md` (47 terms).
 
-### When to use
+**When.** Post-scaffold, operator sees `.env.local` variables or reads RLS / JWT / webhook in a migration file and wants a quick explanation without leaving the CLI.
 
-- Premium redesign push
-- Visual system cleanup across an existing product
-- Mobile app rework
+**Example.** `/ulak-explain rls` → 5-field explanation of Row-Level Security.
 
-### Arguments
+**Output.** Inline 5-field entry.
 
-No required arguments. Keyword: `scope=<web|mobile|both>`.
-
-### Example invocation
-
-```
-/frontend-war-room
-```
-
-### Expected output
-
-- `reports/current/analysis-findings.md`
-- `reports/current/target-state.md`
-- `reports/current/execution-roadmap.md`
-- `reports/current/design-system/MASTER.md` plus per-page override files under `design-system/pages/`
-
-### Vendor note
-
-Claude-native. Depends on Claude Code's parallel subagent dispatch. Listed in `vendor-parity-exemptions.txt` with rationale.
-
----
-
-## /intake
-
-**Source:** `.claude/commands/intake.md`
-
-### What it does
-
-Runs only Phase 0 through Phase 2. Dispatches the `cartographer` agent and the `project-intake` skill. Produces intake, inventory, and initial evidence register. Does not synthesize findings or write a verdict.
-
-### When to use
-
-- You want a "read-only" first pass before committing to a full `/director` run
-- You plan to resume with `/director entry=reports/current/intake.md skip_phase_1=true` later
-- You are testing Ulak OS on a project and want the light touch
-
-### Arguments
-
-No required arguments.
-
-### Example invocation
-
-```
-/intake
-```
-
-### Expected output
-
-- `reports/current/intake.md` — operator intent + project state summary
-- `reports/current/inventory.md` — deep inventory with file:line citations
-- `reports/current/evidence-register.md` — initial findings from the cartographer
-
----
-
-## /pack-gap-audit
-
-**Source:** `.claude/commands/pack-gap-audit.md`
-
-### What it does
-
-Inspects the current operating pack and lists missing or underdeveloped units: commands, skills, agents, hooks, MCP connectors, docs, eval coverage. Dispatches the `prompt-skill-plugin-governor` agent and the `pack-gap-completion` skill.
-
-### When to use
-
-- You are maintaining Ulak OS (or a fork) and want to see gaps
-- You completed a run where the director said "this needed a skill we don't have"
-- Periodic maintenance of your local governance surface
-
-### Arguments
-
-No required arguments.
-
-### Example invocation
-
-```
-/pack-gap-audit
-```
-
-### Expected output
-
-- `reports/current/pack-gap-register.md` — ordered list of missing units with severity
-- `reports/current/manager-verdict.md` — merged verdict specific to pack gaps
-
----
-
-## /triage-build
-
-**Source:** `.claude/commands/triage-build.md`
-
-### What it does
-
-Generalized build-triage flow. Runs `toolchain-precheck` first to determine which stacks are present, then dispatches to the matching subsystem (frontend, backend, container, mobile) with standard diagnostic commands.
-
-### When to use
-
-- Your build or test is red and you do not yet know why
-- You just inherited a project and the CI is failing
-- You want a structured diagnostic pass before guessing
-
-### Arguments
-
-- Keyword: `stack=<frontend|backend|container|mobile|auto>` (default `auto`)
-- Keyword: `log=<path/to/ci.log>` — provide a failing CI log directly
-
-### Example invocation
-
-```
-/triage-build
-```
-
-### Expected output
-
-Terminal narrative of the triage flow plus (if the failure is non-trivial) a finding written to `reports/current/analysis-findings.md`.
-
----
-
-## /ulak-design-ref
+### /ulak-design-ref
 
 **Source:** `.claude/commands/ulak-design-ref.md`
 
-### What it does
+**Does.** Downloads a public brand's design reference from `VoltAgent/awesome-design-md` and writes it to `reports/current/design-references/<brand>/DESIGN.md` so frontend agents can consume it during a redesign.
 
-Downloads a public brand's design reference (color palette, typography, component styles, layout principles) from the `VoltAgent/awesome-design-md` repository and writes it to `reports/current/design-references/<brand>/` so frontend agents can consume it during a redesign.
+**When.** Briefing the design-system-architect with an external anchor (stripe, linear, vercel, notion, etc.).
 
-### When to use
+**Example.** `/ulak-design-ref stripe`.
 
-- You want to reference a public brand's design system during a frontend redesign
-- You are briefing the design-system-architect and want an external anchor
+**Output.** `reports/current/design-references/stripe/DESIGN.md`.
 
-### Arguments
+### /ulak-mcp-discover
 
-Positional: `<brand>` — the brand slug as it exists in `VoltAgent/awesome-design-md`.
+**Source:** `.claude/commands/ulak-mcp-discover.md`
 
-### Example invocation
+**Does.** Discovers new MCP servers from the public registry, classifies by trust tier, proposes addition to the Ulak OS MCP allowlist via governance gate. Produces a candidate report for operator review; does NOT auto-install.
 
-```
-/ulak-design-ref stripe
-```
+**When.** Evaluating community MCP servers for integration into an Ulak run or a scaffolded project.
 
-### Expected output
+**Example.** `/ulak-mcp-discover keyword=database` → candidate list with trust tiers.
 
-`reports/current/design-references/stripe/DESIGN.md` containing the brand's design reference, ready for `/frontend-war-room` to consume.
+**Output.** `reports/current/mcp-candidates.md`.
 
----
-
-## /ulak-intake
+### /ulak-intake
 
 **Source:** `.claude/commands/ulak-intake.md`
 
-### What it does
+**Does.** Produces the Ulak intake artefact — structured capture of operator intent, success criteria, constraints. Calls `superpowers:brainstorming` if installed.
 
-Produces the Ulak intake artefact — a structured capture of operator intent, success criteria, and constraints. If the `superpowers:brainstorming` skill is available in the environment, it is called first to enrich the intake. Otherwise the command runs its own intake flow.
+**When.** Brand new project; disciplined intent capture before inventory.
 
-### When to use
+**Example.** `/ulak-intake I want to build a B2B SaaS for small retail chains`.
 
-- Brand new project where you want a disciplined intent capture before writing any inventory
-- Before starting a scaffold or an audit when the intent is not fully clear
-
-### Arguments
-
-Positional: free-form operator intent.
-
-### Example invocation
-
-```
-/ulak-intake I want to build a B2B SaaS for small retail chains
-```
-
-### Expected output
-
-- `reports/current/intake.md` with intent, success criteria, constraints, and initial scope
+**Output.** `reports/current/intake.md`.
 
 ---
 
-## /ulak-scaffold
+## Project lifecycle
+
+### /ulak-start
+
+**Source:** `.claude/commands/ulak-start.md`
+
+**Does.** 5-phase, 27-question interactive SaaS wizard. You write no prompts; 4–7 questions per phase, sensible default on each, `[enter]` to skip. Two modes: `[t]` technical (default, developer audience) and `[b]` beginner (plain language + inline glossary). Answers map to 24 sector packs + 8 rule packs + 22 governance docs + ~100 anti-patterns. On confirmation, `/ulak-scaffold` auto-dispatches.
+
+**When.** Starting a new SaaS from scratch, want a guided path.
+
+**Example.** `/ulak-start` — interactive.
+
+**Output.** Wizard writes `reports/current/scaffold-inputs.yaml`, then dispatches `/ulak-scaffold`.
+
+### /ulak-scaffold
 
 **Source:** `.claude/commands/ulak-scaffold.md`
 
-### What it does
+**Does.** Greenfield full-stack SaaS scaffolder. Produces a ship-ready starter with Ulak OS governance baked in from commit 1: Next.js 16 + TypeScript + Tailwind CSS 4 + Supabase + payment provider + i18n + RLS + CI + deploy pattern. Dispatches the `saas-scaffolder` skill.
 
-Greenfield full-stack SaaS scaffolder. Produces a ship-ready starter project with Ulak OS governance baked in from commit 1. Dispatches the `saas-scaffolder` skill.
+**When.** Starting a new SaaS product (greenfield, not brownfield addition).
 
-### When to use
-
-- Starting a new SaaS product
-- You want the 24 sector packs + 8 rule packs + ~100 anti-patterns + 22 governance docs applied from the start, not as a later audit
-- You want a consistent stack across a portfolio of products
-
-### Arguments
-
-Inputs are collected interactively or via keyword arguments:
-
-```yaml
-product_name: "example-saas"
-product_domain: "saas"           # saas | ecommerce | edtech | fintech | marketplace | content-ops | community | dev-tools
-stack_frontend: "nextjs"         # nextjs (default) | remix | sveltekit
-stack_backend: "supabase"        # supabase (default) | node-fastapi | hybrid
-locale_primary: "en"             # en | tr
-locales_supported: ["en", "tr"]
-payment_provider: "stripe"       # none | stripe | iyzico | both
-has_reseller_tier: false
-has_admin_surface: true
-has_mobile: false
-hosting: "self-managed-vps"      # self-managed-vps | vercel | fly | railway
-output_path: "../example-saas"
+**Example.**
+```
+/ulak-scaffold product_name=example-saas product_domain=saas payment_provider=stripe locale_primary=en
 ```
 
-Any field can be omitted; the command prompts for required fields before executing.
+**Output.** A new directory containing the full project. Post-scaffold checklist: see `/ulak-next-steps`.
 
-### Example invocation
+### /ulak-next-steps
 
-```
-/ulak-scaffold product_name=example-saas product_domain=saas locale_primary=en payment_provider=stripe
-```
+**Source:** `.claude/commands/ulak-next-steps.md`
 
-### Expected output
+**Does.** Answers "what do I do now?" after scaffold completes, with 8–10 concrete steps. Produces a personalized runbook based on your wizard choices (sector, payment, deploy, email): `pnpm install`, `.env.local` fill-in, Supabase / Iyzico / Resend signup links, first migration, seed, `pnpm dev`, first admin user creation, admin panel entry. Following these steps reaches localhost:3000 with a working admin login.
 
-A new directory containing a full Next.js + Supabase + Stripe + i18n + CI + tests + deploy project. Post-scaffold checklist and full flow in [chapter 05](./05-workflows.md) § Workflow 2.
+**When.** Immediately after `/ulak-scaffold`. Cross-links to `docs/tutorials/{supabase,vercel,github,resend}.md` for external-service setup.
+
+**Example.** `/ulak-next-steps` — from inside the scaffolded directory.
+
+**Output.** `reports/current/next-steps.md` (personalized) + inline summary.
+
+### /director
+
+**Source:** `.claude/commands/director.md`
+
+**Does.** Dispatches the `autonomous-program-director` subagent to run the complete Phase 0 → 5 protocol. The canonical "read everything, audit everything, give me a verdict" command.
+
+**When.** First pass on a brownfield; rescue mission; periodic health check; pre-release signoff.
+
+**Example.** `/director komple` or `/director komple mode=RESCUE dispatch=persona parallel_dispatch=9`.
+
+**Output.** 15 artefact files under `reports/current/` chained across the six phases.
+
+### /ulak-audit-deep
+
+**Source:** `.claude/commands/ulak-audit-deep.md`
+
+**Does.** 14-dimension audit scorecard (Architecture, Testing, Secrets, Observability, CI/CD, Duplication, Dependencies, Type Safety, Plugins, API Design, Infrastructure, Frontend, Data Validation, Documentation). Produces 0-100 per dimension + target-state + gap analysis + A-F overall grade.
+
+**When.** Project baselines, post-modernization verification, quarterly health report, second-opinion scorecard after `/director`.
+
+**Example.** `/ulak-audit-deep`.
+
+**Output.** `reports/current/14d-audit-scorecard.md` + `reports/current/14d-gap-analysis.md`.
+
+### /ulak-brainstorm
+
+**Source:** `.claude/commands/ulak-brainstorm.md`
+
+**Does.** Pre-implementation ideation for a new feature / surface. Enforces "explore intent + requirements + alternatives BEFORE touching code". Wraps `superpowers:brainstorming` with Ulak governance; writes to `docs/superpowers/specs/<date>-<topic>.md`.
+
+**When.** Starting any non-trivial feature, adding a new user-facing capability, making a design decision that outlives this session.
+
+**Example.** `/ulak-brainstorm topic="subscription-tiering"`.
+
+**Output.** `docs/superpowers/specs/<date>-subscription-tiering.md`.
+
+### /ulak-test-driven
+
+**Source:** `.claude/commands/ulak-test-driven.md`
+
+**Does.** TDD workflow for a specific feature or bugfix. Writes failing test first, implements to pass, then refactors. Enforced via `superpowers:test-driven-development`; adds to golden set if cross-project-relevant.
+
+**When.** Any feature implementation or bug fix that will ship; not for throwaway experiments.
+
+**Example.** `/ulak-test-driven feature="admin-bulk-delete-audit-log"`.
+
+**Output.** Red-green-refactor commit chain plus optional golden-set entry under `evals/`.
+
+### /ulak-pattern-extract
+
+**Source:** `.claude/commands/ulak-pattern-extract.md`
+
+**Does.** Extracts a reusable pattern from a candidate source project; registers it in `pattern-import-ledger.md` with T1/T2 evidence. Produces a native Ulak OS rule-pack / sector-pack / anti-pattern entry.
+
+**When.** You read a real project that exhibits a pattern worth propagating across the portfolio.
+
+**Example.** `/ulak-pattern-extract source=./other-repo pattern="webhook-retry-with-idempotency"`.
+
+**Output.** Pattern-import-ledger entry + (optionally) new rule-pack or anti-pattern file.
+
+### /ulak-subagent-dispatch
+
+**Source:** `.claude/commands/ulak-subagent-dispatch.md`
+
+**Does.** Dispatches N independent subagents in parallel for a bounded scope. Enforces `superpowers:dispatching-parallel-agents` + `subagent-driven-development`: identify truly-independent work, hand each subagent a self-contained brief, collect + reconcile outputs, commit merged result.
+
+**When.** Large content-generation tasks (N-file template creation, N-agent expansion, cross-service refactor) where serial work would waste hours.
+
+**Example.** `/ulak-subagent-dispatch n=6 scope="generate migration files for tenants"`.
+
+**Output.** Per-subagent artefacts merged into a single reconciled output.
+
+### /triage-build
+
+**Source:** `.claude/commands/triage-build.md`
+
+**Does.** Generalized build-triage flow. Runs `toolchain-precheck` first, then dispatches to the matching subsystem (frontend, backend, container, mobile) with standard diagnostic commands.
+
+**When.** Build or test is red and you do not yet know why.
+
+**Example.** `/triage-build` or `/triage-build stack=frontend log=./ci.log`.
+
+**Output.** Terminal narrative plus (if non-trivial) a finding in `reports/current/analysis-findings.md`.
+
+### /frontend-war-room
+
+**Source:** `.claude/commands/frontend-war-room.md`
+
+**Does.** Runs frontend / mobile redesign protocol. Dispatches `frontend-ios-flutter-director`, `design-system-architect`, `educational-ux-specialist`. Produces design-system master + per-page overrides + analysis findings.
+
+**When.** Premium redesign push, visual system cleanup, mobile rework.
+
+**Example.** `/frontend-war-room` or `/frontend-war-room scope=mobile`.
+
+**Output.** `design-system/MASTER.md` + per-page overrides + findings + roadmap.
+
+**Vendor note.** Claude-native. Exempt on Codex, Copilot, Gemini due to parallel subagent dispatch dependency.
+
+### /intake
+
+**Source:** `.claude/commands/intake.md`
+
+**Does.** Runs only Phase 0 through Phase 2. Dispatches `cartographer` + `project-intake` skill. Produces intake + inventory + initial evidence register. Does not synthesize findings or write a verdict.
+
+**When.** Read-only first pass before a full `/director` run.
+
+**Example.** `/intake`.
+
+**Output.** `reports/current/intake.md`, `inventory.md`, `evidence-register.md`.
+
+### /final-verdict
+
+**Source:** `.claude/commands/final-verdict.md`
+
+**Does.** Runs only the validation gate. Dispatches `qa-validation-commander`, `release-readiness-auditor`, `red-team-challenger`, `autonomous-program-director`. Re-evaluates existing `reports/current/**` and produces a merged verdict.
+
+**When.** After executing roadmap from `/director`; want independent challenge; pre-release refresh.
+
+**Example.** `/final-verdict`.
+
+**Output.** Updated `validation-plan.md` + refreshed `manager-verdict.md`.
+
+### /pack-gap-audit
+
+**Source:** `.claude/commands/pack-gap-audit.md`
+
+**Does.** Inspects the current operating pack and lists missing or underdeveloped units: commands, skills, agents, hooks, MCP connectors, docs, eval coverage.
+
+**When.** Maintaining Ulak OS (or a fork); after a run flagged missing skills; periodic governance-surface maintenance.
+
+**Example.** `/pack-gap-audit`.
+
+**Output.** `reports/current/pack-gap-register.md` + `reports/current/manager-verdict.md`.
+
+---
+
+## Meta / governance
+
+### /ulak-locale
+
+**Source:** `.claude/commands/ulak-locale.md`
+
+**Does.** Manages Ulak OS active locale (TR/EN toggle). `show` prints current, `tr` or `en` switches persistently. State lives at `.claude/state/locale.txt`. README and user surface pick TR-first or EN-first based on that file.
+
+**When.** Switching the default language of the entire surface.
+
+**Example.** `/ulak-locale show` / `/ulak-locale en` / `/ulak-locale tr`.
+
+**Output.** Updated `.claude/state/locale.txt` + confirmation message.
 
 ---
 
 ## Vendor parity
 
-Most commands exist on all three vendors (Claude Code, Codex / Copilot, Gemini CLI). A few are Claude-native and carry documented exemptions.
+Most commands exist on all four vendors. A handful are Claude-native and carry documented exemptions. The enforced single source of truth is [`docs/governance/vendor-capability-matrix.md`](../../governance/vendor-capability-matrix.md).
 
-| Command | Claude Code | Codex / Copilot | Gemini CLI |
-|---|---|---|---|
-| `/director` | yes | yes | yes |
-| `/final-verdict` | yes | yes | yes |
-| `/frontend-war-room` | yes | **exempt** | **exempt** |
-| `/intake` | yes | yes | yes |
-| `/pack-gap-audit` | yes | yes | yes |
-| `/triage-build` | yes | yes | yes |
-| `/ulak-design-ref` | yes | yes | yes |
-| `/ulak-intake` | yes | yes | yes |
-| `/ulak-scaffold` | yes | yes | yes |
+**Claude-native (exempt on other vendors):**
+- `/frontend-war-room` — depends on Claude's parallel subagent dispatch semantics.
+- `/ulak-subagent-dispatch` on Codex/Copilot — no native parallel dispatch.
 
-**Exemptions** are tracked in `.claude/vendor-parity-exemptions.txt`. `/frontend-war-room` is Claude-native because it depends on Claude Code's parallel subagent dispatch semantics and the specific agent-file format the war room expects. Codex and Gemini reach the same goals via a different flow (manually chain `/design-system-architect` + `/frontend-ios-flutter-director` via the generic dispatch).
+**NL trigger map note.** For Codex and Copilot CLIs, commands that show 🟡 in the matrix are reached via natural-language trigger phrases in `AGENTS.md`. Example: "audit my project" → `/director komple`. "start a new saas" → `/ulak-start`. "what does rls mean?" → `/ulak-explain rls`.
 
-The parity check is enforced by `scripts/validate-vendor-parity.sh`. If you add a command under `.claude/commands/` without a matching Gemini adapter (or exemption entry), the script fails.
+**Exemption discipline.** Each exemption is listed in `.claude/vendor-parity-exemptions.txt` with a rationale. The parity check is enforced by `scripts/validate-vendor-parity.sh`. Adding a command without a matching adapter (or exemption entry) fails the script.
 
 ## Related references
 
-- [`../../architecture/director-protocol.md`](../../architecture/director-protocol.md) — the canonical phase table
+- [`../../architecture/director-protocol.md`](../../architecture/director-protocol.md) — canonical phase table
 - [`../../runtime/output-profiles.md`](../../runtime/output-profiles.md) — the 7 output profiles the `profile=` argument selects
 - [`../../runtime/persona-dispatch-pattern.md`](../../runtime/persona-dispatch-pattern.md) — how `dispatch=persona` works
-- [`../../governance/plugin-skill-decision.md`](../../governance/plugin-skill-decision.md) — how to decide whether a new proposal is a command vs skill vs agent
+- [`../../governance/plugin-skill-decision.md`](../../governance/plugin-skill-decision.md) — command vs skill vs agent decision tree
+- [`../../governance/vendor-capability-matrix.md`](../../governance/vendor-capability-matrix.md) — 4-vendor matrix (enforced)
+- [`../../runtime/beginner-glossary.md`](../../runtime/beginner-glossary.md) — 47-term glossary (source for `/ulak-explain`)
 
 ---
 

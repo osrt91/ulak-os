@@ -1,5 +1,46 @@
 # Changelog
 
+## [1.6.0] — 2026-04-21 — Cross-vendor parity (Gemini native + Codex NL + Copilot NL)
+
+### Added
+- **Gemini CLI native parity**: 18 new .toml commands generated from
+  .claude/commands/*.md via scripts/sync-gemini-commands.sh (idempotent)
+- Commands added: ulak-ask, ulak-audit-deep, ulak-brainstorm, ulak-demo,
+  ulak-explain, ulak-hello, ulak-locale, ulak-mcp-discover, ulak-next-steps,
+  ulak-packs, ulak-pattern-extract, ulak-scaffold, ulak-search, ulak-start,
+  ulak-subagent-dispatch, ulak-test-driven, frontend-war-room, triage-build
+- AGENTS.md Natural-Language Trigger Map (55L new section) — 90 NL phrases
+  mapped to 24 Ulak capabilities for Codex CLI
+- .github/copilot-instructions.md NL Trigger Map (106L expansion) — 60+
+  triggers for Copilot Chat
+- docs/governance/vendor-capability-matrix.md (183L, new) — primitive ×
+  vendor + command × vendor authoritative truth source
+- docs/adapters/copilot-chat.md (113L, new) — dedicated Copilot Chat adapter
+- docs/walkthrough/01-first-saas-end-to-end-codex.md (671L, new)
+- docs/walkthrough/01-first-saas-end-to-end-copilot.md (360L, new)
+
+### Changed
+- CLAUDE.md + AGENTS.md — import vendor-capability-matrix.md
+- docs/adapters/universal-runtime-contract.md — new "Runtime primitive
+  contract" section (32 → 62 lines)
+- docs/adapters/codex-cli.md — vendor primitive matrix + slash-to-NL
+  principles (45 → 121 lines)
+- docs/adapters/gemini-cli.md — 24-command support table + sync script docs
+- docs/catalog.md — new "Vendor support (C/G/X/P)" column per command
+- .github/vendor-parity-exemptions.txt — 91 → 44 lines (47 cycle-era
+  exemptions removed)
+
+### Fixed
+- Vendor parity drift — previously 7/24 Gemini commands, now 24/24
+
+### Vendor status
+- Claude Code: 24/24 native ✅
+- Gemini CLI: 24/24 native ✅ (new)
+- Codex CLI: 24/24 NL trigger ✅ (new)
+- Copilot Chat: 22/24 NL trigger ✅ (new; 2 MCP-dependent commands degraded)
+
+---
+
 ## [1.1.0-unreleased] — Post-v1.0.0 operator-facing polish
 
 ### Added — slash commands

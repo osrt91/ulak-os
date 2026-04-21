@@ -1,11 +1,11 @@
 {
   "name": "ulak-os",
-  "version": "1.0.0",
+  "version": "1.6.0",
   "license": "MIT",
   "description": "Vendor-neutral prompt operating system — plan, audit, govern, scaffold full-stack SaaS across Claude Code / Codex / Gemini CLI",
   "core": "core/ulak-os-core-contract-2.0.0.md",
   "agents": 27,
-  "commands": 22,
+  "commands": 24,
   "skills": 10,
   "rule_packs": 8,
   "sector_packs": 24,
