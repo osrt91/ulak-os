@@ -13,15 +13,15 @@ The toolchain precheck runs in Phase 0 (environment lock) as part of `runtime-ma
 For every detected or required tool, emit this shape:
 
 ```yaml
-tool: ""                                  # e.g. "pnpm", "flutter", "docker"
+tool: "" # e.g. "pnpm", "flutter", "docker"
 status: required|conditional|optional|not-needed|not-recommended
-reason: ""                                # why the status applies to this project
-detected_version: ""                      # or "missing"
-baseline_version: ""                      # minimum the project needs
-install_hint: ""                          # preferred install command
-verify_command: ""                        # command to confirm presence and version
-risk_note: ""                             # e.g. "conflicts with existing Node 16 on this machine"
-trust: T1|T2|T3|T4|T5|T6|T7               # how the detection was done
+reason: "" # why the status applies to this project
+detected_version: "" # or "missing"
+baseline_version: "" # minimum the project needs
+install_hint: "" # preferred install command
+verify_command: "" # command to confirm presence and version
+risk_note: "" # e.g. "conflicts with existing Node 16 on this machine"
+trust: T1|T2|T3|T4|T5|T6|T7 # how the detection was done
 ```
 
 ## Status definitions
@@ -123,7 +123,7 @@ Preflight should be installable via a repo-local `scripts/install-hooks.sh` that
 
 `--no-verify` is **forbidden without explicit operator consent**, documented in the commit message. Bypass hooks without consent = finding. The rule is enforced by a separate post-receive audit (CI job that reads git push metadata for `--no-verify` markers).
 
-Derived from a security scanner project `CLAUDE.md:67-94` + `.githooks/pre-push` + `scripts/install-hooks.sh`.
+md:67-94` + `.githooks/pre-push` + `scripts/install-hooks.sh`.
 
 ## VPS baseline precheck (R-04)
 
@@ -149,7 +149,7 @@ When running the hardening script on a remote host:
 
 A single-session execution of SSH hardening is a safety finding — one typo locks the operator out.
 
-Derived from a security scanner project `infrastructure/kale-kapisi.sh` + `SETUP.md:37-42`.
+sh` + `SETUP.md:37-42`.
 
 ## Integration
 

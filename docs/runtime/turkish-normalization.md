@@ -74,12 +74,12 @@ These three layers must never leak into each other. If the slug algorithm ends u
 When scanning a project for Turkish quality issues, look for:
 
 - **ASCII fold in display** — grep for `.toAscii`, `normalize-to-ascii`, `slugify(display=true)`, and check if the result is rendered to users
-- **`.toUpperCase()` / `.toLowerCase()` without a locale argument** in any path that touches Turkish strings
+- **`.toUpperCase` / `.toLowerCase` without a locale argument** in any path that touches Turkish strings
 - **Slug functions used for display labels** — slug is a one-way function; if the display text is computed from the slug, Turkish is broken
 - **Search query normalized differently from indexed content** — the fold must match on both sides
 - **Collation / sort operations without locale** — Turkish sorts `i` before `ı`, not after
 - **Hardcoded `en` or default locale** in any case / sort / search call
-- **Email / push / SMS templates with hardcoded English variable substitution** — `${name.toUpperCase()}` without locale will break names like `İrem`
+- **Email / push / SMS templates with hardcoded English variable substitution** — `${name.toUpperCase}` without locale will break names like `İrem`
 - **Filename generation** that folds Turkish characters silently — affects media uploads, exports, receipts
 
 ## Correction confidence levels
@@ -112,7 +112,7 @@ These go into `reports/current/turkish-text-audit.md` as findings.
 
 ## Hard rules
 
-- **`toUpperCase()` / `toLowerCase()` without a locale is a bug if Turkish is in scope.** No exceptions.
+- **`toUpperCase` / `toLowerCase` without a locale is a bug if Turkish is in scope.** No exceptions.
 - **Display text is never ASCII-folded.** No exceptions.
 - **Search and display share storage but not format.** Store the original, index the fold, render the original.
 - **Slug ≠ display.** Never derive display from slug.

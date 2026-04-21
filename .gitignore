@@ -39,6 +39,9 @@ __pycache__/
 reports/current/*
 !reports/current/.gitkeep
 
+# Operator-only session notes (contain real portfolio project names/paths; never commit)
+reports/sessions/
+
 # Vendored external references (large third-party content, not committed)
 # Populated by scripts/fetch-design-references.sh --all
 # See docs/governance/pattern-import-ledger.md for provenance tracking

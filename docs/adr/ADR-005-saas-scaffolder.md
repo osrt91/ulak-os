@@ -47,9 +47,9 @@ The scaffolder produces a target directory containing Next.js 16 + TypeScript st
 
 ## Implementation phases
 
-- **v2.2.2** (2026-04-20) — Infrastructure: command + skill + sector pack + 5 seed templates (README, CLAUDE.md, .env.example, .gitignore, package.json)
-- **v2.2.3** (2026-04-20) — Core templates complete: +10 templates (middleware, auth, RLS, CI, deploy, preflight, VPS hardening, DESIGN.md, ...)
-- **v2.3.0** — Finalize the starter: +12 templates (tsconfig, next.config, tailwind, layout.tsx, landing, supabase clients, tests, .claude settings, docker-compose, dependabot, .gitleaks.toml)
+- **v2.2.2** (2026-04-20) — Infrastructure: command + skill + sector pack + 5 seed templates (README, CLAUDE.md,.env.example,.gitignore, package.json)
+- **v2.2.3** (2026-04-20) — Core templates complete: +10 templates (middleware, auth, RLS, CI, deploy, preflight, VPS hardening, DESIGN.md,...)
+- **v2.3.0** — Finalize the starter: +12 templates (tsconfig, next.config, tailwind, layout.tsx, landing, supabase clients, tests,.claude settings, docker-compose, dependabot,.gitleaks.toml)
 - **v3.0** — Alternative stack templates (Remix, SvelteKit, FastAPI-backend variants)
 
 ## References

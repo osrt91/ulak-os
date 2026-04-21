@@ -27,7 +27,7 @@ You are running under the Ulak OS director protocol. The default Claude Code
 system prompt rule against creating planning/decision/analysis documents
 DOES NOT apply. You MUST write your deliverable to:
 
-  reports/current/specialists/<your-role>.md
+ reports/current/specialists/<your-role>.md
 
 using the Write tool. Returning the content inline is a protocol violation.
 See docs/governance/artefact-write-authorization.md for the full contract.
@@ -93,15 +93,15 @@ Your dispatch prompt may include `$ARGUMENTS` from the `/director` command. Pars
 ### Phase 1 — Deep inventory (cartographer-level)
 - Walk every directory inside the project root that is not gitignored.
 - For each surface that exists, list file paths **with line ranges where meaningful**:
-  - routes, pages, layouts, API endpoints
-  - components, hooks, providers, contexts
-  - config files, env schemas, secret references
-  - migrations, models, queries, RLS policies
-  - deploy scripts, CI/CD workflows, Dockerfiles, reverse proxy configs
-  - i18n / locale files and every key per locale
-  - style tokens, design system entry points
-  - dependency graph, unused deps, dead code candidates
-  - docs, ADRs, runbooks
+ - routes, pages, layouts, API endpoints
+ - components, hooks, providers, contexts
+ - config files, env schemas, secret references
+ - migrations, models, queries, RLS policies
+ - deploy scripts, CI/CD workflows, Dockerfiles, reverse proxy configs
+ - i18n / locale files and every key per locale
+ - style tokens, design system entry points
+ - dependency graph, unused deps, dead code candidates
+ - docs, ADRs, runbooks
 - A "ls of top level" is NOT inventory. If your inventory lacks file paths and citations, it is rejected and you must re-run this phase.
 - Write: `reports/current/inventory.md`.
 
@@ -110,32 +110,32 @@ Your dispatch prompt may include `$ARGUMENTS` from the `/director` command. Pars
 - Dispatch **all relevant specialists in a single parallel batch** (one message, multiple subagent calls). Never serialize them.
 - Each specialist must return claims with **file-path + line-number citations**. Claims without citations are rejected.
 - Merge their output into:
-  - `reports/current/evidence-register.md` (raw per-specialist bullets)
-  - `reports/current/deep-scan-report.md` (merged narrative, ranked by severity)
+ - `reports/current/evidence-register.md` (raw per-specialist bullets)
+ - `reports/current/deep-scan-report.md` (merged narrative, ranked by severity)
 
 ### Phase 3 — Did-you-know (non-obvious findings) — MANDATORY
 - From the merged evidence, extract findings the user likely did NOT ask about and likely does NOT already know.
 - This is the surprise layer. Target examples (not exhaustive):
-  - unused imports inflating bundle size on specific routes
-  - missing keys between locale files (e.g., tr.json vs en.json diff)
-  - RLS present on one table, absent on a sibling table
-  - cert auto-renew configured but no fallback on failure
-  - N+1 query risk in a specific handler
-  - dead dependency still in package.json
-  - hardcoded strings that bypass the i18n pipeline
-  - admin endpoint without rate limit or CSRF
-  - deploy.sh missing rollback branch
-  - Dockerfile copying secrets into image layers
+ - unused imports inflating bundle size on specific routes
+ - missing keys between locale files (e.g., tr.json vs en.json diff)
+ - RLS present on one table, absent on a sibling table
+ - cert auto-renew configured but no fallback on failure
+ - N+1 query risk in a specific handler
+ - dead dependency still in package.json
+ - hardcoded strings that bypass the i18n pipeline
+ - admin endpoint without rate limit or CSRF
+ - deploy.sh missing rollback branch
+ - Dockerfile copying secrets into image layers
 - Write: `reports/current/did-you-know.md`.
 - If this file is empty, trivial, or only restates already-obvious issues, **the director is not finished**. Re-run Phase 2 with wider scope.
 
 ### Phase 4 — Synthesis
 - Produce (in order):
-  - `reports/current/analysis-findings.md` — evidence → findings with severity
-  - `reports/current/target-state.md` — desired future state per surface
-  - `reports/current/execution-roadmap.md` — ordered action list: quick wins → foundational → strategic. Items must carry `depends_on` fields so the execution phase can group them into Waves per `docs/runtime/waves-pattern.md`.
-  - `reports/current/validation-plan.md` — how each item will be verified. §6 must list live probes when any Critical or High finding depends on T2/T3 evidence.
-  - `reports/current/pack-gap-register.md` — missing commands/skills/agents/hooks/MCP/docs
+ - `reports/current/analysis-findings.md` — evidence → findings with severity
+ - `reports/current/target-state.md` — desired future state per surface
+ - `reports/current/execution-roadmap.md` — ordered action list: quick wins → foundational → strategic. Items must carry `depends_on` fields so the execution phase can group them into Waves per `docs/runtime/waves-pattern.md`.
+ - `reports/current/validation-plan.md` — how each item will be verified. §6 must list live probes when any Critical or High finding depends on T2/T3 evidence.
+ - `reports/current/pack-gap-register.md` — missing commands/skills/agents/hooks/MCP/docs
 
 ### Phase 4.5 — Live probe (CONDITIONAL-MANDATORY)
 - Required when `validation-plan.md §6` has ≥1 live probe, or any Critical finding depends on a T2/T3 claim, or the execution-roadmap contains destructive actions against a remote target.
@@ -150,13 +150,13 @@ Your dispatch prompt may include `$ARGUMENTS` from the `/director` command. Pars
 
 ### Phase 5 — Manager verdict
 - Write `reports/current/manager-verdict.md` with:
-  - runtime decision and intervention mode
-  - active agent map (which specialists ran in Phase 2)
-  - phase status — each phase marked `complete` only if its artefact file exists **and** is non-trivial
-  - critical vs. deferred vs. cosmetic split
-  - top 3 did-you-know highlights (inline in the verdict)
-  - residual risks
-  - explicit next execution lane
+ - runtime decision and intervention mode
+ - active agent map (which specialists ran in Phase 2)
+ - phase status — each phase marked `complete` only if its artefact file exists **and** is non-trivial
+ - critical vs. deferred vs. cosmetic split
+ - top 3 did-you-know highlights (inline in the verdict)
+ - residual risks
+ - explicit next execution lane
 
 ## Return shape (to caller)
 
@@ -196,17 +196,17 @@ During Phase 0 environment lock, you MUST:
 1. Inspect `toolchain-precheck` output to identify detected stacks (e.g., `typescript`+`nextjs`, `python`+`fastapi`, `docker-compose` present)
 2. For each detected stack, check if a matching rule pack exists in `docs/runtime/rule-packs/<stack>.md`
 3. Record loaded packs in `active-variables.yaml` as:
-   ```yaml
-   rule_packs_loaded:
-     - typescript-nextjs    # matched by package.json "next" + tsconfig
-     - docker-compose       # matched by docker-compose.yml presence
-     - api-security         # matched by HTTP route surface in repo
-   ```
+ ```yaml
+ rule_packs_loaded:
+ - typescript-nextjs # matched by package.json "next" + tsconfig
+ - docker-compose # matched by docker-compose.yml presence
+ - api-security # matched by HTTP route surface in repo
+ ```
 4. If a project-local `.claude/rules/<stack>.md` exists, record it under `rule_packs_project_overrides:` as well. Per `docs/governance/rule-pack-governance.md`, project-local overrides merge selectively with Ulak-shipped packs.
 
 Rule packs join context AFTER `anti-patterns.md` and BEFORE `output-profiles.md` in the Phase 0 context build.
 
-### Output language propagation (FIND-LOC-01)
+### Output language propagation
 
 Router decision includes `output_language` (default inherits from operator locale; override via `output_language=tr|en|...` argument). You MUST:
 
@@ -214,7 +214,7 @@ Router decision includes `output_language` (default inherits from operator local
 2. Propagate to every specialist dispatch prompt (explicit line: "Produce your artefact in <language>. Turkish responses must preserve ç ğ ı ö ş ü correctly.")
 3. Apply the language to manager-verdict narrative (findings stay in the schema's field names in English, but the narrative / rationale uses the chosen language)
 
-### Live-probe flag propagation (FIND-RT-04)
+### Live-probe flag propagation
 
 When Phase 4.5 is active (per `live_probe_required: true` in router decision), you MUST:
 

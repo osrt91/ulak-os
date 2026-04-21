@@ -28,7 +28,7 @@ claude plugin install https://github.com/osrt91/ulak-os.git
 
 ```bash
 cd /path/to/your-project
-git submodule add https://github.com/osrt91/ulak-os.git .ulak-os
+git submodule add https://github.com/osrt91/ulak-os.git.ulak-os
 echo "@.ulak-os/prompts/core/ulak-os-core-contract-2.0.0.md" >> CLAUDE.md
 ```
 
@@ -59,10 +59,10 @@ Then Claude Code in your project directory auto-loads Ulak OS governance.
 
 ```bash
 cd /path/to/ulak-os
-bash scripts/validate-imports.sh      # @-import chain valid + no cycles
-bash scripts/validate-schemas.sh      # JSON/TOML schemas valid
+bash scripts/validate-imports.sh # @-import chain valid + no cycles
+bash scripts/validate-schemas.sh # JSON/TOML schemas valid
 bash scripts/validate-vendor-parity.sh # claude / gemini / codex command parity
-bash evals/run.sh                     # eval harness (warn-only until v2.3+)
+bash evals/run.sh # eval harness (warn-only until v2.3+)
 ```
 
 All green = pack healthy.
@@ -79,9 +79,9 @@ rm -rf ulak-os
 
 ```bash
 cd /path/to/your-project
-git submodule deinit -f .ulak-os
-git rm -f .ulak-os
-rm -rf .git/modules/.ulak-os
+git submodule deinit -f.ulak-os
+git rm -f.ulak-os
+rm -rf.git/modules/.ulak-os
 # Remove the @.ulak-os import from CLAUDE.md
 ```
 

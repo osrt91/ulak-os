@@ -10,7 +10,7 @@ Separately, `docs/governance/surface-split.md` already existed — but it covere
 
 Two unrelated concepts called "surface split" — easy to confuse.
 
-The v2.1.3 scanner-project-pattern-extraction pass surfaced a fourth product surface emerging in mature portfolio products: **partner / reseller / bayi**. This tier has its own authz gate (plan capability, not role), its own data model (parent/child user mapping), and its own branding / white-label story.
+A v2.1.3 pattern-extraction pass surfaced a fourth product surface emerging in mature SaaS products: **partner / reseller / bayi**. This tier has its own authz gate (plan capability, not role), its own data model (parent/child user mapping), and its own branding / white-label story.
 
 ## Decision
 

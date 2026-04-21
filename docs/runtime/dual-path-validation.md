@@ -4,7 +4,7 @@
 
 The director's Phase 3 produces `did-you-know.md` — the surprise layer of non-obvious findings. By design, Phase 3 is *one subagent's* interpretation of the evidence register. That produces 15-25 good findings on a typical run, but it has a blind spot: **what would a second independent reviewer catch that this specific subagent missed?**
 
-On the a portfolio + CMS project session (2026-04-11), the operator improvised a second path: while the director ran Phase 3, the operator was independently preparing their own non-obvious findings list (stale CLAUDE.md claims, cartographer-flagged inconsistencies). The two lists were then merged. The overlap was **T1 consensus**; the divergence was **new signal**.
+On the session (2026-04-11), the operator improvised a second path: while the director ran Phase 3, the operator was independently preparing their own non-obvious findings list (stale CLAUDE.md claims, cartographer-flagged inconsistencies). The two lists were then merged. The overlap was **T1 consensus**; the divergence was **new signal**.
 
 Dual-path validation formalizes this pattern as an optional Phase 3 enhancement.
 
@@ -61,10 +61,10 @@ The merged `did-you-know.md` carries a frontmatter field:
 dual_path: true
 path_a_source: director-phase-3
 path_b_source: operator-manual | parallel-subagent-<name>
-overlap_count: 7       # findings both paths agreed on
-path_a_unique: 12      # findings only Path A found
-path_b_unique: 5       # findings only Path B found
-contradictions: 2      # conflicts sent to probe
+overlap_count: 7 # findings both paths agreed on
+path_a_unique: 12 # findings only Path A found
+path_b_unique: 5 # findings only Path B found
+contradictions: 2 # conflicts sent to probe
 ```
 
 ## The merged-and-promoted claim
@@ -73,18 +73,18 @@ A finding that both paths found gets **tier promotion**:
 
 ```yaml
 - id: DYK-001
-  title: "admin SEO panel writes to a table no generateMetadata reads"
-  evidence: "src/app/admin/seo/page.tsx:1-236 + grep(getSeoMetadata) = 1 match (definition only)"
-  trust: T1                      # promoted from T2 because dual-path consensus
-  trust_history:
-    - path: A (director)
-      tier: T2
-      reasoning: "grep found definition, no callers — inferred no consumer"
-    - path: B (operator-manual)
-      tier: T2
-      reasoning: "manually traced the import graph, no generateMetadata reference"
-    - merged: T1
-      reasoning: "two independent traces confirmed. Consensus promotes to T1."
+ title: "admin SEO panel writes to a table no generateMetadata reads"
+ evidence: "src/app/admin/seo/page.tsx:1-236 + grep(getSeoMetadata) = 1 match (definition only)"
+ trust: T1 # promoted from T2 because dual-path consensus
+ trust_history:
+ - path: A (director)
+ tier: T2
+ reasoning: "grep found definition, no callers — inferred no consumer"
+ - path: B (operator-manual)
+ tier: T2
+ reasoning: "manually traced the import graph, no generateMetadata reference"
+ - merged: T1
+ reasoning: "two independent traces confirmed. Consensus promotes to T1."
 ```
 
 This is a direct application of `docs/governance/evidence-trust-scoring.md` + the UOI-04 principle (specialist overlap is a feature).
@@ -125,4 +125,4 @@ A `/director --dual-path` flag (or a `/dual-path-validate` standalone command) c
 
 ## Origin
 
-This pattern was observed in the a portfolio + CMS project 2026-04-11 session. While the director ran Phase 3, the operator was independently preparing a non-obvious findings list. The improvised merge caught 2 findings the director had missed (stale CLAUDE.md claim, cartographer-flagged inconsistencies). Neither path alone would have surfaced both. Dual-path is the formal version of that improvisation.
+This pattern was observed in the 2026-04-11 session. While the director ran Phase 3, the operator was independently preparing a non-obvious findings list. The improvised merge caught 2 findings the director had missed (stale CLAUDE.md claim, cartographer-flagged inconsistencies). Neither path alone would have surfaced both. Dual-path is the formal version of that improvisation.

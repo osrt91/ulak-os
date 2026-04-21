@@ -12,61 +12,61 @@ At Phase 0, the director writes `reports/current/active-variables.yaml` (or the 
 
 ```yaml
 # ----- request context -----
-REQUEST: ""                              # the user's literal ask
-PROJECT_CONTEXT: ""                      # 1-3 sentences of what this project is
-PROJECT_TYPE: ""                         # saas|mobile-app|marketplace|api|static-site|internal-tool|pack|...
-INDUSTRY: ""                             # education|fintech|ecommerce|health|media|...
-BUSINESS_MODEL: ""                       # subscription|one-time|ads|b2b-seat|freemium|...
-PLATFORMS: ""                            # web|ios|android|flutter|desktop|cli|...
-PRIMARY_GOAL: ""                         # one sentence, user's outcome
-KNOWN_CONSTRAINTS: ""                    # timeline, budget, team, compliance
-CURRENT_STACK: ""                        # languages, frameworks, databases, infra
+REQUEST: "" # the user's literal ask
+PROJECT_CONTEXT: "" # 1-3 sentences of what this project is
+PROJECT_TYPE: "" # saas|mobile-app|marketplace|api|static-site|internal-tool|pack|...
+INDUSTRY: "" # education|fintech|ecommerce|health|media|...
+BUSINESS_MODEL: "" # subscription|one-time|ads|b2b-seat|freemium|...
+PLATFORMS: "" # web|ios|android|flutter|desktop|cli|...
+PRIMARY_GOAL: "" # one sentence, user's outcome
+KNOWN_CONSTRAINTS: "" # timeline, budget, team, compliance
+CURRENT_STACK: "" # languages, frameworks, databases, infra
 
 # ----- surface map -----
-ROUTES_AND_SCREENS: ""                   # summary or link to inventory.md
-PUBLIC_URLS: ""                          # production URLs if any
-CUSTOMER_SURFACES: ""                    # what end-users touch
-ADMIN_SURFACES: ""                       # what operators/admins touch
-API_SURFACES: ""                         # public, private, internal endpoints
-STORE_SURFACES: ""                       # app store listings if mobile
-SEO_SURFACES: ""                         # marketing pages, blog, landing
-FILES_AND_FOLDERS: ""                    # key paths
+ROUTES_AND_SCREENS: "" # summary or link to inventory.md
+PUBLIC_URLS: "" # production URLs if any
+CUSTOMER_SURFACES: "" # what end-users touch
+ADMIN_SURFACES: "" # what operators/admins touch
+API_SURFACES: "" # public, private, internal endpoints
+STORE_SURFACES: "" # app store listings if mobile
+SEO_SURFACES: "" # marketing pages, blog, landing
+FILES_AND_FOLDERS: "" # key paths
 KNOWN_RISKS: ""
 KNOWN_BUGS: ""
 DESIGN_REFERENCES: ""
 
 # ----- output mode -----
-OUTPUT_MODE: "markdown"                  # markdown | json | jira | figma | hybrid
-EXECUTION_MODE: "analysis-only"          # analysis-only | plan-only | controlled-editing | pack-generation | hybrid
+OUTPUT_MODE: "markdown" # markdown | json | jira | figma | hybrid
+EXECUTION_MODE: "analysis-only" # analysis-only | plan-only | controlled-editing | pack-generation | hybrid
 
 # ----- permission boundaries -----
-CAN_EDIT_FILES: false                    # may the director write to source?
-CAN_RUN_TESTS: false                     # may it run the test suite?
-CAN_USE_NETWORK: false                   # may it fetch from the web?
-CAN_USE_MCP: false                       # may it call MCP servers?
-CAN_TOUCH_PROD: false                    # hard safety — default false
+CAN_EDIT_FILES: false # may the director write to source?
+CAN_RUN_TESTS: false # may it run the test suite?
+CAN_USE_NETWORK: false # may it fetch from the web?
+CAN_USE_MCP: false # may it call MCP servers?
+CAN_TOUCH_PROD: false # hard safety — default false
 NEEDS_APPROVAL_FOR_DESTRUCTIVE_ACTIONS: true
 
 # ----- output location -----
 REQUIRED_REPORT_PATH: "reports/current/"
-TARGET_BRANCH: ""                        # if editing is allowed
-MAX_PARALLEL_AGENTS: 6                   # phase 2 parallel dispatch cap
+TARGET_BRANCH: "" # if editing is allowed
+MAX_PARALLEL_AGENTS: 6 # phase 2 parallel dispatch cap
 
 # ----- router decision (filled by Phase 0) -----
-ACTIVE_MODE: ""                          # see router-schema.md
-PROJECT_STATE: ""                        # greenfield | brownfield | hybrid
-INTERVENTION_MODE: ""                    # CREATE | REPAIR | EXTEND | REFACTOR | MIGRATE | RESCUE | REPACKAGE
-OUTPUT_PROFILE: ""                       # see output-profiles.md
-REQUIRED_PACKS: []                       # sector packs activated (canonical name: required_sector_packs per runtime-constants.md)
-REQUIRED_OVERLAYS: []                    # overlays activated
-BLOCKED_PATHS: []                        # paths the director must not read/write
-VALIDATION_DEPTH: "standard"             # light | standard | deep
+ACTIVE_MODE: "" # see router-schema.md
+PROJECT_STATE: "" # greenfield | brownfield | hybrid
+INTERVENTION_MODE: "" # CREATE | REPAIR | EXTEND | REFACTOR | MIGRATE | RESCUE | REPACKAGE
+OUTPUT_PROFILE: "" # see output-profiles.md
+REQUIRED_PACKS: [] # sector packs activated (canonical name: required_sector_packs per runtime-constants.md)
+REQUIRED_OVERLAYS: [] # overlays activated
+BLOCKED_PATHS: [] # paths the director must not read/write
+VALIDATION_DEPTH: "standard" # light | standard | deep
 
 # ----- locale + output language (v2.2.0 addition — FIND-LOC-01) -----
-OUTPUT_LANGUAGE: "tr"                    # tr | en | de | ... — the language manager-verdict narrative + specialist artefacts use
-RULE_PACKS_LOADED: []                    # e.g. [typescript-nextjs, docker-compose, turkish-locale] — populated by Phase 0 toolchain-precheck
-RULE_PACKS_PROJECT_OVERRIDES: []         # e.g. [python] — if .claude/rules/python.md exists, it overrides ulak-shipped python-fastapi.md for matching imperatives
-MCP_AUTHORIZED_TOOLS: {}                 # per docs/governance/mcp-governance.md — justification + approved_at + scope per MCP server
+OUTPUT_LANGUAGE: "tr" # tr | en | de |... — the language manager-verdict narrative + specialist artefacts use
+RULE_PACKS_LOADED: [] # e.g. [typescript-nextjs, docker-compose, turkish-locale] — populated by Phase 0 toolchain-precheck
+RULE_PACKS_PROJECT_OVERRIDES: [] # e.g. [python] — if.claude/rules/python.md exists, it overrides ulak-shipped python-fastapi.md for matching imperatives
+MCP_AUTHORIZED_TOOLS: {} # per docs/governance/mcp-governance.md — justification + approved_at + scope per MCP server
 ```
 
 ## Default values

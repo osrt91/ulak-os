@@ -10,17 +10,17 @@ Bu komut Ulak OS'un intake artefakt zincirinin ilk halkasını üretir. Public s
 
 1. **Kontrol et**: `superpowers:brainstorming` skill'i mevcut mu?
 2. **Eğer mevcutsa**:
-   - Brainstorming skill'ini çağır (kullanıcının talebi/niyeti üzerine)
-   - Çıktısını proje bağlamı, başarı kriterleri, sınırlar olarak topla
+ - Brainstorming skill'ini çağır (kullanıcının talebi/niyeti üzerine)
+ - Çıktısını proje bağlamı, başarı kriterleri, sınırlar olarak topla
 3. **Eğer mevcut değilse**:
-   - Native intake akışını uygula (proje state switch + intervention mode + kullanıcı niyeti)
+ - Native intake akışını uygula (proje state switch + intervention mode + kullanıcı niyeti)
 4. **Yaz**: `reports/current/intake.md` dosyasını intake formatında oluştur:
-   - Project state (GREENFIELD / BROWNFIELD / HYBRID)
-   - Intervention mode (CREATE / REPAIR / EXTEND / REFACTOR / MIGRATE / RESCUE / REPACKAGE)
-   - User intent
-   - Success criteria
-   - Constraints
-   - Out-of-scope
+ - Project state (GREENFIELD / BROWNFIELD / HYBRID)
+ - Intervention mode (CREATE / REPAIR / EXTEND / REFACTOR / MIGRATE / RESCUE / REPACKAGE)
+ - User intent
+ - Success criteria
+ - Constraints
+ - Out-of-scope
 5. **Önerin**: Bir sonraki artefakt zincirine geçiş için `/inventory` komutunu öner.
 
 ## Notlar

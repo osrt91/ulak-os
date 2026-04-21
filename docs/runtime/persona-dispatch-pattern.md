@@ -6,7 +6,7 @@ The default director Phase 2 dispatches **specialists by discipline** — securi
 
 But some projects have a **user-layer complexity** that a pure discipline scan can miss. A multi-tenant SaaS with customer + admin + reseller surfaces isn't just "frontend + backend + admin". Each **persona** has different intent, different permissions, different failure modes, different deliverables. Auditing "frontend" doesn't tell you whether the Bayi (reseller) panel honors its sold promises.
 
-Persona dispatch is the alternative: **audit the project as each persona would experience it**. Observed in the a security scanner project session (2026-04-11), which dispatched 4 personas (Customer, Bayi, Admin, Security) and produced 92 findings across persona-specific files.
+Persona dispatch is the alternative: **audit the project as each persona would experience it**. 
 
 ## Persona dispatch vs specialist dispatch
 
@@ -19,7 +19,7 @@ Persona dispatch is the alternative: **audit the project as each persona would e
 | **Best for** | Technical debt, security, architecture cleanup | Multi-tenant products, SaaS with seller/buyer/admin, customer journey audits |
 | **Worst for** | Simple single-user products (overkill) | Pure technical audits (misses the code-level rigor) |
 
-**They are not mutually exclusive.** A single session can run BOTH in Phase 2: specialists in one batch + personas in another batch, merged into the evidence register. a security scanner project did this implicitly — the persona specialists ALSO read code, so they were effectively persona-framed specialists.
+**They are not mutually exclusive.** A single session can run BOTH in Phase 2: specialists in one batch + personas in another batch, merged into the evidence register. did this implicitly — the persona specialists ALSO read code, so they were effectively persona-framed specialists.
 
 ## When to use persona dispatch
 
@@ -131,16 +131,14 @@ How this persona experiences the product. 2-3 sentences.
 
 ### Blockers (<count>)
 - [BLOCKER-id] Title
-  - Evidence: file:line
-  - Persona impact: what this persona cannot do / loses / risks
-  - Fix summary
-  - Sprint assignment
+ - Evidence: file:line
+ - Persona impact: what this persona cannot do / loses / risks
+ - Fix summary
+ - Sprint assignment
 
-### High (<count>)
-...
+### High (<count>)...
 
-### Medium (<count>)
-...
+### Medium (<count>)...
 
 ## Non-persona cross-cuts
 Findings this persona surfaces that also affect other personas. Link to the overlap.
@@ -168,10 +166,10 @@ The director merges persona findings into the evidence register with a `source_p
 
 ```yaml
 - id: FIND-001
-  title: "Admin can silently self-escalate via user_metadata"
-  source_personas: [security-redteam, admin]
-  overlap_count: 2
-  trust: T1  # two independent personas agreed
+ title: "Admin can silently self-escalate via user_metadata"
+ source_personas: [security-redteam, admin]
+ overlap_count: 2
+ trust: T1 # two independent personas agreed
 ```
 
 Overlap between personas is a **consensus signal**, same as specialist overlap (per UOI-04 in Ulak OS core contract principles).
@@ -199,11 +197,11 @@ Overlap between personas is a **consensus signal**, same as specialist overlap (
 - `docs/runtime/handoff-plan-contract.md` — workstreams in section 6 can be grouped by persona (W1 Customer, W2 Reseller, etc.)
 - `docs/runtime/waves-pattern.md` — Wave assignment can respect persona boundaries when constructing the conflict map
 - `docs/governance/finding-schema.md` — `source_personas` field for persona attribution
-- Pack Gap: 7 persona agents (customer-persona, admin-persona, bayi-persona, security-redteam, support-persona, developer-persona, compliance-persona) are not yet in `.claude/agents/`. See `reports/sessions/2026-04-11-the portfolio + CMS project-dev-sprint-0-1/pack-gap-proposals.md` for planned additions.
+- Pack Gap: 7 persona agents (customer-persona, admin-persona, bayi-persona, security-redteam, support-persona, developer-persona, compliance-persona) are not yet in `.claude/agents/`. See `reports/sessions/2026-04-11--dev-sprint-0-1/pack-gap-proposals.md` for planned additions.
 
 ## Origin
 
-This pattern was observed in the a security scanner project 2026-04-11 session, which explicitly dispatched 4 personas and produced persona-framed findings files in `reports/current/findings/`. The session produced:
+This pattern was observed in the 2026-04-11 session, which explicitly dispatched 4 personas and produced persona-framed findings files in `reports/current/findings/`. The session produced:
 - 22 customer findings (2 blocker, 7 high)
 - 20 bayi findings (5 blocker — most of any persona, 7 high)
 - 25 admin findings (2 blocker, 5 high)

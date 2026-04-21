@@ -25,8 +25,8 @@ Mevcut markaları görmek için: https://github.com/VoltAgent/awesome-design-md
 1. `scripts/fetch-design-references.sh <brand>` çağır (Windows: `.ps1`)
 2. İndirilen `reports/current/design-references/<brand>/DESIGN.md` dosyasını oku
 3. Mevcut frontend görevine entegre et:
-   - `/frontend-war-room` ile birlikte kullanılırsa, savaş odası bu referansı bağlama dahil eder
-   - `design-system-architect` subagent'ı bu dosyayı tasarım kararı için input olarak alır
+ - `/frontend-war-room` ile birlikte kullanılırsa, savaş odası bu referansı bağlama dahil eder
+ - `design-system-architect` subagent'ı bu dosyayı tasarım kararı için input olarak alır
 4. İçeriği kullanıcıya özetle: "Stripe'ın renk paleti şu, tipografisi şu, ana bileşenleri şu" gibi
 5. Kullanıcıya öner: "Şu component'i Stripe stiline uyarlayayım mı?"
 

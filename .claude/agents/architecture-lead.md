@@ -61,18 +61,18 @@ Every architectural finding uses the finding-schema YAML (per `docs/governance/f
 
 ```yaml
 - id: ARCH-NNN
-  area: frontend | backend | data | infra | security | mobile | prompt | cross-cutting
-  title: "<short>"
-  problem: "<what's architecturally wrong>"
-  evidence: "<file:line citations>"
-  evidence_trust: T1 | T2 | T3
-  severity: Critical | High | Medium | Low
-  recommended_fix: "<specific change>"
-  migration_impact: low | medium | high | critical
-  migration_steps_summary: "<one-paragraph plan>"
-  label: CURRENT_RECOMMENDED | CURRENT_BUT_CONDITIONAL | LEGACY_STILL_VALID | OUTDATED_AVOID | EXPERIMENTAL_NOT_DEFAULT
-  effort: hours | sessions | weeks
-  validation: "<how to verify the fix is right>"
+ area: frontend | backend | data | infra | security | mobile | prompt | cross-cutting
+ title: "<short>"
+ problem: "<what's architecturally wrong>"
+ evidence: "<file:line citations>"
+ evidence_trust: T1 | T2 | T3
+ severity: Critical | High | Medium | Low
+ recommended_fix: "<specific change>"
+ migration_impact: low | medium | high | critical
+ migration_steps_summary: "<one-paragraph plan>"
+ label: CURRENT_RECOMMENDED | CURRENT_BUT_CONDITIONAL | LEGACY_STILL_VALID | OUTDATED_AVOID | EXPERIMENTAL_NOT_DEFAULT
+ effort: hours | sessions | weeks
+ validation: "<how to verify the fix is right>"
 ```
 
 Write to `reports/current/specialists/architecture.md`. Produce a target-architecture section at the end ("what the codebase should look like after these findings are addressed").

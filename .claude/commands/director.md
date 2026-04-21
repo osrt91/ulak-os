@@ -75,9 +75,9 @@ The director accepts positional user intent PLUS optional keyword arguments:
 - `skip_phase_2=<comma-list>` — skip specific specialist dispatches if they already ran (e.g., `skip_phase_2=cartographer,security-hardening-lead`)
 - `parallel_dispatch=<N>` — override the Phase 2 default dispatch cap (default 6)
 - `dispatch=<specialist|persona>` — dispatch mode:
-  - `specialist` (default) — discipline-based agents (security-hardening-lead, backend-api-architect, etc.)
-  - `persona` — user-role-based agents (customer-persona, admin-persona, etc. — see `docs/runtime/persona-dispatch-pattern.md`)
-  - `both` — run both in sequence, merge evidence with overlap boost
+ - `specialist` (default) — discipline-based agents (security-hardening-lead, backend-api-architect, etc.)
+ - `persona` — user-role-based agents (customer-persona, admin-persona, etc. — see `docs/runtime/persona-dispatch-pattern.md`)
+ - `both` — run both in sequence, merge evidence with overlap boost
 - `validation_depth=<light|standard|deep>` — validation gate depth in Phase 7
 - `profile=<AUDIT_PROFILE|GREENFIELD_BUILDER_PROFILE|...>` — pre-select output profile
 

@@ -21,12 +21,12 @@ Turn a raw backlog + agent roster into an executable multi-sprint plan that resp
 ## Inputs
 
 - `backlog` — JSON or YAML array of tasks. Each task:
-  - `id` (e.g., W2.1, NF-03)
-  - `title` + `description`
-  - `effort_estimate` (session-units or hours)
-  - `dependencies` (list of prior task ids)
-  - `owner_agent` (specialist that should claim it, e.g., "backend-api-architect")
-  - `target_files` (absolute paths the task will write)
+ - `id` (e.g., W2.1, NF-03)
+ - `title` + `description`
+ - `effort_estimate` (session-units or hours)
+ - `dependencies` (list of prior task ids)
+ - `owner_agent` (specialist that should claim it, e.g., "backend-api-architect")
+ - `target_files` (absolute paths the task will write)
 - `sprint_length_days` (default 14)
 - `num_agents_per_sprint` (default 4, clamped to MAX_PARALLEL_AGENTS = 6)
 - `agent_capacity_hours_per_day` (default 6; varies by agent — e.g., backend 8, QA 6)

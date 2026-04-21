@@ -65,19 +65,19 @@ The justification lives in `active-variables.yaml` (or the equivalent block in `
 
 ```yaml
 mcp_authorized_tools:
-  github:
-    justification: "PR review and issue triage; scoped to read + list operations"
-    approved_at: 2026-04-18
-    approved_by: osrt91
-    scope: read-only
-    rotation_cadence: quarterly
-  supabase:
-    justification: "Multi-tenant DB read for audit reports; per-tenant service role key"
-    approved_at: 2026-03-02
-    approved_by: osrt91
-    scope: read-only
-    rotation_cadence: monthly
-    next_rotation_due: 2026-05-02
+ github:
+ justification: "PR review and issue triage; scoped to read + list operations"
+ approved_at: 2026-04-18
+ approved_by: osrt91
+ scope: read-only
+ rotation_cadence: quarterly
+ supabase:
+ justification: "Multi-tenant DB read for audit reports; per-tenant service role key"
+ approved_at: 2026-03-02
+ approved_by: osrt91
+ scope: read-only
+ rotation_cadence: monthly
+ next_rotation_due: 2026-05-02
 ```
 
 ### Required fields

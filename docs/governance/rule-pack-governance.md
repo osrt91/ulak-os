@@ -14,7 +14,7 @@ Rule packs fill a category gap that the earlier plugin/skill/agent/command/hook/
 ## Load order
 
 1. Phase 0 toolchain precheck detects stacks present in the project
-2. Director populates `active-variables.yaml` field `rule_packs_loaded: [typescript-nextjs, docker-compose, ...]`
+2. Director populates `active-variables.yaml` field `rule_packs_loaded: [typescript-nextjs, docker-compose,...]`
 3. Each matched pack is loaded **after** `anti-patterns.md` but **before** `output-profiles.md` in the context-budget ordering
 4. If a project-local `.claude/rules/<stack>.md` exists for a matched stack, it is loaded AFTER the Ulak pack for the same stack
 

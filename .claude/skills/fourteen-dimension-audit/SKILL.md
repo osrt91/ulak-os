@@ -75,9 +75,9 @@ Full rubric in `docs/runtime/audit-scoring-framework.md` §The 14 dimensions.
 
 1. Read `runtime-manifest.md` to understand stack (inferred dimensions differ by stack)
 2. For each dimension, collect evidence:
-   - Query the filesystem (file counts, test counts, coverage report, dependency file contents)
-   - Query git history (commit cadence, bug-vs-feature ratio, dependency drift)
-   - Cross-reference findings from other specialists (evidence-register.md hits per dimension lower the score)
+ - Query the filesystem (file counts, test counts, coverage report, dependency file contents)
+ - Query git history (commit cadence, bug-vs-feature ratio, dependency drift)
+ - Cross-reference findings from other specialists (evidence-register.md hits per dimension lower the score)
 3. Apply the rubric to score 0-100 per dimension
 4. Compute weighted average + grade
 5. For each dimension below 70, propose a gap-closing roadmap item with effort estimate
@@ -86,18 +86,17 @@ Full rubric in `docs/runtime/audit-scoring-framework.md` §The 14 dimensions.
 
 ```yaml
 audit:
-  date: 2026-04-18
-  repo: a security scanner project
-  stack: [python, fastapi, nextjs, docker]
-  dimensions:
-    architecture: { current: 20, target: 75, delta_needed: 55 }
-    testing:      { current: 15, target: 70, delta_needed: 55 }
-    # ... 12 more
-  average: 37.5
-  target_average: 77.9
-  grade: F
-  target_grade: B-
-  priority_dimensions: [architecture, testing, secret_management, observability]
+ date: 2026-04-18
+ repo: stack: [python, fastapi, nextjs, docker]
+ dimensions:
+ architecture: { current: 20, target: 75, delta_needed: 55 }
+ testing: { current: 15, target: 70, delta_needed: 55 }
+ #... 12 more
+ average: 37.5
+ target_average: 77.9
+ grade: F
+ target_grade: B-
+ priority_dimensions: [architecture, testing, secret_management, observability]
 ```
 
 ## Rules

@@ -18,7 +18,7 @@ Not all evidence is equal. A line in a vendor marketing page, a line in the repo
 
 ## Default ordering rule
 
-When two sources conflict, trust the lower-tier number (T1 beats T2 beats T3 ...). Never use T6 or T7 to override T1-T3.
+When two sources conflict, trust the lower-tier number (T1 beats T2 beats T3...). Never use T6 or T7 to override T1-T3.
 
 ## Fields every serious finding must carry
 

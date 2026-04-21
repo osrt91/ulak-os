@@ -1,7 +1,7 @@
 # Ulak OS 2.0.0 — CLI Console + Memory + Vendor Adapters
 
 **Release date:** 2026-04-09
-**Author:** Oğuzhan Sert <info@oguzhansert.dev>
+**Author:** Oğuzhan Sert <info@>
 
 ## Overview
 

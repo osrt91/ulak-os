@@ -36,18 +36,18 @@ Scan both the current tree AND git history: `git log -p -S"api_key" -S"SECRET" -
 
 ```yaml
 - id: SEC-ROT-001
-  secret_type: "Stripe test key"
-  exposure_scope: "git history since 2024-06-02"
-  location: "payment.py:28 + .env.example:15 (historical)"
-  rotation_steps:
-    1: "Log into Stripe dashboard → Developers → API keys"
-    2: "Create new restricted key with minimum scope"
-    3: "Update secret in production env (e.g. Hostinger VPS .env, or secret manager)"
-    4: "Deploy with new key; verify /webhooks/stripe still verifies signature"
-    5: "Revoke old key on Stripe dashboard"
-    6: "Update local .env.example to reflect new key NAME only (never value)"
-  urgency: critical-if-production | medium-if-test-key
-  affected_services: ["/api/webhooks/stripe", "/api/payments"]
+ secret_type: "Stripe test key"
+ exposure_scope: "git history since 2024-06-02"
+ location: "payment.py:28 +.env.example:15 (historical)"
+ rotation_steps:
+ 1: "Log into Stripe dashboard → Developers → API keys"
+ 2: "Create new restricted key with minimum scope"
+ 3: "Update secret in production env (e.g. Hostinger VPS.env, or secret manager)"
+ 4: "Deploy with new key; verify /webhooks/stripe still verifies signature"
+ 5: "Revoke old key on Stripe dashboard"
+ 6: "Update local.env.example to reflect new key NAME only (never value)"
+ urgency: critical-if-production | medium-if-test-key
+ affected_services: ["/api/webhooks/stripe", "/api/payments"]
 ```
 
 ### History purge (when and how)

@@ -1,6 +1,6 @@
 # Sample Manager Verdict — Brownfield Audit Scenario
 
-> Ulak OS `manager-verdict` artefakt örneği. Programın kapanış kararı; intake → inventory → ... → validation-plan zincirinin son halkası.
+> Ulak OS `manager-verdict` artefakt örneği. Programın kapanış kararı; intake → inventory →... → validation-plan zincirinin son halkası.
 
 ## Verdict
 

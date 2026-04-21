@@ -15,7 +15,7 @@
 Before proposing anything, record what's actually shipping:
 
 - Which locales are present in the code? (look for `messages/`, `locales/`, `i18n/`, `.po`, `.xliff`, `.strings`, `.arb`)
-- What locale codes are used? (en, en-US, en-GB, tr, tr-TR, ...)
+- What locale codes are used? (en, en-US, en-GB, tr, tr-TR,...)
 - Which surfaces are actually translated?
 - Which surfaces are untranslated or partially translated?
 - Is there a fallback chain? What happens when a key is missing in the active locale?

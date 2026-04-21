@@ -6,7 +6,7 @@
 
 A static-only audit produces claims like "the committed JWT signing key in `kong.yml:8` MAY match the prod `JWT_SECRET`" — tier T2 evidence at best. The only way to upgrade that claim to T1 (or refute it entirely) is a **live probe**: SSH into the VPS, read the env var, compare.
 
-Before v2.1.2, live probes lived in `validation-plan.md §6` as TODOs. The director's protocol ended at Phase 5 manager-verdict without a formal step that forced the probes to actually run. The a portfolio + CMS project Sprint 0+1 session (2026-04-11, FP-04) caught this: the probes ran only because the operator was "lucky" — SSH config was already in place, credentials were ambient. On a session without that luck, Phase 5 would have issued a verdict on T2 evidence and the operator would never have known.
+Before v2.1.2, live probes lived in `validation-plan.md §6` as TODOs. The director's protocol ended at Phase 5 manager-verdict without a formal step that forced the probes to actually run. The Sprint 0+1 session (2026-04-11, FP-04) caught this: the probes ran only because the operator was "lucky" — SSH config was already in place, credentials were ambient. On a session without that luck, Phase 5 would have issued a verdict on T2 evidence and the operator would never have known.
 
 Phase 4.5 is the formal answer: **if `validation-plan.md §6` has ≥1 live probe, Phase 4.5 is mandatory before Phase 5 can run**.
 
@@ -32,12 +32,12 @@ Before probes can run, the director must collect:
 - **Credential surface** — SSH config, API tokens, DB connection strings, cloud account access
 - **Operator authorization** — explicit consent to run read-only probes against named targets
 - **Probe definitions** — each probe from `validation-plan.md §6` with:
-  - `id` (LP-01, LP-02, ...)
-  - `question` (what are we testing)
-  - `target` (host, endpoint, table, file path)
-  - `command` (the actual probe to run)
-  - `expected_result` (what "pass" looks like)
-  - `failure_action` (what happens if the probe fails)
+ - `id` (LP-01, LP-02,...)
+ - `question` (what are we testing)
+ - `target` (host, endpoint, table, file path)
+ - `command` (the actual probe to run)
+ - `expected_result` (what "pass" looks like)
+ - `failure_action` (what happens if the probe fails)
 
 If credentials are missing, the director must PAUSE and request them from the operator. Never guess or invent credentials.
 
@@ -76,10 +76,10 @@ Probes must not leave footprints. Do not create temporary files, do not modify c
 Phase 4.5 writes:
 
 - `reports/current/live-probe-results.md` — one entry per probe with:
-  - probe id, target, command, timestamp
-  - result (pass / fail / partial / skipped / blocked-by-credentials)
-  - raw output reference (a link to a saved log file, NOT the raw output inline)
-  - T-tier upgrade (e.g. "LP-07: JWT reuse — REFUTED. Prod JWT_SECRET differs from kong.yml:8. Evidence upgraded T2 → T1.")
+ - probe id, target, command, timestamp
+ - result (pass / fail / partial / skipped / blocked-by-credentials)
+ - raw output reference (a link to a saved log file, NOT the raw output inline)
+ - T-tier upgrade (e.g. "LP-07: JWT reuse — REFUTED. Prod JWT_SECRET differs from kong.yml:8. Evidence upgraded T2 → T1.")
 
 ### Evidence register updates
 
@@ -95,16 +95,16 @@ Live probes often surface **new findings** that weren't in the static pass. Thes
 ```markdown
 ## New findings from live probing (NF-*)
 
-### NF-01 — .env.local.bak has mode 0644 on prod (discovered during LP-05)
+### NF-01 —.env.local.bak has mode 0644 on prod (discovered during LP-05)
 
-**Evidence**: `ls -la /home/deploy/a portfolio + CMS project/` returned:
--rw-r--r-- .env.local.bak
+**Evidence**: `ls -la /home/deploy//` returned:
+-rw-r--r--.env.local.bak
 
 **Why non-obvious**: no file in the repo points at the backup; it exists because of a manual cp a week ago. Static scan cannot see VPS files.
 
 **Severity**: High (world-readable secrets on a multi-tenant host)
 
-**Fix**: chmod 0600, add .env*.bak* to .gitignore
+**Fix**: chmod 0600, add.env*.bak* to.gitignore
 ```
 
 ### Gates
@@ -117,23 +117,23 @@ Live probes often surface **new findings** that weren't in the static pass. Thes
 
 `docs/runtime/anti-patterns.md` § "Destructive action without live-probe" already lists the forbidden actions that require a probe. Phase 4.5 is the step that **runs** those pre-checks. Every destructive item in `execution-roadmap.md` has a `pre_check` field naming its probe; Phase 4.5 executes the probes in dependency order with execution items.
 
-## Example — a portfolio + CMS project session
+## Example — session
 
 The Sprint 0+1 session had 11 probes. Two were pivotal:
 
 **LP-07 — JWT reuse check**
 
-- `command`: `ssh prod 'pm2 env the portfolio + CMS project | grep JWT_SECRET'`
+- `command`: `ssh prod 'pm2 env | grep JWT_SECRET'`
 - `question`: "Does prod JWT_SECRET match the HS256 key committed in kong.yml:8?"
 - `result`: **REFUTED**. Prod uses a different secret.
 - `impact`: DIR-005 severity dropped from Critical ("prod compromise likely") to High ("historical exposure only, rotation advisable")
 
-**LP-09 — /opt/the portfolio + CMS project/ staleness**
+**LP-09 — /opt// staleness**
 
-- `command`: `ssh prod 'ls -la /opt/the portfolio + CMS project/'`
-- `question`: "Is /opt/the portfolio + CMS project/ stale and safe to rm -rf?"
+- `command`: `ssh prod 'ls -la /opt//'`
+- `question`: "Is /opt// stale and safe to rm -rf?"
 - `result`: **BLOCKED**. Directory contained a second `.env.local` from a prior deploy attempt.
-- `impact`: R-119 destructive action cancelled. New finding NF-03 issued: "two .env.local files, chmod needed".
+- `impact`: R-119 destructive action cancelled. New finding NF-03 issued: "two.env.local files, chmod needed".
 
 Both probes changed the verdict shape. Neither could have been answered from static analysis.
 

@@ -11,7 +11,7 @@ Activated when runtime-manifest detects `docker-compose.yml` or `Dockerfile` in 
 - Production bindings use `127.0.0.1:<port>`; expose publicly only through the reverse proxy
 - Prod compose adds `security_opt: [no-new-privileges:true]` and `cap_drop: ALL` for app containers
 - Base compose = security hardened defaults; dev override adds source mounts + exposed ports; prod override forces loopback binds
-- No secrets in image layers (`COPY .env .env` is rejected); use env_file or secret manager
+- No secrets in image layers (`COPY.env.env` is rejected); use env_file or secret manager
 
 ## Collision rule
 

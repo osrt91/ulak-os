@@ -13,7 +13,7 @@ Produce a deep, file:line-cited inventory of a project. This is **Phase 1** of t
 ## Focus areas
 
 ### 1. Repo skeleton
-- Root-level files (package.json, Dockerfile, .env.example, CI workflows)
+- Root-level files (package.json, Dockerfile,.env.example, CI workflows)
 - Top-level directories + purpose inference
 - Git state (branch, last N commits, uncommitted files)
 - Monorepo vs single-package detection (pnpm-workspace, Turbo, Nx, Lerna)
@@ -65,7 +65,7 @@ For each surface: list route files with line ranges, map auth gates, identify sh
 ### 8. Dead surface detection
 - Unreferenced files (search for `import` / `require` pointing at them)
 - Unused dependencies (in package.json but zero imports)
-- Orphaned env vars (declared in .env.example but not read anywhere)
+- Orphaned env vars (declared in.env.example but not read anywhere)
 - Dead admin CRUD (AP-14: writes table that nothing reads)
 
 ## Evidence rules
@@ -83,7 +83,7 @@ Never emit T6 (heuristic) or T7 (guess) in inventory output — if you don't hav
 Compare numeric claims in CLAUDE.md / README to filesystem reality:
 
 - "N plugins" claimed → `ls src/plugins/ | wc -l` actual
-- "N Docker services" → `grep -c "^  [a-z]" docker-compose.yml` actual
+- "N Docker services" → `grep -c "^ [a-z]" docker-compose.yml` actual
 - "N API endpoints" → grep for route declarations
 
 Any claim differing from reality by >10% or 1 order of magnitude becomes a `DRIFT-NNN` finding with T-tier downgrade of the stale number to T7 (contradicted).

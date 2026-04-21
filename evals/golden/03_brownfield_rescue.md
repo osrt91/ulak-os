@@ -8,22 +8,22 @@
 
 ```yaml
 router:
-  task_type: intervention
-  active_mode: rescue
-  project_state: brownfield
-  intervention_mode: RESCUE
-  scope_level: multi-surface-full-system
-  live_research_need: not-needed
-  artefact_program: full
-  output_type: markdown-artifact-set
-  output_profile: BROWNFIELD_INTERVENTION_PROFILE
-  required_overlays:
-    - toolchain-precheck
-  required_sector_packs: []
-  blocked_paths: []
-  validation_depth: deep
-  max_parallel_agents: 6
-  rationale: "Explicit rescue with near-release timing → deep validation, no time for market research, prioritize stabilization."
+ task_type: intervention
+ active_mode: rescue
+ project_state: brownfield
+ intervention_mode: RESCUE
+ scope_level: multi-surface-full-system
+ live_research_need: not-needed
+ artefact_program: full
+ output_type: markdown-artifact-set
+ output_profile: BROWNFIELD_INTERVENTION_PROFILE
+ required_overlays:
+ - toolchain-precheck
+ required_sector_packs: []
+ blocked_paths: []
+ validation_depth: deep
+ max_parallel_agents: 6
+ rationale: "Explicit rescue with near-release timing → deep validation, no time for market research, prioritize stabilization."
 ```
 
 ## Expected active agent map
@@ -43,17 +43,17 @@ router:
 
 - Router decision shows `intervention_mode: RESCUE` and `validation_depth: deep`
 - `reports/current/inventory.md` contains broken-surface map:
-  - broken routes
-  - broken links
-  - broken callbacks
-  - dead CTAs
-  - orphan menu items
+ - broken routes
+ - broken links
+ - broken callbacks
+ - dead CTAs
+ - orphan menu items
 - `reports/current/evidence-register.md` prioritizes Critical findings at the top
 - `reports/current/risk-register.md` (or `analysis-findings.md` at severity: Critical) exists
 - `reports/current/execution-roadmap.md` has a stabilization-first ordering:
-  - immediate blockers (hours)
-  - release blockers (days)
-  - post-release (weeks)
+ - immediate blockers (hours)
+ - release blockers (days)
+ - post-release (weeks)
 - `reports/current/rollback-plan.md` or equivalent exists
 - `reports/current/validation-plan.md` includes release gates
 - `reports/current/manager-verdict.md` explicitly states `signoff_status: blocked | conditional | ready`

@@ -113,7 +113,7 @@ The solution is **surface split**: three layers with clear rules about what goes
 
 ## Hard rules
 
-- **The user never sees hidden-core notes in their response.** If a response contains "in V7 this was different, now in V9 we ...", that's a bleed-through bug.
+- **The user never sees hidden-core notes in their response.** If a response contains "in V7 this was different, now in V9 we...", that's a bleed-through bug.
 - **The active model context never loads hidden core by default.** History leaks into reasoning and blurs decisions.
 - **Maintainer surface is for humans, not for the model.** The model does not need to know the release criteria table to do a good audit run.
 - **The three layers are not hierarchical.** Hidden core is not a "deeper" version of public runtime — it's a different audience.

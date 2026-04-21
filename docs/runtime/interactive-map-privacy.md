@@ -4,7 +4,7 @@
 
 Products showing events, locations, or geographic data on interactive maps (Leaflet, Mapbox, Google Maps) create a privacy + UX surface that's easy to mishandle. A map that requests browser geolocation on first load without consent is a dark pattern. A map that renders 10k markers in a cluster at world-zoom is a performance and privacy footgun (exposes every point at once). A map that embeds a third-party provider API that the privacy policy didn't declare is a compliance miss.
 
-a community/event platform project (and any community / event / ecommerce product with location data) needs a discipline layer.
+(and any community / event / ecommerce product with location data) needs a discipline layer.
 
 ## When to apply
 
@@ -18,7 +18,7 @@ Apply when the product exposes:
 
 ### Consent before geolocation
 
-- NEVER call `navigator.geolocation.getCurrentPosition()` on page load without user action
+- NEVER call `navigator.geolocation.getCurrentPosition` on page load without user action
 - Default map view: project's primary service area (e.g., country bounding box), not "request user location"
 - Explicit button / toggle: "Show events near me" → fires consent prompt
 - Consent captured: record in session / DB so you don't re-prompt on every visit
@@ -55,71 +55,69 @@ Apply when the product exposes:
 - Map is keyboard-navigable: tab through markers, Enter to open popup
 - Non-map fallback: list view of the same data for screen-reader-only users
 
-## Worked example — a community/event platform project
-
-```typescript
+## Worked example — ```typescript
 // components/EventMap.tsx (sketch)
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-markercluster'
 
 export function EventMap({ events, userLocation }: Props) {
-  // Default to Istanbul bounds if no user location
-  const defaultCenter: LatLng = userLocation ?? [41.0082, 28.9784]
-  const defaultZoom = userLocation ? 13 : 10
+ // Default to Istanbul bounds if no user location
+ const defaultCenter: LatLng = userLocation ?? [41.0082, 28.9784]
+ const defaultZoom = userLocation ? 13 : 10
 
-  return (
-    <MapContainer
-      center={defaultCenter}
-      zoom={defaultZoom}
-      minZoom={5}      // prevent world-zoom
-      maxZoom={18}
-      maxBounds={[[35, 25], [43, 45]]}  // Turkey bounding box
-    >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; OpenStreetMap contributors'
-      />
-      {events.length > 20 ? (
-        <MarkerClusterGroup>
-          {events.map(e => <EventMarker key={e.id} event={e} />)}
-        </MarkerClusterGroup>
-      ) : (
-        events.map(e => <EventMarker key={e.id} event={e} />)
-      )}
-    </MapContainer>
-  )
+ return (
+ <MapContainer
+ center={defaultCenter}
+ zoom={defaultZoom}
+ minZoom={5} // prevent world-zoom
+ maxZoom={18}
+ maxBounds={[[35, 25], [43, 45]]} // Turkey bounding box
+ >
+ <TileLayer
+ url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+ attribution='&copy; OpenStreetMap contributors'
+ />
+ {events.length > 20 ? (
+ <MarkerClusterGroup>
+ {events.map(e => <EventMarker key={e.id} event={e} />)}
+ </MarkerClusterGroup>
+ ) : (
+ events.map(e => <EventMarker key={e.id} event={e} />)
+ )}
+ </MapContainer>
+ )
 }
 
 function EventMarker({ event }: { event: Event }) {
-  return (
-    <Marker position={event.location} aria-label={`Event: ${event.name} on ${event.date}`}>
-      <Popup>
-        <strong>{event.name}</strong>
-        <div>{event.date}</div>
-        <div>{event.address}</div>
-      </Popup>
-    </Marker>
-  )
+ return (
+ <Marker position={event.location} aria-label={`Event: ${event.name} on ${event.date}`}>
+ <Popup>
+ <strong>{event.name}</strong>
+ <div>{event.date}</div>
+ <div>{event.address}</div>
+ </Popup>
+ </Marker>
+ )
 }
 ```
 
 ```typescript
 // hooks/useLocationPermission.ts
-export function useLocationPermission() {
-  const [location, setLocation] = useState<LatLng | null>(null)
-  const [status, setStatus] = useState<'idle' | 'granted' | 'denied'>('idle')
+export function useLocationPermission {
+ const [location, setLocation] = useState<LatLng | null>(null)
+ const [status, setStatus] = useState<'idle' | 'granted' | 'denied'>('idle')
 
-  // ONLY called from button click — never in useEffect
-  const requestLocation = useCallback(() => {
-    if (!navigator.geolocation) { setStatus('denied'); return }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => { setLocation([pos.coords.latitude, pos.coords.longitude]); setStatus('granted') },
-      () => setStatus('denied'),
-      { timeout: 10000 }
-    )
-  }, [])
+ // ONLY called from button click — never in useEffect
+ const requestLocation = useCallback( => {
+ if (!navigator.geolocation) { setStatus('denied'); return }
+ navigator.geolocation.getCurrentPosition(
+ (pos) => { setLocation([pos.coords.latitude, pos.coords.longitude]); setStatus('granted') },
+  => setStatus('denied'),
+ { timeout: 10000 }
+ )
+ }, [])
 
-  return { location, status, requestLocation }
+ return { location, status, requestLocation }
 }
 ```
 
@@ -140,4 +138,4 @@ export function useLocationPermission() {
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.0**. Evidence base: a community/event platform project `components/EventMap.tsx` (Leaflet + react-leaflet + event RSVP flow). Added in v2.2.0 cross-project pattern absorption pass.
+Authoritative as of Ulak OS **v2.2.0**. tsx` (Leaflet + react-leaflet + event RSVP flow). Added in v2.2.0 cross-project pattern absorption pass.

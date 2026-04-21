@@ -1,7 +1,7 @@
 # Ulak OS 1.0.0 — First Stable Public Release
 
 **Release date:** 2026-04-07
-**Author:** Oğuzhan Sert <info@oguzhansert.dev>
+**Author:** Oğuzhan Sert <info@>
 
 ## Overview
 

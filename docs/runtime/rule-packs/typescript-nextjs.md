@@ -9,7 +9,7 @@ Activated when runtime-manifest detects `typescript` + (`next` | `next.js`) in p
 - No `console.log` shipped to prod — use the logger; lint rule enforces
 - Default to Server Components; add `"use client"` only with a concrete reason
 - Images via `next/image`; raw `<img>` needs a lint-disable + rationale
-- No `require()`; ESM imports only
+- No `require`; ESM imports only
 - Don't commit `.next/`, `next-env.d.ts`, or `tsconfig.tsbuildinfo`
 - Data fetching in Server Components or `route.ts`; never fetch from Client Components for first paint
 

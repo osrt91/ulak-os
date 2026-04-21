@@ -4,29 +4,29 @@
 
 "Which AI provider may this project call" is a **governance decision**, not a code detail. It needs a declared allowlist so architecture review can check against it, because residual SDK imports and env-var references **linger long after a provider swap**. If the user decided two releases ago "no more Groq, we use Gemini", but `lib/groq_client.ts` still exists and someone wires it in for a feature, the governance intent is silently violated.
 
-Evidence from the user's portfolio: a security scanner project's CLAUDE.md listed Groq + Hareki + OpenAI SDK historically; SETUP.md locked the current state to Google Gemini (`gemini-2.5-flash`); the user's Ulak OS memory confirms Gemini-only is the intended steady state. But `lib/hareki.ts` is still present in the security scanner project's frontend — **drift between intent and code**. This doc closes that gap.
+Evidence from practice: CLAUDE.md listed Groq + Hareki + OpenAI SDK historically; SETUP.md locked the current state to Google Gemini (`gemini-2.5-flash`); the user's Ulak OS memory confirms Gemini-only is the intended steady state. But `lib/hareki.ts` is still present in frontend — **drift between intent and code**. This doc closes that gap.
 
 ## The allowlist contract
 
-Every Ulak-OS-managed project declares an `ai_providers_allowed: [...]` array in its `runtime-manifest.md` (or `active-variables.yaml`). Architecture-lead flags any SDK import, env var, or client library referencing a non-allowlisted provider as a **drift finding** (`did-you-know` category).
+Every projects declares an `ai_providers_allowed: [...]` array in its `runtime-manifest.md` (or `active-variables.yaml`). Architecture-lead flags any SDK import, env var, or client library referencing a non-allowlisted provider as a **drift finding** (`did-you-know` category).
 
 Minimum viable declaration:
 
 ```yaml
 ai_providers_allowed:
-  - google-gemini       # gemini-2.5-flash, gemini-2.0-pro
+ - google-gemini # gemini-2.5-flash, gemini-2.0-pro
 ai_providers_forbidden:
-  - openai              # no OpenAI SDK, no `openai` env vars
-  - anthropic           # no Anthropic SDK  (even if Claude Code is the dev tool)
-  - groq                # forbidden per operator decision 2026-02-15
-  - hareki              # forbidden per operator decision 2026-02-15
-  - cohere              # unused
+ - openai # no OpenAI SDK, no `openai` env vars
+ - anthropic # no Anthropic SDK (even if Claude Code is the dev tool)
+ - groq # forbidden per operator decision 2026-02-15
+ - hareki # forbidden per operator decision 2026-02-15
+ - cohere # unused
 ```
 
 A project that does not use AI at all declares:
 
 ```yaml
-ai_providers_allowed: []  # project does not call AI at runtime
+ai_providers_allowed: [] # project does not call AI at runtime
 ```
 
 An empty allowed list with no forbidden list means "we haven't decided yet" — that's itself a finding (the decision needs to be made before shipping).
@@ -35,7 +35,7 @@ An empty allowed list with no forbidden list means "we haven't decided yet" — 
 
 Architecture-lead (or a dedicated subagent) scans for:
 
-1. **SDK imports** — `import groq`, `from openai import ...`, `require('@anthropic-ai/sdk')` against the forbidden list
+1. **SDK imports** — `import groq`, `from openai import...`, `require('@anthropic-ai/sdk')` against the forbidden list
 2. **Env var references** — `process.env.GROQ_API_KEY`, `os.getenv("OPENAI_API_KEY")` against the forbidden list
 3. **Client lib files** — `lib/groq*`, `services/openai*`, `client/anthropic*` against the forbidden list
 4. **Network calls** — `fetch('https://api.groq.com/...')`, `requests.get('api.openai.com/...')` against the forbidden list
@@ -66,10 +66,10 @@ Some projects legitimately need multiple providers (e.g. embeddings from one ven
 
 ```yaml
 ai_providers_allowed:
-  - google-gemini          # chat, generation
-  - openai:embeddings-only # explicit role scope
+ - google-gemini # chat, generation
+ - openai:embeddings-only # explicit role scope
 ai_providers_forbidden:
-  - openai:chat            # chat via OpenAI forbidden even though embeddings allowed
+ - openai:chat # chat via OpenAI forbidden even though embeddings allowed
 ```
 
 The scope annotation is required when the same provider is partially allowed.
@@ -80,25 +80,23 @@ Within an allowed provider, the specific model is declared separately:
 
 ```yaml
 ai_models_pinned:
-  google-gemini: "gemini-2.5-flash"  # pin for prod
-  google-gemini-fallback: "gemini-2.0-pro"  # escape valve for specific endpoints
+ google-gemini: "gemini-2.5-flash" # pin for prod
+ google-gemini-fallback: "gemini-2.0-pro" # escape valve for specific endpoints
 ```
 
 The pinning is tighter than the allowlist. Updating the pinned model is a versioned change (not a governance decision but a release decision).
 
-## Worked example — a security scanner project
-
-Target state (as of v2.1.3 audit):
+## Worked example — Target state (as of v2.1.3 audit):
 
 ```yaml
 ai_providers_allowed:
-  - google-gemini
+ - google-gemini
 ai_providers_forbidden:
-  - groq
-  - hareki
-  - openai
+ - groq
+ - hareki
+ - openai
 ai_models_pinned:
-  google-gemini: "gemini-2.5-flash"
+ google-gemini: "gemini-2.5-flash"
 ```
 
 Drift findings expected at baseline:
@@ -115,4 +113,4 @@ Drift findings expected at baseline:
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.1.3**. Evidence base: user's portfolio-wide Gemini-only constraint (T3 memory) + a security scanner project's `lib/hareki.ts` drift evidence (T1). This doc was pattern G-02 in the the security scanner project extraction.
+Authoritative as of Ulak OS **v2.1.3**. ts` drift evidence (T1). This doc was pattern G-02 in the extraction.

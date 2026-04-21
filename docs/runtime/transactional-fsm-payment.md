@@ -7,7 +7,7 @@ Payment flows involve external providers (Stripe, Iyzico, Telegram Stars, crypto
 1. **Partial failure**: provider succeeds, DB update fails. User paid; you don't know.
 2. **No timeout**: provider never responds. User's money is in flight with no recovery path.
 
-The correct shape is a **finite state machine with timeout + rollback** at every transition. The `a Telegram commerce bot project` project (multi-payment SaaS) implements this cleanly across 4 payment rails. This doc codifies the pattern.
+The correct shape is a **finite state machine with timeout + rollback** at every transition. The `` project (multi-payment SaaS) implements this cleanly across 4 payment rails. This doc codifies the pattern.
 
 ## When to apply
 
@@ -21,10 +21,10 @@ Do NOT apply when:
 
 ```
 INITIATED → RESERVED → PROVIDER_CONTACTED → CONFIRMED → COMPLETED
-                  ↓             ↓                ↓
-              RELEASED     TIMED_OUT       REFUNDED
-                  ↓
-              FAILED
+ ↓ ↓ ↓
+ RELEASED TIMED_OUT REFUNDED
+ ↓
+ FAILED
 ```
 
 ### State definitions
@@ -57,14 +57,14 @@ INITIATED → RESERVED → PROVIDER_CONTACTED → CONFIRMED → COMPLETED
 - A reconciliation job (cron or worker) walks stuck states every N minutes
 - Stuck-state alerts: if a state is held > 2× MAX_DURATION, alert operator (not just user)
 
-Example (adapted from a Telegram commerce bot project TON payment):
+Example (adapted from TON payment):
 
 ```python
 STATE_TIMEOUTS = {
-    "INITIATED": 120,              # seconds — user must submit within 2 min
-    "RESERVED": 300,               # seconds — 5 min to send transaction
-    "PROVIDER_CONTACTED": 900,     # seconds — 15 min waiting for network confirm
-    "CONFIRMED": 60,               # seconds — must hit COMPLETED within 1 min
+ "INITIATED": 120, # seconds — user must submit within 2 min
+ "RESERVED": 300, # seconds — 5 min to send transaction
+ "PROVIDER_CONTACTED": 900, # seconds — 15 min waiting for network confirm
+ "CONFIRMED": 60, # seconds — must hit COMPLETED within 1 min
 }
 ```
 
@@ -85,14 +85,14 @@ Every state transition writes an append-only row:
 
 ```sql
 CREATE TABLE payment_state_transitions (
-    id UUID DEFAULT gen_random_uuid(),
-    payment_intent_id UUID NOT NULL,
-    from_state TEXT,
-    to_state TEXT NOT NULL,
-    transition_cause TEXT NOT NULL,  -- 'user_action' | 'provider_webhook' | 'reconciliation_job' | 'operator_override'
-    transition_time TIMESTAMPTZ DEFAULT now(),
-    metadata JSONB,                  -- provider response, amount, fees, etc
-    trace_id UUID                    -- for distributed tracing
+ id UUID DEFAULT gen_random_uuid,
+ payment_intent_id UUID NOT NULL,
+ from_state TEXT,
+ to_state TEXT NOT NULL,
+ transition_cause TEXT NOT NULL, -- 'user_action' | 'provider_webhook' | 'reconciliation_job' | 'operator_override'
+ transition_time TIMESTAMPTZ DEFAULT now,
+ metadata JSONB, -- provider response, amount, fees, etc
+ trace_id UUID -- for distributed tracing
 );
 ```
 
@@ -111,28 +111,28 @@ When supporting ≥2 payment rails (Stripe + Iyzico + crypto), abstract the FSM 
 
 ```python
 class PaymentRail(ABC):
-    @abstractmethod
-    def reserve(self, amount, currency, idempotency_key): ...
-    @abstractmethod
-    def confirm(self, reservation_id): ...
-    @abstractmethod
-    def cancel(self, reservation_id): ...
-    @abstractmethod
-    def refund(self, reservation_id, amount): ...
-    @abstractmethod
-    def handle_webhook(self, payload, signature): ...
+ @abstractmethod
+ def reserve(self, amount, currency, idempotency_key):...
+ @abstractmethod
+ def confirm(self, reservation_id):...
+ @abstractmethod
+ def cancel(self, reservation_id):...
+ @abstractmethod
+ def refund(self, reservation_id, amount):...
+ @abstractmethod
+ def handle_webhook(self, payload, signature):...
 
-class StripeRail(PaymentRail): ...
-class IyzicoRail(PaymentRail): ...
-class TelegramStarsRail(PaymentRail): ...
-class TonConnectRail(PaymentRail): ...
+class StripeRail(PaymentRail):...
+class IyzicoRail(PaymentRail):...
+class TelegramStarsRail(PaymentRail):...
+class TonConnectRail(PaymentRail):...
 ```
 
 The FSM is rail-agnostic. Adding a new rail = implementing the driver interface.
 
 ## Evidence
 
-Pattern observed in `a Telegram commerce bot project` TON payment handler (reserve → connect → send → confirm with explicit timeout + rollback). Analogous shape needed for Stripe-only and Iyzico-only projects that lack the discipline.
+ Analogous shape needed for Stripe-only and Iyzico-only projects that lack the discipline.
 
 ## Anti-patterns
 
@@ -151,4 +151,4 @@ Pattern observed in `a Telegram commerce bot project` TON payment handler (reser
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.1**. Evidence base: a Telegram commerce bot project TON payment handler (reserve → connect → send → confirm + timeout rollback pattern).
+Authoritative as of Ulak OS **v2.2.1**. 

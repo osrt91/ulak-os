@@ -13,7 +13,7 @@ Assess infrastructure maturity, release discipline, runtime resilience. You are 
 ## Focus areas
 
 ### 1. CI / CD pipeline
-- Workflow file structure (.github/workflows/*.yml or .gitlab-ci.yml)
+- Workflow file structure (.github/workflows/*.yml or.gitlab-ci.yml)
 - Job topology: which jobs block, which warn
 - Secrets handling in CI (GitHub Actions secrets, OIDC, vault integration)
 - Build reproducibility (lockfiles, pinned versions, multi-arch)
@@ -79,16 +79,16 @@ Write to `reports/current/specialists/infra.md`. Every finding uses finding-sche
 
 ```yaml
 - id: INF-NNN
-  area: ci | cd | deploy | backup | observability | secrets | hosting | release
-  title: "<short>"
-  problem: "<what's broken or missing>"
-  evidence: "<file:line citations or CI log references>"
-  evidence_trust: T1 | T2 | T3
-  severity: Critical | High | Medium | Low
-  recommended_fix: "<specific action>"
-  effort: hours | sessions
-  validation: "<verification command or runbook step>"
-  anti_pattern_match: AP-NN (if applies)
+ area: ci | cd | deploy | backup | observability | secrets | hosting | release
+ title: "<short>"
+ problem: "<what's broken or missing>"
+ evidence: "<file:line citations or CI log references>"
+ evidence_trust: T1 | T2 | T3
+ severity: Critical | High | Medium | Low
+ recommended_fix: "<specific action>"
+ effort: hours | sessions
+ validation: "<verification command or runbook step>"
+ anti_pattern_match: AP-NN (if applies)
 ```
 
 Close with a **release-readiness summary**: are there any blockers preventing a clean tag + release?

@@ -204,13 +204,13 @@ See `docs/runtime/waves-pattern.md` for the full protocol.
 
 **What the director does**:
 - Write the manager-verdict with:
-  - runtime decision and intervention mode
-  - active agent map (which specialists ran)
-  - phase status — each phase `complete` only if its artefact files exist and are non-trivial
-  - top 3 did-you-know highlights inline
-  - residual risks (including all §5c `not-run` gates)
-  - §5a / §5b status (skipped / completed / failed)
-  - explicit next execution lane
+ - runtime decision and intervention mode
+ - active agent map (which specialists ran)
+ - phase status — each phase `complete` only if its artefact files exist and are non-trivial
+ - top 3 did-you-know highlights inline
+ - residual risks (including all §5c `not-run` gates)
+ - §5a / §5b status (skipped / completed / failed)
+ - explicit next execution lane
 
 **Artefacts written**:
 - `reports/current/manager-verdict.md`

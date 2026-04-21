@@ -86,70 +86,70 @@ This section is consumed by **Phase 4.5** (`docs/runtime/live-probe-contract.md`
 
 ```yaml
 - id: LP-01
-  question: "Does production JWT_SECRET match the kong.yml:8 committed secret?"
-  target: vps.example.com
-  command: "ssh -p 2244 deploy@vps.example.com 'env | grep ^JWT_SECRET'"
-  expected_result: "JWT_SECRET is different from kong.yml:8 value (refutes the secret-leak hypothesis)"
-  failure_action: "If match: critical finding, rotate secret immediately, file NF-* in did-you-know.md"
-  timeout_seconds: 30
-  credential_requirement: "SSH key for deploy@vps, OR operator runs this and reports back"
-  evidence_tier_on_pass: T1  # upgrade from T2
-  evidence_tier_on_fail: T1  # T1 with a critical finding attached
+ question: "Does production JWT_SECRET match the kong.yml:8 committed secret?"
+ target: vps.example.com
+ command: "ssh -p 2244 deploy@vps.example.com 'env | grep ^JWT_SECRET'"
+ expected_result: "JWT_SECRET is different from kong.yml:8 value (refutes the secret-leak hypothesis)"
+ failure_action: "If match: critical finding, rotate secret immediately, file NF-* in did-you-know.md"
+ timeout_seconds: 30
+ credential_requirement: "SSH key for deploy@vps, OR operator runs this and reports back"
+ evidence_tier_on_pass: T1 # upgrade from T2
+ evidence_tier_on_fail: T1 # T1 with a critical finding attached
 ```
 
 **Example probe bank** (for a Supabase + VPS project):
 
 ```yaml
 - id: LP-01
-  question: "Is /api/admin/users reachable without an admin JWT?"
-  target: https://api.example.com
-  command: "curl -i -s https://api.example.com/api/admin/users"
-  expected_result: "HTTP 401 or 403 (admin gate enforced)"
-  failure_action: "If 200: critical auth bypass finding; open NF-* and add to execution roadmap as P0"
-  timeout_seconds: 10
-  credential_requirement: none
+ question: "Is /api/admin/users reachable without an admin JWT?"
+ target: https://api.example.com
+ command: "curl -i -s https://api.example.com/api/admin/users"
+ expected_result: "HTTP 401 or 403 (admin gate enforced)"
+ failure_action: "If 200: critical auth bypass finding; open NF-* and add to execution roadmap as P0"
+ timeout_seconds: 10
+ credential_requirement: none
 
 - id: LP-02
-  question: "Do production containers mount docker.sock directly?"
-  target: vps.example.com
-  command: "ssh -p 2244 deploy@vps.example.com 'docker inspect <app_container> | jq \".[].Mounts\"'"
-  expected_result: "No mount of /var/run/docker.sock; instead docker-socket-proxy sidecar on internal network"
-  failure_action: "If raw mount: file AP-05 violation finding, roadmap task to migrate to docker-socket-proxy"
-  timeout_seconds: 30
-  credential_requirement: "SSH key for deploy@vps"
+ question: "Do production containers mount docker.sock directly?"
+ target: vps.example.com
+ command: "ssh -p 2244 deploy@vps.example.com 'docker inspect <app_container> | jq \".[].Mounts\"'"
+ expected_result: "No mount of /var/run/docker.sock; instead docker-socket-proxy sidecar on internal network"
+ failure_action: "If raw mount: file AP-05 violation finding, roadmap task to migrate to docker-socket-proxy"
+ timeout_seconds: 30
+ credential_requirement: "SSH key for deploy@vps"
 
 - id: LP-03
-  question: "Does the reseller API honor plan-capability gating (customer plan user cannot reach /reseller/**)?"
-  target: https://api.example.com
-  command: |
-    curl -i -s -H "Authorization: Bearer $CUSTOMER_JWT" \
-      https://api.example.com/reseller/dashboard
-  expected_result: "HTTP 403 with plan-capability-denied body"
-  failure_action: "If 200 or 404 (different leak): critical authz finding"
-  timeout_seconds: 10
-  credential_requirement: "Valid customer-tier JWT (not admin or reseller)"
+ question: "Does the reseller API honor plan-capability gating (customer plan user cannot reach /reseller/**)?"
+ target: https://api.example.com
+ command: |
+ curl -i -s -H "Authorization: Bearer $CUSTOMER_JWT" \
+ https://api.example.com/reseller/dashboard
+ expected_result: "HTTP 403 with plan-capability-denied body"
+ failure_action: "If 200 or 404 (different leak): critical authz finding"
+ timeout_seconds: 10
+ credential_requirement: "Valid customer-tier JWT (not admin or reseller)"
 
 - id: LP-04
-  question: "Is the Iyzico webhook verifying the HMAC signature?"
-  target: https://api.example.com
-  command: |
-    curl -i -s -X POST -d '{"test":"unsigned"}' \
-      https://api.example.com/webhooks/iyzico
-  expected_result: "HTTP 401 or 400 (unsigned rejected)"
-  failure_action: "If 200: file AP-08 finding; webhook signature verification missing"
-  timeout_seconds: 10
-  credential_requirement: none
+ question: "Is the Iyzico webhook verifying the HMAC signature?"
+ target: https://api.example.com
+ command: |
+ curl -i -s -X POST -d '{"test":"unsigned"}' \
+ https://api.example.com/webhooks/iyzico
+ expected_result: "HTTP 401 or 400 (unsigned rejected)"
+ failure_action: "If 200: file AP-08 finding; webhook signature verification missing"
+ timeout_seconds: 10
+ credential_requirement: none
 
 - id: LP-05
-  question: "Are user_metadata values used for authorization anywhere in production?"
-  target: "DB read"
-  command: |
-    psql $DATABASE_URL -c "SELECT count(*) FROM app_logs
-    WHERE message LIKE '%user_metadata%' AND level IN ('auth','role');"
-  expected_result: "0 rows (authz reads come from user_role_assignments, not user_metadata)"
-  failure_action: "If > 0: file AP-06 finding; audit the call sites"
-  timeout_seconds: 15
-  credential_requirement: "Read-only Postgres role for app_logs"
+ question: "Are user_metadata values used for authorization anywhere in production?"
+ target: "DB read"
+ command: |
+ psql $DATABASE_URL -c "SELECT count(*) FROM app_logs
+ WHERE message LIKE '%user_metadata%' AND level IN ('auth','role');"
+ expected_result: "0 rows (authz reads come from user_role_assignments, not user_metadata)"
+ failure_action: "If > 0: file AP-06 finding; audit the call sites"
+ timeout_seconds: 15
+ credential_requirement: "Read-only Postgres role for app_logs"
 ```
 
 **Pre-check mapping** — every destructive item in execution-roadmap.md must have a matching `pre_check: [LP-xx]` entry pointing to a probe above.
@@ -162,20 +162,20 @@ Every execution wave must declare its rollback path. The validation plan aggrega
 
 ```yaml
 rollback:
-  wave_1:
-    approach: "git revert + redeploy from tagged baseline v2.1.2"
-    blast_radius: "docs only; no runtime behavior change"
-    verification: "run §1 lint + typecheck + build after revert"
-  wave_2:
-    approach: "delete newly-created governance files; revert core-contract imports"
-    blast_radius: "safe; nothing depends on them yet"
-  wave_3:
-    approach: "append-only content; revert per commit"
-  wave_4:
-    approach: |
-      Pack-surface changes: revert per agent/command/skill file.
-      Version bump: DO NOT untag v2.1.3 once tagged; instead publish v2.1.4 with fixes.
-    blast_radius: "ecosystem — dependent projects may pin to v2.1.3"
+ wave_1:
+ approach: "git revert + redeploy from tagged baseline v2.1.2"
+ blast_radius: "docs only; no runtime behavior change"
+ verification: "run §1 lint + typecheck + build after revert"
+ wave_2:
+ approach: "delete newly-created governance files; revert core-contract imports"
+ blast_radius: "safe; nothing depends on them yet"
+ wave_3:
+ approach: "append-only content; revert per commit"
+ wave_4:
+ approach: |
+ Pack-surface changes: revert per agent/command/skill file.
+ Version bump: DO NOT untag v2.1.3 once tagged; instead publish v2.1.4 with fixes.
+ blast_radius: "ecosystem — dependent projects may pin to v2.1.3"
 ```
 
 ---

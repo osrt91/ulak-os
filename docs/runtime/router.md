@@ -46,7 +46,7 @@ Pick one:
 ### 6. Artefact program
 - `none` — answer inline, no files written
 - `report-only` — markdown artefacts under reports/current/
-- `pack-only` — pack files under .claude/ and prompts/
+- `pack-only` — pack files under.claude/ and prompts/
 - `full` — report + pack + validation artefacts
 
 ### 7. Final output type
@@ -74,21 +74,21 @@ The router emits this block and the director pins it for the whole run:
 
 ```yaml
 router:
-  task_type: ""                         # see question 1
-  active_mode: ""                       # task_type mapped to execution vocabulary
-  project_state: greenfield|brownfield|hybrid
-  intervention_mode: CREATE|REPAIR|EXTEND|REFACTOR|MIGRATE|RESCUE|REPACKAGE
-  scope_level: single-screen|single-endpoint|single-flow|module|product|multi-surface-full-system
-  live_research_need: required|helpful|not-needed
-  artefact_program: none|report-only|pack-only|full
-  output_type: audit-report|roadmap|repo-pack|markdown-artifact-set|structured-json|hybrid
-  output_profile: ""                    # one of the 7 profiles
-  required_overlays: []                 # e.g. turkish-normalization, localization-strategy
-  required_sector_packs: []             # e.g. education, fintech
-  blocked_paths: []                     # paths the director must not read/write
-  validation_depth: light|standard|deep
-  max_parallel_agents: 6                # phase 2 dispatch cap
-  rationale: ""                         # 1-3 sentences why these choices
+ task_type: "" # see question 1
+ active_mode: "" # task_type mapped to execution vocabulary
+ project_state: greenfield|brownfield|hybrid
+ intervention_mode: CREATE|REPAIR|EXTEND|REFACTOR|MIGRATE|RESCUE|REPACKAGE
+ scope_level: single-screen|single-endpoint|single-flow|module|product|multi-surface-full-system
+ live_research_need: required|helpful|not-needed
+ artefact_program: none|report-only|pack-only|full
+ output_type: audit-report|roadmap|repo-pack|markdown-artifact-set|structured-json|hybrid
+ output_profile: "" # one of the 7 profiles
+ required_overlays: [] # e.g. turkish-normalization, localization-strategy
+ required_sector_packs: [] # e.g. education, fintech
+ blocked_paths: [] # paths the director must not read/write
+ validation_depth: light|standard|deep
+ max_parallel_agents: 6 # phase 2 dispatch cap
+ rationale: "" # 1-3 sentences why these choices
 ```
 
 This block goes into `reports/current/runtime-manifest.md`.

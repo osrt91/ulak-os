@@ -8,25 +8,25 @@
 
 ```yaml
 router:
-  task_type: creation
-  active_mode: builder
-  project_state: greenfield
-  intervention_mode: CREATE
-  scope_level: multi-surface-full-system
-  live_research_need: required
-  artefact_program: full
-  output_type: markdown-artifact-set
-  output_profile: GREENFIELD_BUILDER_PROFILE
-  required_overlays:
-    - market-research-engine
-    - localization-strategy
-    - architecture-currency
-  required_sector_packs:
-    - education
-  blocked_paths: []
-  validation_depth: standard
-  max_parallel_agents: 6
-  rationale: "Greenfield creation with explicit research + release planning. Market research is required because this is a new product entering a market."
+ task_type: creation
+ active_mode: builder
+ project_state: greenfield
+ intervention_mode: CREATE
+ scope_level: multi-surface-full-system
+ live_research_need: required
+ artefact_program: full
+ output_type: markdown-artifact-set
+ output_profile: GREENFIELD_BUILDER_PROFILE
+ required_overlays:
+ - market-research-engine
+ - localization-strategy
+ - architecture-currency
+ required_sector_packs:
+ - education
+ blocked_paths: []
+ validation_depth: standard
+ max_parallel_agents: 6
+ rationale: "Greenfield creation with explicit research + release planning. Market research is required because this is a new product entering a market."
 ```
 
 ## Expected active agent map
@@ -51,14 +51,14 @@ router:
 - Router decision shows `live_research_need: required`
 - Output profile is `GREENFIELD_BUILDER_PROFILE`
 - All GREENFIELD_BUILDER_PROFILE required sections present:
-  - product assumptions
-  - first release slice
-  - architecture baseline
-  - design system baseline
-  - folder topology
-  - analytics plan
-  - testing baseline
-  - release plan
+ - product assumptions
+ - first release slice
+ - architecture baseline
+ - design system baseline
+ - folder topology
+ - analytics plan
+ - testing baseline
+ - release plan
 - `reports/current/market-summary.md` exists (research was required, so this must run)
 - `reports/current/competitor-map.md` exists with at least 3 competitors at T1 or T5 trust
 - `reports/current/language-opportunity-map.md` exists with ADD_NOW / ADD_NEXT_WAVE labels

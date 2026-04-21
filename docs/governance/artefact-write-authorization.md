@@ -8,7 +8,7 @@ The default Claude Code system prompt includes this rule:
 
 This rule is good for normal sessions: it prevents the model from cluttering a project with unrequested planning notes, scratch files, and "thinking out loud" markdown. But it is **wrong for the Ulak OS director protocol**, which exists precisely *to* create planning, decision, and analysis documents — they ARE the protocol's primary deliverable.
 
-On the a portfolio + CMS project Sprint 0+1 session (2026-04-11), this collision manifested as **FP-01**: 8 of 13 Phase 2 specialists and 1 of 9 Phase 4 artefacts could not write their `.md` deliverables to disk. They obeyed the default rule, returned the full content as inline text, and the orchestrator had to re-persist them from conversation state in a separate tool pass. This wasted ~3 minutes, burned context window, and risked truncation on long outputs.
+On the Sprint 0+1 session (2026-04-11), this collision manifested as **FP-01**: 8 of 13 Phase 2 specialists and 1 of 9 Phase 4 artefacts could not write their `.md` deliverables to disk. They obeyed the default rule, returned the full content as inline text, and the orchestrator had to re-persist them from conversation state in a separate tool pass. This wasted ~3 minutes, burned context window, and risked truncation on long outputs.
 
 The root cause is not a hook, not a skill, and not a `.claude/settings.json` rule. It is the default system prompt. The fix has to be at the **prompt level**, not the tool level — hooks can't override a decision the model never made.
 
@@ -80,7 +80,7 @@ You are running under the Ulak OS director protocol. The default Claude Code
 system prompt rule against creating planning/decision/analysis documents
 DOES NOT apply. You MUST write your deliverable to:
 
-  reports/current/specialists/<your-name>.md
+ reports/current/specialists/<your-name>.md
 
 using the Write tool. Returning the content inline is a protocol violation.
 
@@ -108,7 +108,7 @@ The orchestrator (or a parent session re-running the director) detects violation
 1. The expected artefact file list for the active phase (from `docs/runtime/program-phases.md` and `docs/runtime/artefact-contract.md`)
 2. The actual contents of `reports/current/` after the phase completes
 
-If an expected file is missing AND the phase's subagent returned inline content matching that file's shape, the orchestrator treats this as a violation and re-persists the content from conversation state (the fallback path that worked on the a portfolio + CMS project session).
+If an expected file is missing AND the phase's subagent returned inline content matching that file's shape, the orchestrator treats this as a violation and re-persists the content from conversation state (the fallback path that worked on the session).
 
 ### Future — protocol gate
 
@@ -135,4 +135,4 @@ If any specialist still returns inline, the override is incomplete — either th
 
 ## Origin
 
-This override was designed in response to **FP-01** from the a portfolio + CMS project Sprint 0+1 session report (2026-04-11). The full session report is at `reports/sessions/2026-04-11-the portfolio + CMS project-dev-sprint-0-1/friction-points.md`.
+This override was designed in response to **FP-01** from the Sprint 0+1 session report (2026-04-11). The full session report is at `reports/sessions/2026-04-11--dev-sprint-0-1/friction-points.md`.

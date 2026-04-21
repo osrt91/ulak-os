@@ -4,7 +4,7 @@
 
 When the director runs `/director komple` on a project, the output is rich but narrative — 85 findings, 7 themes, 5 P0 blockers. That's actionable but not comparable. Question: "Is this project healthier than it was three months ago?" Answer: narrative can't tell you.
 
-A **14-dimension scorecard** adds numeric comparability. Each dimension gets a score 0–100, aggregated into a grade A–F. Runs separated by time produce deltas ("Architecture went 45 → 72, Testing still stuck at 30"). Projects can be compared ("this codebase is at grade C+; target grade B by end of quarter"). The framework was the baseline for the security scanner project's modernization (47.5 → 85 target across 18 weeks).
+A **14-dimension scorecard** adds numeric comparability. Each dimension gets a score 0–100, aggregated into a grade A–F. Runs separated by time produce deltas ("Architecture went 45 → 72, Testing still stuck at 30"). Projects can be compared ("this codebase is at grade C+; target grade B by end of quarter"). The framework was the baseline for modernization (47.5 → 85 target across 18 weeks).
 
 ## The 14 dimensions
 
@@ -54,9 +54,9 @@ Do NOT run scoring:
 - Mid-sprint (noise > signal)
 - On <2 weeks of changes (too few commits to move a dimension)
 
-## Worked example — a security scanner project baseline
+## Worked example — baseline
 
-Scores at the security scanner project's Sprint 0 (the director audit baseline):
+Scores at Sprint 0 (the director audit baseline):
 
 | Dimension | Current | Target |
 |---|---|---|
@@ -93,4 +93,4 @@ The 85-item roadmap closed the gap wave by wave; the "before/after" column in fi
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.1.3**. Evidence base: a security scanner project `_project_audit/00_master_index/methodology.md:107-161` and `final-executive-report.md:22-52`.
+Authoritative as of Ulak OS **v2.1.3**. md:107-161` and `final-executive-report.md:22-52`.

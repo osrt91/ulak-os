@@ -67,7 +67,7 @@ See `docs/governance/evidence-trust-scoring.md` for T1–T7 definitions. This fi
 
 In prose: `MAX_PARALLEL_AGENTS` (6 per Wave, see `docs/runtime/runtime-constants.md`)
 
-In YAML: `max_parallel_agents: 6  # MAX_PARALLEL_AGENTS`
+In YAML: `max_parallel_agents: 6 # MAX_PARALLEL_AGENTS`
 
 In code: the value should be imported from a config file that this doc declares as the source of truth (v2.2 ships a `config/runtime-constants.yaml` loaded by scripts).
 

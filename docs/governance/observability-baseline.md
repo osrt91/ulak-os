@@ -2,7 +2,7 @@
 
 ## Why this exists
 
-Several Ulak-family projects ship with **zero observability**: no structured logs, no metrics, no error tracker (Sentry / Rollbar / Honeybadger), no tracing. Production runs blind. A crash is visible only if a user reports it. A performance regression is visible only when someone manually notices slowness. A security event is visible only when it's too late.
+Several projects ship with **zero observability**: no structured logs, no metrics, no error tracker (Sentry / Rollbar / Honeybadger), no tracing. Production runs blind. A crash is visible only if a user reports it. A performance regression is visible only when someone manually notices slowness. A security event is visible only when it's too late.
 
 "Observability" is not optional for production services. This doc sets the minimum baseline every Ulak OS project should meet before a `signoff_status: ready` verdict.
 
@@ -53,17 +53,17 @@ Stack options (pick ONE stack per project):
 import * as Sentry from '@sentry/nextjs'
 
 if (process.env.NODE_ENV === 'production') {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.VERCEL_ENV || 'production',
-    release: process.env.VERCEL_GIT_COMMIT_SHA || process.env.GIT_SHA,
-    tracesSampleRate: 0.1,
-    // Scrub PII
-    beforeSend(event) {
-      if (event.user?.email) event.user.email = '[redacted]'
-      return event
-    },
-  })
+ Sentry.init({
+ dsn: process.env.SENTRY_DSN,
+ environment: process.env.VERCEL_ENV || 'production',
+ release: process.env.VERCEL_GIT_COMMIT_SHA || process.env.GIT_SHA,
+ tracesSampleRate: 0.1,
+ // Scrub PII
+ beforeSend(event) {
+ if (event.user?.email) event.user.email = '[redacted]'
+ return event
+ },
+ })
 }
 ```
 
@@ -79,22 +79,22 @@ from sentry_sdk import init as sentry_init
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 
 sentry_init(
-    dsn=os.getenv("SENTRY_DSN"),
-    environment=os.getenv("ENV", "production"),
-    release=os.getenv("GIT_SHA"),
-    traces_sample_rate=0.1,
-    integrations=[FastApiIntegration()],
+ dsn=os.getenv("SENTRY_DSN"),
+ environment=os.getenv("ENV", "production"),
+ release=os.getenv("GIT_SHA"),
+ traces_sample_rate=0.1,
+ integrations=[FastApiIntegration],
 )
 
 structlog.configure(
-    processors=[
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.add_log_level,
-        structlog.processors.JSONRenderer(),
-    ],
+ processors=[
+ structlog.processors.TimeStamper(fmt="iso"),
+ structlog.processors.add_log_level,
+ structlog.processors.JSONRenderer,
+ ],
 )
 
-log = structlog.get_logger()
+log = structlog.get_logger
 ```
 
 Plus: `prometheus-fastapi-instrumentator` for metrics.
@@ -105,11 +105,11 @@ Every service runs with:
 
 ```yaml
 logging:
-  driver: "json-file"
-  options:
-    max-size: "10m"
-    max-file: "5"
-    labels: "service"
+ driver: "json-file"
+ options:
+ max-size: "10m"
+ max-file: "5"
+ labels: "service"
 ```
 
 Plus: log aggregation sidecar (Vector / Promtail / Loki) OR stream to cloud (CloudWatch / Datadog Agent).
@@ -157,4 +157,4 @@ Observability has operational cost. Baseline DOES NOT mean "capture everything":
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.1**. Evidence base: cross-project scan confirming zero observability in the monorepo e-commerce project + the e-commerce project + the portfolio + CMS project + others (no Sentry/Datadog/logging library declared).
+Authoritative as of Ulak OS **v2.2.1**. 

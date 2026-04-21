@@ -7,13 +7,13 @@ Codex/Copilot tarafında güvenli ve taşınabilir yol; kök `AGENTS.md` ile rep
 1. Repo git altında olsun.
 2. Önce read-only/suggest tarzı modda repo okunsun.
 3. İlk istekte agent'a şu yönlendirmeyi ver:
-   ```
-   Read AGENTS.md, CLAUDE.md, prompts/core/ulak-os-core-contract-2.0.0.md,
-   docs/adapters/codex-cli.md, and docs/adapters/universal-runtime-contract.md.
-   Then execute the Phase 0 → Phase 5 protocol for: <görev>
-   ```
+ ```
+ Read AGENTS.md, CLAUDE.md, prompts/core/ulak-os-core-contract-2.0.0.md,
+ docs/adapters/codex-cli.md, and docs/adapters/universal-runtime-contract.md.
+ Then execute the Phase 0 → Phase 5 protocol for: <görev>
+ ```
 4. Sonra görev tipi açık yazılsın:
-   - greenfield / brownfield / rescue / refactor / release-readiness / localization
+ - greenfield / brownfield / rescue / refactor / release-readiness / localization
 
 ## v2.1 protokol özet
 Codex/Copilot, Claude Code'un autonomous-program-director'ünün eşdeğerini doğrudan çalıştırmaz, ama aynı 8-phase artefakt zincirini takip etmek **zorundadır**:

@@ -36,17 +36,17 @@ Every project `settings.json` SHOULD include a deny block for absolute safety, e
 
 ```json
 {
-  "permissions": {
-    "deny": [
-      "Bash(rm -rf /*)",
-      "Bash(rm -rf ~*)",
-      "Bash(git push --force*)",
-      "Bash(git push -f*)",
-      "Bash(git reset --hard*)",
-      "Bash(curl * | sh)",
-      "Bash(wget * | sh)"
-    ]
-  }
+ "permissions": {
+ "deny": [
+ "Bash(rm -rf /*)",
+ "Bash(rm -rf ~*)",
+ "Bash(git push --force*)",
+ "Bash(git push -f*)",
+ "Bash(git reset --hard*)",
+ "Bash(curl * | sh)",
+ "Bash(wget * | sh)"
+ ]
+ }
 }
 ```
 
@@ -58,11 +58,11 @@ Every entry in `enabledMcpjsonServers` (and every tool in `enabled_mcpjson_serve
 
 ```yaml
 mcp_authorized_tools:
-  github:
-    justification: "PR review and issue triage for v2.1.3 release; scoped to read + list operations"
-    approved_at: 2026-04-18
-    approved_by: osrt91
-    scope: read-only  # or read-write if write operations are intended
+ github:
+ justification: "PR review and issue triage for v2.1.3 release; scoped to read + list operations"
+ approved_at: 2026-04-18
+ approved_by: osrt91
+ scope: read-only # or read-write if write operations are intended
 ```
 
 If a server is enabled without a recorded justification, the release-readiness-auditor flags the run as `settings_governance: fail`.
@@ -78,11 +78,7 @@ If a server is enabled without a recorded justification, the release-readiness-a
 Sample `.gitignore` block for Claude Code projects:
 
 ```gitignore
-# Claude Code local settings (per-operator, never commit)
-.claude/settings.local.json
-.claude/scheduled_tasks.lock
-.claude/worktrees/
-.claude/logs/
+# Claude Code local settings (per-operator, never commit).claude/settings.local.json.claude/scheduled_tasks.lock.claude/worktrees/.claude/logs/
 ```
 
 ## Hooks surface
@@ -101,30 +97,30 @@ A project with zero hooks declared is not a gap; it's a minimal surface. But if 
 
 ```json
 {
-  "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "permissions": {
-    "allow": [
-      "Read(**)",
-      "Glob(**)",
-      "Grep(**)",
-      "Edit(**)",
-      "Write(**)",
-      "Bash(git:*)",
-      "Bash(npm:*)",
-      "WebFetch(domain:docs.claude.com)"
-    ],
-    "deny": [
-      "Bash(rm -rf /*)",
-      "Bash(git push --force*)",
-      "Bash(git reset --hard*)"
-    ]
-  }
+ "$schema": "https://json.schemastore.org/claude-code-settings.json",
+ "permissions": {
+ "allow": [
+ "Read(**)",
+ "Glob(**)",
+ "Grep(**)",
+ "Edit(**)",
+ "Write(**)",
+ "Bash(git:*)",
+ "Bash(npm:*)",
+ "WebFetch(domain:docs.claude.com)"
+ ],
+ "deny": [
+ "Bash(rm -rf /*)",
+ "Bash(git push --force*)",
+ "Bash(git reset --hard*)"
+ ]
+ }
 }
 ```
 
-### the security scanner project-derived lesson — what NOT to ship
+### -derived lesson — what NOT to ship
 
-a security scanner project's settings.json (before the self-audit) shipped:
+settings.json (before the self-audit) shipped:
 
 ```json
 { "permissions": { "allow": ["Bash(*)", "Read(*)", "Write(*)", "Edit(*)", "MultiEdit(*)", "Delete(*)"] } }
@@ -143,4 +139,4 @@ This is **effective root access** inside the repo. The fix: replace with scoped 
 
 ## Canonical footer
 
-This file is authoritative as of Ulak OS **v2.1.3**. the security scanner project-derived SP (settings-permissions) findings FIND-SEC-01+02 and the pattern extraction bucket G-04 are the evidence base.
+This file is authoritative as of Ulak OS **v2.1.3**. -derived SP (settings-permissions) findings FIND-SEC-01+02 and the pattern extraction bucket G-04 are the evidence base.

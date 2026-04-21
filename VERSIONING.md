@@ -3,19 +3,19 @@
 ## Ulak OS — Public release line
 
 - **2.0.0** — CLI Console + Memory + Vendor Adapters (2026-04-09)
-  - CLI orchestration layer (`ulak` binary with 8 subcommands)
-  - SQLite + FTS5 project memory
-  - Vendor adapter abstraction (subprocess-based)
-  - Pack versioning and upgrade system
-  - TypeScript project infrastructure
-  - Full platform command parity and EN translation coverage
+ - CLI orchestration layer (`ulak` binary with 8 subcommands)
+ - SQLite + FTS5 project memory
+ - Vendor adapter abstraction (subprocess-based)
+ - Pack versioning and upgrade system
+ - TypeScript project infrastructure
+ - Full platform command parity and EN translation coverage
 
 - **1.0.0** — First Stable Public Release (2026-04-07)
-  - Brand transition Claude Ulak → Ulak OS
-  - Three-vendor adapter parity
-  - CI quality gates + cross-platform bootstrap scripts
-  - Multi-language: TR + EN parallel
-  - awesome-design-md integration + ecosystem related-work doc
+ - Brand transition Claude Ulak → Ulak OS
+ - Three-vendor adapter parity
+ - CI quality gates + cross-platform bootstrap scripts
+ - Multi-language: TR + EN parallel
+ - awesome-design-md integration + ecosystem related-work doc
 
 The pre-1.0.0 internal "Claude Ulak" development series is documented below for historical reference.
 

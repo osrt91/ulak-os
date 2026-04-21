@@ -4,7 +4,7 @@
 
 Claude Code sessions write transient lock files to signal "I'm the active session holding this resource." If a session crashes, is force-killed, or the machine reboots, the lock file persists as a zombie — future sessions see it, assume the resource is held, and refuse to proceed.
 
-The a security scanner project self-audit revealed `.claude/scheduled_tasks.lock` containing a raw `pid` with no TTL, no liveness check, no owner session tag. A machine reboot would leave that lock in place; a new session would then either deadlock or clobber it. Ulak OS's own repo had the same shape.
+The self-audit revealed `.claude/scheduled_tasks.lock` containing a raw `pid` with no TTL, no liveness check, no owner session tag. A machine reboot would leave that lock in place; a new session would then either deadlock or clobber it. Ulak OS's own repo had the same shape.
 
 This doc is the doctrine to prevent zombie locks.
 
@@ -25,12 +25,12 @@ Example well-formed lock:
 
 ```json
 {
-  "sessionId": "a3f1-b29c",
-  "pid": 18440,
-  "acquiredAt": 1776470622303,
-  "ttlSeconds": 3600,
-  "resource": "scheduled-task-runner",
-  "holder": "director-komple-ulakos-self-audit"
+ "sessionId": "a3f1-b29c",
+ "pid": 18440,
+ "acquiredAt": 1776470622303,
+ "ttlSeconds": 3600,
+ "resource": "scheduled-task-runner",
+ "holder": "director-komple-ulakos-self-audit"
 }
 ```
 
@@ -48,9 +48,9 @@ Breaking a lock means:
 
 1. Move the old lock file to `.claude/broken-locks/<timestamp>-<resource>.json` (audit trail)
 2. Emit a log line to `runtime-manifest.md § broken_locks`:
-   ```
-   Broken lock at .claude/scheduled_tasks.lock. Reason: pid 18440 not alive on this machine. Moved to .claude/broken-locks/2026-04-18T14:22:01Z-scheduled-task-runner.json.
-   ```
+ ```
+ Broken lock at.claude/scheduled_tasks.lock. Reason: pid 18440 not alive on this machine. Moved to.claude/broken-locks/2026-04-18T14:22:01Z-scheduled-task-runner.json.
+ ```
 3. Proceed to acquire the lock fresh
 
 Never silently delete a zombie lock. The audit trail matters when debugging "why did two sessions run at once".
@@ -67,11 +67,7 @@ Every lock file pattern under `.claude/` MUST be gitignored. Lock files are per-
 
 Standard `.gitignore` block (covered by `docs/governance/settings-permissions-governance.md` too):
 
-```gitignore
-.claude/scheduled_tasks.lock
-.claude/*.lock
-.claude/worktrees/
-.claude/broken-locks/
+```gitignore.claude/scheduled_tasks.lock.claude/*.lock.claude/worktrees/.claude/broken-locks/
 ```
 
 ## Cross-environment concerns
@@ -82,7 +78,7 @@ Standard `.gitignore` block (covered by `docs/governance/settings-permissions-go
 
 ## Integration
 
-- `docs/governance/settings-permissions-governance.md` — .gitignore block for lock files
+- `docs/governance/settings-permissions-governance.md` —.gitignore block for lock files
 - `docs/governance/memory-hygiene.md` — worktree cleanup including dead worktrees with stale locks
 - `docs/runtime/program-phases.md` — Phase 0 liveness sweep
 - `docs/runtime/toolchain-precheck.md` — environment check may record pid capability (ps, Get-Process)
@@ -90,4 +86,4 @@ Standard `.gitignore` block (covered by `docs/governance/settings-permissions-go
 
 ## Canonical footer
 
-This file is authoritative as of Ulak OS **v2.1.3**. The motivating evidence is a security scanner project's `scheduled_tasks.lock` containing pid 18440 from 2026-04-18 with no TTL (FIND-INF-* category in the v2.1.3 audit).
+This file is authoritative as of Ulak OS **v2.1.3**. The motivating evidence is `scheduled_tasks.lock` containing pid 18440 from 2026-04-18 with no TTL (FIND-INF-* category in the v2.1.3 audit).

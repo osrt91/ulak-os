@@ -14,18 +14,18 @@ Safely decompose a single-file monolith into a multi-module package without a bi
 
 ## When to use
 
-Invoke when `inventory.md` or an anti-patterns match flags a "God module (>1000 LOC)" finding. Representative example: a security scanner project's `the security scanner project.py` (146KB, 15+ responsibilities) decomposed to a 73-line shim backed by `app/main.py` + `app/routers/*.py`.
+Invoke when `inventory.md` or an anti-patterns match flags a "God module (>1000 LOC)" finding. Representative example: `.py` (146KB, 15+ responsibilities) decomposed to a 73-line shim backed by `app/main.py` + `app/routers/*.py`.
 
 ## Inputs
 
-- `source_file` — absolute path to the monolith (e.g., `C:/Users/osrt91/desktop/proje/<project>/the security scanner project.py`)
+- `source_file` — absolute path to the monolith (e.g., `C:/Users/osrt91/desktop/proje/<project>/.py`)
 - `target_package` — destination package name (e.g., `app`)
 - `extraction_plan` — YAML document listing phases A/B/C/D with:
-  - `phase_id` — A / B / C / D
-  - `step_id` — A.1 / A.2 / ... within phase
-  - `source_line_range` — lines in the monolith to move
-  - `target_module` — destination path (e.g., `app/services/scoring.py`)
-  - `dependencies` — prior step_ids this depends on
+ - `phase_id` — A / B / C / D
+ - `step_id` — A.1 / A.2 /... within phase
+ - `source_line_range` — lines in the monolith to move
+ - `target_module` — destination path (e.g., `app/services/scoring.py`)
+ - `dependencies` — prior step_ids this depends on
 - `test_command` — command to run after each step (e.g., `pytest tests/`)
 
 ## Outputs

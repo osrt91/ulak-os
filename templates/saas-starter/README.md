@@ -44,7 +44,7 @@ The scaffolder reads these as starting points and substitutes `{{product_name}}`
 - `supabase/migrations/00002_rls_policies.sql.template` — RLS policies with service_role bypass + admin gates
 - `.github/workflows/ci-validation.yml.template` — validate + gitleaks + e2e jobs (all blocking)
 - `scripts/preflight.sh.template` — pre-push parity (fast / full modes)
-- `scripts/install-hooks.sh.template` — installs .githooks/pre-push; bypass-via-commit-message policy
+- `scripts/install-hooks.sh.template` — installs.githooks/pre-push; bypass-via-commit-message policy
 - `infrastructure/deploy.sh.template` — webhook-triggered + health probe + SHA verification + automated rollback (AP-12/AP-18 prevention)
 - `infrastructure/kale-kapisi.sh.template` — VPS hardening (SSH port, key-only, UFW, fail2ban, dual-session safety rule)
 

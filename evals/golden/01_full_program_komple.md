@@ -8,20 +8,20 @@
 
 ```yaml
 router:
-  task_type: intervention
-  active_mode: full-program
-  project_state: brownfield
-  intervention_mode: RESCUE
-  scope_level: multi-surface-full-system
-  live_research_need: helpful
-  artefact_program: full
-  output_type: markdown-artifact-set
-  output_profile: BROWNFIELD_INTERVENTION_PROFILE
-  required_overlays: []
-  required_sector_packs: []
-  validation_depth: standard
-  max_parallel_agents: 6
-  rationale: "Intent is explicit 'full / komple'. No menu loop; router completes from phrasing alone."
+ task_type: intervention
+ active_mode: full-program
+ project_state: brownfield
+ intervention_mode: RESCUE
+ scope_level: multi-surface-full-system
+ live_research_need: helpful
+ artefact_program: full
+ output_type: markdown-artifact-set
+ output_profile: BROWNFIELD_INTERVENTION_PROFILE
+ required_overlays: []
+ required_sector_packs: []
+ validation_depth: standard
+ max_parallel_agents: 6
+ rationale: "Intent is explicit 'full / komple'. No menu loop; router completes from phrasing alone."
 ```
 
 ## Expected active agent map

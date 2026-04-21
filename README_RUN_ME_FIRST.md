@@ -20,9 +20,9 @@
 1. Open this folder as your project root.
 2. Read `README.md`.
 3. Pick your runtime:
-   - Claude Code → use `CLAUDE.md` and `/director komple`
-   - Codex/Copilot → use `AGENTS.md`
-   - Gemini CLI → use `GEMINI.md`, then `/memory reload` and `/commands reload`
+ - Claude Code → use `CLAUDE.md` and `/director komple`
+ - Codex/Copilot → use `AGENTS.md`
+ - Gemini CLI → use `GEMINI.md`, then `/memory reload` and `/commands reload`
 4. Let the system create and maintain the report artefacts under `reports/current/`.
 
 ## Safe default

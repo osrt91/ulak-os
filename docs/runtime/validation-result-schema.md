@@ -10,54 +10,54 @@ Every manager-verdict must carry or link to this block (typically in `reports/cu
 
 ```yaml
 validation:
-  # ----- engineering gates -----
-  build: pass|fail|not-run|not-applicable
-  lint: pass|fail|not-run|not-applicable
-  typecheck: pass|fail|not-run|not-applicable
+ # ----- engineering gates -----
+ build: pass|fail|not-run|not-applicable
+ lint: pass|fail|not-run|not-applicable
+ typecheck: pass|fail|not-run|not-applicable
 
-  # ----- test gates -----
-  tests:
-    unit: pass|fail|partial|not-run|not-applicable
-    integration: pass|fail|partial|not-run|not-applicable
-    e2e: pass|fail|partial|not-run|not-applicable
-    contract: pass|fail|partial|not-run|not-applicable
-    visual_regression: pass|fail|partial|not-run|not-applicable
-    accessibility: pass|fail|partial|not-run|not-applicable
-    security_regression: pass|fail|partial|not-run|not-applicable
-    localization: pass|fail|partial|not-run|not-applicable
-    release_checks: pass|fail|partial|not-run|not-applicable
-    prompt_regression: pass|fail|partial|not-run|not-applicable
+ # ----- test gates -----
+ tests:
+ unit: pass|fail|partial|not-run|not-applicable
+ integration: pass|fail|partial|not-run|not-applicable
+ e2e: pass|fail|partial|not-run|not-applicable
+ contract: pass|fail|partial|not-run|not-applicable
+ visual_regression: pass|fail|partial|not-run|not-applicable
+ accessibility: pass|fail|partial|not-run|not-applicable
+ security_regression: pass|fail|partial|not-run|not-applicable
+ localization: pass|fail|partial|not-run|not-applicable
+ release_checks: pass|fail|partial|not-run|not-applicable
+ prompt_regression: pass|fail|partial|not-run|not-applicable
 
-  # ----- surface checks -----
-  surfaces:
-    broken_links: pass|fail|partial|not-run|not-applicable
-    broken_routes: pass|fail|partial|not-run|not-applicable
-    broken_endpoints: pass|fail|partial|not-run|not-applicable
-    deep_links: pass|fail|partial|not-run|not-applicable
-    store_listing_urls: pass|fail|partial|not-run|not-applicable
+ # ----- surface checks -----
+ surfaces:
+ broken_links: pass|fail|partial|not-run|not-applicable
+ broken_routes: pass|fail|partial|not-run|not-applicable
+ broken_endpoints: pass|fail|partial|not-run|not-applicable
+ deep_links: pass|fail|partial|not-run|not-applicable
+ store_listing_urls: pass|fail|partial|not-run|not-applicable
 
-  # ----- risk state -----
-  unresolved_risks: []                    # list of FIND-* ids still open
-  residual_risks:                         # things known to remain after this run
-    - id: ""
-      description: ""
-      severity: Critical|High|Medium|Low
-      mitigation: ""
+ # ----- risk state -----
+ unresolved_risks: [] # list of FIND-* ids still open
+ residual_risks: # things known to remain after this run
+ - id: ""
+ description: ""
+ severity: Critical|High|Medium|Low
+ mitigation: ""
 
-  # ----- rollback -----
-  rollback_ready: yes|no|partial
-  rollback_notes: ""
+ # ----- rollback -----
+ rollback_ready: yes|no|partial
+ rollback_notes: ""
 
-  # ----- evidence for the gates -----
-  evidence:
-    - gate: ""                            # e.g. "lint"
-      command: ""                         # e.g. "pnpm lint"
-      output_reference: ""                # file path or log id
-      trust: T1|T2|T3|T4|T5|T6|T7
+ # ----- evidence for the gates -----
+ evidence:
+ - gate: "" # e.g. "lint"
+ command: "" # e.g. "pnpm lint"
+ output_reference: "" # file path or log id
+ trust: T1|T2|T3|T4|T5|T6|T7
 
-  # ----- signoff -----
-  signoff_status: blocked|conditional|ready
-  signoff_reason: ""
+ # ----- signoff -----
+ signoff_status: blocked|conditional|ready
+ signoff_reason: ""
 ```
 
 ## Status definitions

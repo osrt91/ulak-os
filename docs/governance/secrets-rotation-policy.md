@@ -4,7 +4,7 @@
 
 Every production secret has a half-life. An unrotated secret with 3 years of history has a different blast radius than the same secret with 30-day rotation. Teams that don't rotate discover this the hard way — a disgruntled ex-contributor's environment still has the prod JWT secret, or a committed `.env` from 2023 still authorizes to 2026's prod API.
 
-Ulak-family projects inherit a pattern from the security scanner project / the monorepo e-commerce project / the community/event platform project: **static JWT_SECRET, static POSTGRES_PASSWORD, static PAYMENT_ENCRYPTION_KEY**. No rotation documented. No schedule. Credential sharing across services means one leak compromises everything.
+projects inherit a pattern from / / : **static JWT_SECRET, static POSTGRES_PASSWORD, static PAYMENT_ENCRYPTION_KEY**. No rotation documented. No schedule. Credential sharing across services means one leak compromises everything.
 
 This doc is the discipline. It answers: which secret rotates how often, who rotates it, what happens when rotation fails mid-flight.
 
@@ -40,11 +40,11 @@ Multi-signatory rotations (e.g., payment keys that require Finance + Tech Lead a
 Every rotation follows the same 9-step protocol:
 
 1. **Pre-rotation check** — verify current secret is present in:
-   - runtime env of prod
-   - staging env (if exists)
-   - CI secrets store
-   - operator local `.env.local` (if applicable)
-   - all backup retention layers (if secret would be used post-restore)
+ - runtime env of prod
+ - staging env (if exists)
+ - CI secrets store
+ - operator local `.env.local` (if applicable)
+ - all backup retention layers (if secret would be used post-restore)
 
 2. **Generate new value** — from the provider (Supabase dashboard / Stripe / Cloudflare / openssl rand) NOT a hand-crafted string
 
@@ -59,18 +59,18 @@ Every rotation follows the same 9-step protocol:
 7. **Revoke old value** — from the provider. NOT before step 6 completes. NOT after a calendar wait.
 
 8. **Audit entry** — append to `reports/current/secret-rotation-log.md` (or per-project equivalent):
-   ```yaml
-   - date: 2026-04-20T14:00:00Z
-     secret_class: "jwt_signing_key"
-     rotated_by: "operator-identifier"
-     reason: "scheduled 90-day rotation"
-     old_value_fingerprint: "sha256-first-8-of-old"
-     new_value_fingerprint: "sha256-first-8-of-new"
-     cutover_time_utc: 2026-04-20T14:12:00Z
-     revoked_old_at_utc: 2026-04-20T14:40:00Z
-     rollback_used: false
-     notes: "zero downtime; dual-issue window 12 min"
-   ```
+ ```yaml
+ - date: 2026-04-20T14:00:00Z
+ secret_class: "jwt_signing_key"
+ rotated_by: "operator-identifier"
+ reason: "scheduled 90-day rotation"
+ old_value_fingerprint: "sha256-first-8-of-old"
+ new_value_fingerprint: "sha256-first-8-of-new"
+ cutover_time_utc: 2026-04-20T14:12:00Z
+ revoked_old_at_utc: 2026-04-20T14:40:00Z
+ rollback_used: false
+ notes: "zero downtime; dual-issue window 12 min"
+ ```
 
 9. **Update rotation-due date** — record next rotation in `active-variables.yaml` under `mcp_authorized_tools` (or equivalent) for scheduled alerting
 
@@ -90,11 +90,11 @@ If the OLD value cannot be restored (revoked too early):
 
 ## Shared-secret hazards
 
-Several projects in the Ulak-family portfolio share secrets across repos:
+When multiple projects share infrastructure, a single rotation affects multiple consumers:
 
-- **JWT_SECRET reused** across Kong gateway + Supabase auth (a portfolio + CMS project finding DIR-005)
-- **Cloudflare account credentials** shared across the monorepo e-commerce project + the e-commerce project + others
-- **Shared Supabase instance** (schema isolation, but same master credentials)
+- **JWT_SECRET reused** across gateway + auth service (single rotation invalidates all sessions)
+- **Cloudflare account credentials** shared across sibling projects (DNS / WAF / cache control)
+- **Shared Supabase instance** (schema isolation only; same master credentials)
 - **Shared SMTP relay** (one credential serves multiple transactional-email surfaces)
 
 These shared-secret arrangements concentrate blast radius. Each shared secret gets a **multi-project rotation window** — rotating once triggers coordinated update across all consumers. The rotation log records which consumer was updated at which timestamp.
@@ -107,7 +107,7 @@ These shared-secret arrangements concentrate blast radius. Each shared secret ge
 ## Anti-patterns
 
 - **"We'll rotate when someone leaves"** — by the time someone leaves, the secret has likely been copied to a personal machine
-- **"Secrets in committed files"** — AP-11 (the security scanner project lineage) — does not live here but cross-references
+- **"Secrets in committed files"** — AP-11 (lineage) — does not live here but cross-references
 - **Root `.env.local` in monorepo** — see AP-19 (v2.2.1); one rotation must touch all app-level `.env.local` copies
 - **Static encryption-at-rest key** — means re-encrypt migration is impossible; plan rotation path from day 1
 - **Rotation without dual-issue window** — cuts over in a single step, any in-flight request fails
@@ -123,4 +123,4 @@ These shared-secret arrangements concentrate blast radius. Each shared secret ge
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.1**. Evidence base: cross-project scan observing static long-lived secrets across the security scanner project / the monorepo e-commerce project / the B2B multi-locale SaaS project / the EdTech AI platform project / the portfolio + CMS project. No real secret values in this document by policy.
+Authoritative as of Ulak OS **v2.2.1**. No real secret values in this document by policy.

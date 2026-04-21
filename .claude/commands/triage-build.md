@@ -5,7 +5,7 @@ phases_run: [0]
 
 # /triage-build
 
-Generalized from a security scanner project's `/fix-build` command. Stack-agnostic triage flow for any Ulak-OS-managed project.
+Generalized from `/fix-build` command. Stack-agnostic triage flow for any projects.
 
 ## Flow
 
@@ -35,7 +35,7 @@ Common causes + fixes:
 - `Cannot find module '...'` — `pnpm install` skipped or lockfile drift; run `pnpm install --frozen-lockfile`
 - `Type '...' is not assignable to '...'` — recent contract change; check `types/` generated from backend OpenAPI
 - `Cannot find name 'X'` — missing `import` or missing types package; check `@types/*` in devDependencies
-- Stale Next.js cache — `rm -rf .next` and rebuild
+- Stale Next.js cache — `rm -rf.next` and rebuild
 - Tailwind content paths broken — check `tailwind.config.ts` `content:` glob matches current src layout
 
 ## Backend subsystem (Python / FastAPI / Django)
@@ -46,7 +46,7 @@ pip install -r requirements.txt
 # type
 mypy --strict app/
 # lint
-ruff check .
+ruff check.
 # test
 pytest -x --tb=short
 ```
@@ -54,10 +54,10 @@ pytest -x --tb=short
 Common causes + fixes:
 
 - `ImportError: cannot import name` — circular import; check for Strangler-Fig-pending file with mutual deps
-- `SQLAlchemy ... not found` — migration not run; check `alembic current` and `alembic upgrade head`
+- `SQLAlchemy... not found` — migration not run; check `alembic current` and `alembic upgrade head`
 - `KeyError: '<ENV_VAR>'` — `.env.local` missing or `.env.example` out of date
 - `pytest` hangs on one test — often DB fixture not torn down; check for `yield`-style fixtures without cleanup
-- `RuntimeError: Event loop is closed` — sync code in async endpoint; grep for `.json()` vs `.json()` on a dict inside `async def`
+- `RuntimeError: Event loop is closed` — sync code in async endpoint; grep for `.json` vs `.json` on a dict inside `async def`
 
 ## Container subsystem (Docker / Compose)
 
@@ -74,7 +74,7 @@ docker inspect <container> | grep -A 5 Healthcheck
 
 Common causes + fixes:
 
-- `Cannot start service ... network not found` — `docker network create <name>` or re-run `deploy.sh` precheck
+- `Cannot start service... network not found` — `docker network create <name>` or re-run `deploy.sh` precheck
 - Service crashloop — `docker compose logs <service>` → usually missing env var or missing volume mount
 - Healthcheck failing — check the healthcheck endpoint actually exists + returns 200 under the probe's cmd
 - `connect: connection refused` to a sibling container — wrong service name in connection URL (use compose service name, not localhost)

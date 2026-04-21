@@ -35,18 +35,18 @@ A new directory under the operator's chosen path containing:
 ## Inputs (collected interactively or via args)
 
 ```yaml
-product_name: "wording-manager"          # kebab-case; used for package.json + directory + Supabase schema
-product_domain: "content-ops"            # one of: saas, ecommerce, edtech, fintech, marketplace, content-ops, community, dev-tools
-stack_frontend: "nextjs"                 # nextjs | remix | sveltekit (nextjs default; others require custom work)
-stack_backend: "supabase"                # supabase | node-fastapi | hybrid
-locale_primary: "tr"                     # tr | en (determines which rule packs load)
-locales_supported: ["tr", "en"]          # array
-payment_provider: "iyzico"               # none | stripe | iyzico | both
-has_reseller_tier: false                 # true activates SP-05 reseller-enabled-saas
-has_admin_surface: true                  # nearly always true
-has_mobile: false                        # true scaffolds a mobile/ workspace (Expo + react-native-expo rule pack)
-hosting: "self-managed-vps"              # self-managed-vps | vercel | fly | railway
-output_path: "../wording-manager"        # where to scaffold; sibling directory by default
+product_name: "wording-manager" # kebab-case; used for package.json + directory + Supabase schema
+product_domain: "content-ops" # one of: saas, ecommerce, edtech, fintech, marketplace, content-ops, community, dev-tools
+stack_frontend: "nextjs" # nextjs | remix | sveltekit (nextjs default; others require custom work)
+stack_backend: "supabase" # supabase | node-fastapi | hybrid
+locale_primary: "tr" # tr | en (determines which rule packs load)
+locales_supported: ["tr", "en"] # array
+payment_provider: "iyzico" # none | stripe | iyzico | both
+has_reseller_tier: false # true activates SP-05 reseller-enabled-saas
+has_admin_surface: true # nearly always true
+has_mobile: false # true scaffolds a mobile/ workspace (Expo + react-native-expo rule pack)
+hosting: "self-managed-vps" # self-managed-vps | vercel | fly | railway
+output_path: "../wording-manager" # where to scaffold; sibling directory by default
 ```
 
 Any field can be omitted; the command will prompt for required fields before executing.
@@ -75,10 +75,10 @@ Dispatches the `saas-scaffolder` skill which:
 3. Writes app/ structure (public / auth / customer / admin / [partner/ if has_reseller_tier])
 4. Writes supabase/ migrations with RLS templates
 5. Writes infrastructure/ compose + prod override + kale-kapisi.sh
-6. Writes .github/workflows/ CI + dependabot + gitleaks
+6. Writes.github/workflows/ CI + dependabot + gitleaks
 7. Writes tests/ with vitest + playwright stubs
 8. Writes scripts/preflight.sh + install-hooks.sh
-9. Writes .env.example + .gitignore + .claude/ tree
+9. Writes.env.example +.gitignore +.claude/ tree
 10. Writes CLAUDE.md that imports Ulak OS core contract
 11. Runs `git init` + first commit
 
@@ -87,12 +87,11 @@ Dispatches the `saas-scaffolder` skill which:
 After the scaffold completes, the operator runs in the new project directory:
 
 ```bash
-cd ../wording-manager
+cd../wording-manager
 pnpm install
-cp .env.example .env.local
-# fill .env.local with real values
-pnpm dev                    # verify baseline works
-./scripts/install-hooks.sh  # pre-push parity
+cp.env.example.env.local
+# fill.env.local with real values
+pnpm dev # verify baseline works./scripts/install-hooks.sh # pre-push parity
 ```
 
 Then optionally runs `/director komple` from Ulak OS on the new project to validate the baseline health score.

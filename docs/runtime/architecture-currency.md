@@ -15,29 +15,29 @@ The model's training data has a cutoff. The project's stack is what it is today.
 Before making a serious architectural recommendation, answer:
 
 1. **What stack is actually in use?**
-   Read from the repo (T2), not from assumptions. Package manifests, lockfiles, build configs, imports.
+ Read from the repo (T2), not from assumptions. Package manifests, lockfiles, build configs, imports.
 
 2. **What does the official source currently say?**
-   Consult upstream docs at T1 priority:
-   - Anthropic / Claude Code docs for Claude runtime
-   - Apple HIG / SwiftUI / UIKit docs
-   - Android Developers docs / adaptive quality guide
-   - Flutter docs (including Cupertino for iOS fidelity)
-   - Framework / language upstream docs (React, Next.js, Python, Rust, Go...)
-   - Platform store guidelines (App Store, Google Play)
-   - Security and privacy upstream sources (OWASP, RFCs, NIST)
+ Consult upstream docs at T1 priority:
+ - Anthropic / Claude Code docs for Claude runtime
+ - Apple HIG / SwiftUI / UIKit docs
+ - Android Developers docs / adaptive quality guide
+ - Flutter docs (including Cupertino for iOS fidelity)
+ - Framework / language upstream docs (React, Next.js, Python, Rust, Go...)
+ - Platform store guidelines (App Store, Google Play)
+ - Security and privacy upstream sources (OWASP, RFCs, NIST)
 
 3. **Is the recommended pattern stable or experimental?**
-   Unstable APIs get a label. Never present an experimental feature as "the way".
+ Unstable APIs get a label. Never present an experimental feature as "the way".
 
 4. **Is there a deprecated surface involved?**
-   If the project uses a deprecated feature, the target state must mention the migration path.
+ If the project uses a deprecated feature, the target state must mention the migration path.
 
 5. **What's the migration cost?**
-   "Upgrade to the new way" is cheap when it's a flag. It's expensive when it's a rewrite. Record the cost.
+ "Upgrade to the new way" is cheap when it's a flag. It's expensive when it's a rewrite. Record the cost.
 
 6. **Does the team / product scale match the recommendation?**
-   A 3-person team does not need the pattern that scales to 300 engineers. Match the advice to the ship.
+ A 3-person team does not need the pattern that scales to 300 engineers. Match the advice to the ship.
 
 ## Labels
 
@@ -57,18 +57,18 @@ Every serious architecture recommendation (in `target-state.md` or a specialist'
 
 ```yaml
 - id: "ARCH-001"
-  area: ""                                # frontend|backend|data|infra|security|mobile|...
-  recommendation: ""
-  label: CURRENT_RECOMMENDED|CURRENT_BUT_CONDITIONAL|LEGACY_STILL_VALID|OUTDATED_AVOID|EXPERIMENTAL_NOT_DEFAULT
-  why_now: ""                             # 1-3 sentences
-  upstream_source: ""                     # URL or doc reference
-  upstream_trust: T1|T5                   # T1 for official, T5 for reputable secondary
-  constraints: []                         # e.g. requires Node 20+, requires specific DB version
-  tradeoffs: []                           # what gets worse to make this better
-  migration_impact: low|medium|high|critical
-  migration_steps_summary: ""
-  localization_impact: ""                 # does this affect i18n or locale handling?
-  validation_plan: ""                     # how to verify the migration or adoption succeeded
+ area: "" # frontend|backend|data|infra|security|mobile|...
+ recommendation: ""
+ label: CURRENT_RECOMMENDED|CURRENT_BUT_CONDITIONAL|LEGACY_STILL_VALID|OUTDATED_AVOID|EXPERIMENTAL_NOT_DEFAULT
+ why_now: "" # 1-3 sentences
+ upstream_source: "" # URL or doc reference
+ upstream_trust: T1|T5 # T1 for official, T5 for reputable secondary
+ constraints: [] # e.g. requires Node 20+, requires specific DB version
+ tradeoffs: [] # what gets worse to make this better
+ migration_impact: low|medium|high|critical
+ migration_steps_summary: ""
+ localization_impact: "" # does this affect i18n or locale handling?
+ validation_plan: "" # how to verify the migration or adoption succeeded
 ```
 
 ## Hard rules
@@ -110,7 +110,7 @@ Fallback paths without smoke checks are incomplete.
 
 Cron-poll fallback existence is a T1 observation (file exists, executable, has flock). Its effectiveness under a real primary outage is T2 (inferred — often not truly tested). Projects should run a quarterly "fallback drill" where the primary CI is artificially disabled and the fallback is exercised.
 
-Derived from a security scanner project `infrastructure/deploy-poll.sh:1-69` (flock-guarded, 2-minute polling, rebuild + smoke-check).
+sh:1-69` (flock-guarded, 2-minute polling, rebuild + smoke-check).
 
 ## Integration
 

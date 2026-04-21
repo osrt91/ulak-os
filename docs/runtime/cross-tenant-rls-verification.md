@@ -4,7 +4,7 @@
 
 When multiple tenants share a single Postgres (or Supabase) instance with schema-level isolation, Row-Level Security policies are the only thing preventing cross-tenant data access. Writing RLS is easy. **Testing that RLS actually isolates** is the missing discipline.
 
-Observed across Ulak-family projects: `NEXT_PUBLIC_SUPABASE_URL` points to a shared Supabase instance; `NEXT_PUBLIC_SUPABASE_SCHEMA` varies per project. Each project declares its own RLS policies. Nobody verifies at runtime that Project A's service-role key cannot read Project B's tables.
+Observed across projects: `NEXT_PUBLIC_SUPABASE_URL` points to a shared Supabase instance; `NEXT_PUBLIC_SUPABASE_SCHEMA` varies per project. Each project declares its own RLS policies. Nobody verifies at runtime that Project A's service-role key cannot read Project B's tables.
 
 This doc is the discipline. RLS intent + tests for RLS intent = isolation guarantee. Without tests, a single missed policy leaks every tenant.
 
@@ -124,25 +124,24 @@ Example output:
 
 ```yaml
 rls_verification:
-  timestamp: 2026-04-20T15:00:00Z
-  supabase_url_fingerprint: sha256-first-8  # never the actual URL
-  tested_schemas:
-    - schema: tenant_a
-      anon_select: denied
-      cross_tenant_select: denied
-      service_role_escape: expected-denied-OR-global
-      cross_tenant_insert: denied
-      result: verified
-    - schema: tenant_b
-      ...
-  global_service_role_present: true
-  global_service_role_locations_checked:
-    - CI secrets: present
-    - prod env: present
-    - operator local: present
-  notes: |
-    Global service_role bypasses RLS. Confirmed scoped to server-side usage
-    only. No client-side imports of supabase-admin.ts.
+ timestamp: 2026-04-20T15:00:00Z
+ supabase_url_fingerprint: sha256-first-8 # never the actual URL
+ tested_schemas:
+ - schema: tenant_a
+ anon_select: denied
+ cross_tenant_select: denied
+ service_role_escape: expected-denied-OR-global
+ cross_tenant_insert: denied
+ result: verified
+ - schema: tenant_b...
+ global_service_role_present: true
+ global_service_role_locations_checked:
+ - CI secrets: present
+ - prod env: present
+ - operator local: present
+ notes: |
+ Global service_role bypasses RLS. Confirmed scoped to server-side usage
+ only. No client-side imports of supabase-admin.ts.
 ```
 
 ## Integration
@@ -156,4 +155,4 @@ rls_verification:
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.1**. Evidence base: a monorepo e-commerce project + an e-commerce project + a B2B multi-locale SaaS project cross-project scan showing shared Supabase instance with schema-per-tenant isolation but no runtime verification of isolation.
+Authoritative as of Ulak OS **v2.2.1**. 

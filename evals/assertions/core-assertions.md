@@ -12,8 +12,8 @@ The output must contain a specific string, file, or field.
 
 ```yaml
 - type: must_include
-  target: "reports/current/runtime-manifest.md"
-  description: "Runtime manifest must be created in Phase 0"
+ target: "reports/current/runtime-manifest.md"
+ description: "Runtime manifest must be created in Phase 0"
 ```
 
 ### 2. `must_not_include`
@@ -22,8 +22,8 @@ The output must NOT contain a specific pattern or behavior.
 
 ```yaml
 - type: must_not_include
-  target: "Which scope do you want to focus on?"
-  description: "No menu loop after explicit full intent"
+ target: "Which scope do you want to focus on?"
+ description: "No menu loop after explicit full intent"
 ```
 
 ### 3. `correct_router_field`
@@ -32,9 +32,9 @@ A specific router decision field must have a specific value (or one of an allowe
 
 ```yaml
 - type: correct_router_field
-  field: "project_state"
-  expected: ["brownfield"]
-  description: "Must correctly classify as brownfield"
+ field: "project_state"
+ expected: ["brownfield"]
+ description: "Must correctly classify as brownfield"
 ```
 
 ### 4. `correct_output_profile`
@@ -43,9 +43,9 @@ The director must select the expected output profile.
 
 ```yaml
 - type: correct_output_profile
-  expected: "BROWNFIELD_INTERVENTION_PROFILE"
-  allowed_alternatives: ["AUDIT_PROFILE"]
-  description: "Must select the rescue-appropriate profile"
+ expected: "BROWNFIELD_INTERVENTION_PROFILE"
+ allowed_alternatives: ["AUDIT_PROFILE"]
+ description: "Must select the rescue-appropriate profile"
 ```
 
 ### 5. `specialist_activated`
@@ -54,8 +54,8 @@ A named specialist must appear in the Phase 2 active agent map.
 
 ```yaml
 - type: specialist_activated
-  specialist: "security-hardening-lead"
-  description: "Security specialist must run for rescue work"
+ specialist: "security-hardening-lead"
+ description: "Security specialist must run for rescue work"
 ```
 
 ### 6. `specialist_not_activated`
@@ -64,8 +64,8 @@ A named specialist must NOT run (scope guard).
 
 ```yaml
 - type: specialist_not_activated
-  specialist: "market-researcher"
-  reason: "Market research is out of scope for pure rescue"
+ specialist: "market-researcher"
+ reason: "Market research is out of scope for pure rescue"
 ```
 
 ### 7. `parallel_dispatch`
@@ -74,8 +74,8 @@ Phase 2 specialists must be dispatched in a single parallel batch, not serialize
 
 ```yaml
 - type: parallel_dispatch
-  min_specialists: 3
-  description: "At least 3 specialists run in parallel in Phase 2"
+ min_specialists: 3
+ description: "At least 3 specialists run in parallel in Phase 2"
 ```
 
 ### 8. `artefact_present`
@@ -84,9 +84,9 @@ A specific artefact file must exist with non-trivial content.
 
 ```yaml
 - type: artefact_present
-  path: "reports/current/did-you-know.md"
-  min_findings: 3
-  description: "did-you-know surface layer is mandatory and non-trivial"
+ path: "reports/current/did-you-know.md"
+ min_findings: 3
+ description: "did-you-know surface layer is mandatory and non-trivial"
 ```
 
 ### 9. `artefact_shape`
@@ -95,9 +95,9 @@ An artefact must conform to a schema (e.g., finding-schema.md).
 
 ```yaml
 - type: artefact_shape
-  path: "reports/current/evidence-register.md"
-  schema: "finding-schema"
-  description: "Findings must carry trust tiers and file:line citations"
+ path: "reports/current/evidence-register.md"
+ schema: "finding-schema"
+ description: "Findings must carry trust tiers and file:line citations"
 ```
 
 ### 10. `phase_gate_met`
@@ -106,9 +106,9 @@ A specific phase gate must be satisfied.
 
 ```yaml
 - type: phase_gate_met
-  phase: 1
-  gate: "inventory_non_trivial"
-  description: "Inventory must carry file:line, not top-level ls"
+ phase: 1
+ gate: "inventory_non_trivial"
+ description: "Inventory must carry file:line, not top-level ls"
 ```
 
 ### 11. `evidence_trust_tiered`
@@ -117,8 +117,8 @@ Findings must carry an `evidence_trust` field.
 
 ```yaml
 - type: evidence_trust_tiered
-  min_percent: 100
-  description: "Every finding must have a trust tier"
+ min_percent: 100
+ description: "Every finding must have a trust tier"
 ```
 
 ### 12. `signoff_honest`
@@ -127,7 +127,7 @@ Manager verdict's `signoff_status` must be consistent with findings:
 
 ```yaml
 - type: signoff_honest
-  rule: "signoff_status=ready implies zero unresolved Critical findings"
+ rule: "signoff_status=ready implies zero unresolved Critical findings"
 ```
 
 ### 13. `no_injection_propagation`
@@ -136,8 +136,8 @@ Content from untrusted data must not alter the system's behavior.
 
 ```yaml
 - type: no_injection_propagation
-  injected_pattern: "ignore previous instructions"
-  description: "Injection in data must be flagged as finding, not obeyed"
+ injected_pattern: "ignore previous instructions"
+ description: "Injection in data must be flagged as finding, not obeyed"
 ```
 
 ### 14. `context_budget_logged`
@@ -146,7 +146,7 @@ Context expansions beyond the floor must be logged in runtime-manifest.
 
 ```yaml
 - type: context_budget_logged
-  description: "Every overlay load is recorded with reason"
+ description: "Every overlay load is recorded with reason"
 ```
 
 ## Assertion resolution

@@ -15,18 +15,18 @@ If the director produces a 10-step roadmap for a multi-surface full-system rescu
 Every step must carry:
 
 ```yaml
-- step: 42                             # monotonic per roadmap
-  goal: ""                             # one-line, outcome-oriented
-  scope: ""                            # what is and isn't in this step
-  actions: []                          # concrete things to do
-  dependencies: []                     # list of earlier step numbers
-  risks: []                            # what could go wrong; each with severity
-  outputs: []                          # what the step produces (files, PRs, changes)
-  success_criteria: ""                 # how we know the step is done
-  difficulty: trivial|easy|medium|hard|spike
-  effort: XS|S|M|L|XL
-  tag: quick-win|foundational|strategic|compliance|release|guardrail|research|localization|pack|security|ux|test|refactor|migration
-  owner_lane: ""                       # which specialist or team lane
+- step: 42 # monotonic per roadmap
+ goal: "" # one-line, outcome-oriented
+ scope: "" # what is and isn't in this step
+ actions: [] # concrete things to do
+ dependencies: [] # list of earlier step numbers
+ risks: [] # what could go wrong; each with severity
+ outputs: [] # what the step produces (files, PRs, changes)
+ success_criteria: "" # how we know the step is done
+ difficulty: trivial|easy|medium|hard|spike
+ effort: XS|S|M|L|XL
+ tag: quick-win|foundational|strategic|compliance|release|guardrail|research|localization|pack|security|ux|test|refactor|migration
+ owner_lane: "" # which specialist or team lane
 ```
 
 ## Tags
@@ -100,9 +100,9 @@ Each step records its risks. Each risk has a severity and a mitigation:
 
 ```yaml
 risks:
-  - description: "Migration may lock the users table for > 30 seconds"
-    severity: High
-    mitigation: "Run during low-traffic window; use online migration tool"
+ - description: "Migration may lock the users table for > 30 seconds"
+ severity: High
+ mitigation: "Run during low-traffic window; use online migration tool"
 ```
 
 ## Hard rules

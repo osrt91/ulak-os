@@ -4,7 +4,7 @@
 
 Production deploy can be initiated from multiple sources: push-to-main (CI-driven), manual SSH, cron-poll fallback (see `docs/runtime/architecture-currency.md §Deploy resilience`), or **webhook-triggered from a third party** (CI completion → POST to deploy webhook on target host). The last is increasingly common — GitHub Actions run tests, then POST to a private deploy endpoint which pulls + rebuilds + health-checks. This pattern has its own discipline.
 
-the security scanner project-family projects (a security scanner project, an EdTech AI platform project, a community/event platform project) use GitHub Actions → webhook POST pattern. Without discipline, it silently fails (`curl` returns 200 but deploy script logs show crash; CI still reports green).
+-family projects (, , ) use GitHub Actions → webhook POST pattern. Without discipline, it silently fails (`curl` returns 200 but deploy script logs show crash; CI still reports green).
 
 ## When to apply
 
@@ -74,51 +74,49 @@ The webhook endpoint MUST run a post-deploy health probe that is stricter than "
 
 The time between "deploy script says done" and "health probe passes" is the **silent window**. A deploy script that skips health probing guarantees the silent window is infinite when something breaks. Fake rollback (AP-12) is the anti-pattern this section closes.
 
-## Worked example — an EdTech AI platform project
-
-```yaml
-# .github/workflows/deploy.yml (excerpt)
+## Worked example — ```yaml
+#.github/workflows/deploy.yml (excerpt)
 on:
-  push:
-    branches: [main]
+ push:
+ branches: [main]
 
 jobs:
-  test:
-    # ... unit + integration + E2E tests
-  deploy:
-    needs: test
-    if: success()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger deploy webhook
-        run: |
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Authorization: Bearer ${{ secrets.DEPLOY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"commit\":\"${{ github.sha }}\",\"branch\":\"main\",\"trigger_source\":\"github-actions\"}" \
-            https://deploy.example.com/webhook)
-          STATUS=$(echo "$RESPONSE" | tail -n 1)
-          BODY=$(echo "$RESPONSE" | head -n -1)
-          if [[ "$STATUS" != "202" ]]; then
-            echo "::error::Deploy webhook returned $STATUS"
-            echo "$BODY"
-            exit 1
-          fi
-          DEPLOY_ID=$(echo "$BODY" | jq -r '.deploy_id')
-          echo "Deploy id: $DEPLOY_ID"
-          # Poll for completion (up to 10 min)
-          for i in $(seq 1 60); do
-            sleep 10
-            STATE=$(curl -s -H "Authorization: Bearer ${{ secrets.DEPLOY_TOKEN }}" \
-              https://deploy.example.com/status/$DEPLOY_ID | jq -r '.state')
-            case "$STATE" in
-              complete) echo "Deploy complete"; exit 0 ;;
-              failed|rolled-back) echo "::error::Deploy $STATE"; exit 1 ;;
-              processing) echo "Still processing..."; continue ;;
-            esac
-          done
-          echo "::error::Deploy polling timed out"
-          exit 1
+ test:
+ #... unit + integration + E2E tests
+ deploy:
+ needs: test
+ if: success
+ runs-on: ubuntu-latest
+ steps:
+ - name: Trigger deploy webhook
+ run: |
+ RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+ -H "Authorization: Bearer ${{ secrets.DEPLOY_TOKEN }}" \
+ -H "Content-Type: application/json" \
+ -d "{\"commit\":\"${{ github.sha }}\",\"branch\":\"main\",\"trigger_source\":\"github-actions\"}" \
+ https://deploy.example.com/webhook)
+ STATUS=$(echo "$RESPONSE" | tail -n 1)
+ BODY=$(echo "$RESPONSE" | head -n -1)
+ if [[ "$STATUS" != "202" ]]; then
+ echo "::error::Deploy webhook returned $STATUS"
+ echo "$BODY"
+ exit 1
+ fi
+ DEPLOY_ID=$(echo "$BODY" | jq -r '.deploy_id')
+ echo "Deploy id: $DEPLOY_ID"
+ # Poll for completion (up to 10 min)
+ for i in $(seq 1 60); do
+ sleep 10
+ STATE=$(curl -s -H "Authorization: Bearer ${{ secrets.DEPLOY_TOKEN }}" \
+ https://deploy.example.com/status/$DEPLOY_ID | jq -r '.state')
+ case "$STATE" in
+ complete) echo "Deploy complete"; exit 0 ;;
+ failed|rolled-back) echo "::error::Deploy $STATE"; exit 1 ;;
+ processing) echo "Still processing..."; continue ;;
+ esac
+ done
+ echo "::error::Deploy polling timed out"
+ exit 1
 ```
 
 ## Integration
@@ -130,4 +128,4 @@ jobs:
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.0**. Evidence base: an EdTech AI platform project `.github/workflows/deploy.yml` + a security scanner project / a community/event platform project deploy scripts. Added in v2.2.0 cross-project pattern absorption pass.
+Authoritative as of Ulak OS **v2.2.0**. github/workflows/deploy.yml` + / deploy scripts. Added in v2.2.0 cross-project pattern absorption pass.

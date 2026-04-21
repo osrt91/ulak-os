@@ -82,15 +82,15 @@ One block per competitor:
 
 ```yaml
 - name: ""
-  tier: leader|challenger|niche|emerging
-  pricing: ""
-  target_audience: ""
-  strongest_features: []
-  weakest_features: []
-  review_sentiment: ""                    # from T6 with bias note
-  source_list:
-    - url: ""
-      trust: T1|T5|T6
+ tier: leader|challenger|niche|emerging
+ pricing: ""
+ target_audience: ""
+ strongest_features: []
+ weakest_features: []
+ review_sentiment: "" # from T6 with bias note
+ source_list:
+ - url: ""
+ trust: T1|T5|T6
 ```
 
 ### `pricing-map.md`
