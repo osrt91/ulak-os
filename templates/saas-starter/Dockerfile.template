@@ -1,0 +1,91 @@
+# {{product_name_pascal}} — web app Dockerfile
+#
+# Multi-stage build: dependencies → build → runtime. Runtime image is distroless-
+# style (non-root, minimal shell, only pnpm output + production node_modules).
+#
+# References:
+# - https://nextjs.org/docs/app/api-reference/next-config-js/output (standalone output)
+# - Ulak OS Dockerfile discipline: docs/runtime/anti-patterns.md § infra (AP-K8S-01 resource-limits)
+#
+# Build: docker build -f Dockerfile -t {{product_name}}-web:latest .
+# Run:   docker run --rm -p 3000:3000 --env-file .env.local {{product_name}}-web:latest
+
+# =============================================================================
+# Stage 1 — deps: install all workspace deps (dev + prod)
+# =============================================================================
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+# Install pnpm; pinned so cache layers stay stable
+RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+
+# Copy lockfile + manifests only (maximize cache hit on deps layer)
+COPY package.json pnpm-lock.yaml* .npmrc* ./
+
+# Workspace manifests (for monorepo mode; single-app mode no-ops safely)
+COPY pnpm-workspace.yaml* ./
+COPY packages/*/package.json ./packages/*/
+COPY apps/web/package.json ./apps/web/
+
+# Frozen install ensures reproducible builds; fails if lockfile drifts
+RUN pnpm install --frozen-lockfile
+
+# =============================================================================
+# Stage 2 — builder: compile Next.js production bundle
+# =============================================================================
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+COPY . .
+
+# Build-time env (public vars only; NEXT_PUBLIC_* is compiled into the bundle)
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+
+# Skip telemetry; fail the build on typecheck/lint errors
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+WORKDIR /app/apps/web
+RUN pnpm build
+
+# =============================================================================
+# Stage 3 — runner: production runtime (Next.js standalone output)
+# =============================================================================
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Non-root user (AP-K8S-01 + container hardening baseline)
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 nextjs
+
+# Install curl for healthcheck (minimal — no shell package)
+RUN apk add --no-cache curl
+
+# Copy Next.js standalone server output
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
+
+USER nextjs
+EXPOSE 3000
+
+# Healthcheck — hits the /api/public/health route every 30s
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -fsS http://localhost:3000/api/public/health || exit 1
+
+CMD ["node", "server.js"]

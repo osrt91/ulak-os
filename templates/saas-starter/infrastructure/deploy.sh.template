@@ -18,6 +18,20 @@ HEALTH_TIMEOUT_SECONDS=60
 DEPLOY_ID="${DEPLOY_ID:-$(uuidgen 2>/dev/null || date +%s)}"
 COMMIT="${1:-HEAD}"
 
+# --- SEC-B-10: Validate COMMIT against a strict regex before ANY git op.
+# Prevents injection via `git checkout "$COMMIT"` when the caller (e.g. a
+# webhook payload) provides a shell-metacharacter-laden string.
+# Accepted:
+#   - full/short SHA (7-40 hex)
+#   - refs like main, release/v1.2, origin/main, v1.0.0
+#   - HEAD
+# ---
+COMMIT_REGEX='^(HEAD|[0-9a-f]{7,40}|[A-Za-z0-9][A-Za-z0-9._/\-]{0,127})$'
+if ! printf '%s' "$COMMIT" | grep -Eq "$COMMIT_REGEX"; then
+  echo "ERROR: rejected COMMIT '$COMMIT' — does not match allowed ref pattern" >&2
+  exit 64
+fi
+
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/$DEPLOY_ID.log"
 
@@ -41,6 +55,14 @@ log "Previous commit: $PREVIOUS_COMMIT"
 git fetch origin main
 git checkout "$COMMIT"
 
+# --- SEC-B-10: Clean .next/ before build on ANY code-change deploy.
+# Prevents stale build artifacts from a prior commit contaminating the new
+# bundle (especially during rollback where partial .next/ state lingers).
+if [[ -d .next ]]; then
+  log "Clearing stale .next/ build output before rebuild"
+  rm -rf .next
+fi
+
 # Build
 pnpm install --frozen-lockfile 2>&1 | tee -a "$LOG_FILE"
 pnpm build 2>&1 | tee -a "$LOG_FILE"
@@ -63,6 +85,12 @@ if [[ $HEALTH_OK -eq 0 ]]; then
   log "ERROR: Health endpoint did not return 200 within ${HEALTH_TIMEOUT_SECONDS}s"
   log "Rolling back to $PREVIOUS_COMMIT..."
   git checkout "$PREVIOUS_COMMIT"
+  # SEC-B-10: same .next/ cleanup on rollback path — prevents stale bundle
+  # from the failed deploy lingering under pm2's warm port
+  if [[ -d .next ]]; then
+    log "Clearing stale .next/ from failed deploy before rollback rebuild"
+    rm -rf .next
+  fi
   pnpm install --frozen-lockfile 2>&1 | tee -a "$LOG_FILE"
   pnpm build 2>&1 | tee -a "$LOG_FILE"
   pm2 restart "$PROJECT_NAME" --update-env 2>&1 | tee -a "$LOG_FILE"
@@ -77,6 +105,8 @@ if [[ "$DEPLOYED_SHA" != "$EXPECTED_SHA" ]]; then
   log "ERROR: Deployed SHA mismatch. expected=$EXPECTED_SHA got=$DEPLOYED_SHA"
   log "Rolling back..."
   git checkout "$PREVIOUS_COMMIT"
+  # SEC-B-10: same .next/ cleanup on sha-mismatch rollback
+  [[ -d .next ]] && { log "Clearing stale .next/ before sha-mismatch rollback rebuild"; rm -rf .next; }
   pnpm install --frozen-lockfile
   pnpm build
   pm2 restart "$PROJECT_NAME" --update-env

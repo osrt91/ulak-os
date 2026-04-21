@@ -2,7 +2,7 @@
 # {{product_name_pascal}} — install pre-push hook (Ulak OS v{{ulak_os_version}})
 # Runs scripts/preflight.sh (full mode) before every push.
 # Bypass policy: --no-verify forbidden without explicit operator consent
-# (documented in commit message).
+# (documented in commit message). Bypass token is HMAC-signed (SEC-B-12).
 
 set -euo pipefail
 
@@ -14,21 +14,95 @@ mkdir -p .githooks
 cat > "$HOOK" <<'HOOKEOF'
 #!/usr/bin/env bash
 # Pre-push preflight — mirror CI 1-for-1.
-# Bypass: commit message must contain "preflight-bypass:" token.
+#
+# Bypass: commit message must contain a valid HMAC-signed `preflight-bypass:`
+# token. Format:
+#     preflight-bypass: <reason>|<YYYY-MM-DDTHH:MM:SSZ>|<hex-hmac>
+# Where hex-hmac = HMAC-SHA256(PREFLIGHT_BYPASS_SECRET, "<reason>|<timestamp>").
+# Token expires 24h after its timestamp.
+#
+# Mint a token with:
+#     ts=$(date -u +%Y-%m-%dT%H:%M:%SZ); reason="ci-outage"
+#     hmac=$(printf '%s|%s' "$reason" "$ts" | openssl dgst -sha256 -hmac "$PREFLIGHT_BYPASS_SECRET" -hex | awk '{print $2}')
+#     echo "preflight-bypass: $reason|$ts|$hmac"
+#
+# Forbidden: plain `preflight-bypass: <reason>` with no signature — pre-HMAC
+# tokens from older Ulak OS versions are rejected (SEC-B-12).
 
 set -e
 cd "$(git rev-parse --show-toplevel)"
+
+if [[ -z "${PREFLIGHT_BYPASS_SECRET:-}" ]] && [[ -f .githooks/.preflight-secret ]]; then
+  PREFLIGHT_BYPASS_SECRET="$(cat .githooks/.preflight-secret)"
+fi
+
 LAST_COMMIT_MSG="$(git log -1 --pretty=%B || echo '')"
-if echo "$LAST_COMMIT_MSG" | grep -q "preflight-bypass:"; then
-  echo "⚠️  preflight-bypass token detected in commit message; skipping preflight."
-  echo "    Reason: $(echo "$LAST_COMMIT_MSG" | grep 'preflight-bypass:' | head -1)"
+BYPASS_LINE="$(echo "$LAST_COMMIT_MSG" | grep -E '^preflight-bypass:' | head -1 || true)"
+
+if [[ -n "$BYPASS_LINE" ]]; then
+  # Extract the payload after "preflight-bypass:"
+  PAYLOAD="$(printf '%s' "$BYPASS_LINE" | sed -E 's/^preflight-bypass:[[:space:]]*//')"
+
+  # Split reason|timestamp|hmac
+  IFS='|' read -r REASON TS PROVIDED_HMAC <<< "$PAYLOAD"
+
+  if [[ -z "${REASON:-}" || -z "${TS:-}" || -z "${PROVIDED_HMAC:-}" ]]; then
+    echo "❌ preflight-bypass rejected: missing fields. Expected 'reason|timestamp|hmac'." >&2
+    exit 1
+  fi
+
+  if [[ -z "${PREFLIGHT_BYPASS_SECRET:-}" ]]; then
+    echo "❌ preflight-bypass present but PREFLIGHT_BYPASS_SECRET not set locally; cannot verify." >&2
+    exit 1
+  fi
+
+  EXPECTED_HMAC="$(printf '%s|%s' "$REASON" "$TS" | openssl dgst -sha256 -hmac "$PREFLIGHT_BYPASS_SECRET" -hex 2>/dev/null | awk '{print $2}')"
+  if [[ -z "$EXPECTED_HMAC" ]] || ! [ "$EXPECTED_HMAC" = "$PROVIDED_HMAC" ]; then
+    echo "❌ preflight-bypass rejected: HMAC verification failed." >&2
+    exit 1
+  fi
+
+  # Timestamp window: token must be minted within the last 24h
+  NOW_EPOCH="$(date -u +%s)"
+  TS_EPOCH="$(date -u -d "$TS" +%s 2>/dev/null || echo 0)"
+  if [[ "$TS_EPOCH" -eq 0 ]]; then
+    echo "❌ preflight-bypass rejected: invalid timestamp '$TS'." >&2
+    exit 1
+  fi
+  AGE=$((NOW_EPOCH - TS_EPOCH))
+  if [[ "$AGE" -gt 86400 ]] || [[ "$AGE" -lt -300 ]]; then
+    echo "❌ preflight-bypass rejected: timestamp outside 24h window (age=${AGE}s)." >&2
+    exit 1
+  fi
+
+  echo "⚠️  preflight-bypass verified. reason=$REASON ts=$TS age=${AGE}s"
+  echo "    Logged for audit."
+  mkdir -p .claude/logs
+  printf '[%s] preflight-bypass: reason=%s actor=%s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$REASON" "$(git config user.email || echo unknown)" \
+    >> .claude/logs/preflight-bypass.log
   exit 0
 fi
+
 bash ./scripts/preflight.sh
 HOOKEOF
 
 chmod +x "$HOOK"
 git config --local core.hooksPath .githooks
 
+# Generate a local preflight secret if one does not exist — keeps per-clone
+# bypass tokens locally scoped (no shared-secret leakage across contributors).
+if [[ ! -f .githooks/.preflight-secret ]]; then
+  head -c 32 /dev/urandom | openssl dgst -sha256 -hex | awk '{print $2}' > .githooks/.preflight-secret
+  chmod 600 .githooks/.preflight-secret
+fi
+
+# Ensure the secret never lands in git
+if ! grep -qE '^\.githooks/\.preflight-secret$' .gitignore 2>/dev/null; then
+  echo '.githooks/.preflight-secret' >> .gitignore
+fi
+
 echo "✓ Pre-push hook installed at $HOOK"
-echo "  Bypass: include 'preflight-bypass: <reason>' in commit message."
+echo "  Bypass: include 'preflight-bypass: <reason>|<ts>|<hmac>' in commit message."
+echo "  Mint token with: scripts/mint-preflight-bypass.sh <reason>"
+echo "  Local bypass secret: .githooks/.preflight-secret (gitignored, auto-generated per clone)"

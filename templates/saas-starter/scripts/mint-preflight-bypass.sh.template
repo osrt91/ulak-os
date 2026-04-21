@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# {{product_name_pascal}} — mint a preflight-bypass token (SEC-B-12)
+#
+# Usage: bash scripts/mint-preflight-bypass.sh "<reason>"
+# Example: bash scripts/mint-preflight-bypass.sh "ci-outage-2026-NN-NN"
+#
+# Outputs a line suitable for `git commit -m` that will pass the pre-push
+# hook verification. Token expires 24h after this command runs.
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 <reason>" >&2
+  echo "  reason must be non-empty; do not include '|' character" >&2
+  exit 64
+fi
+
+REASON="$1"
+if [[ "$REASON" == *'|'* ]] || [[ -z "$REASON" ]]; then
+  echo "ERROR: reason must be non-empty and must not contain '|'" >&2
+  exit 64
+fi
+
+if [[ -z "${PREFLIGHT_BYPASS_SECRET:-}" ]] && [[ -f .githooks/.preflight-secret ]]; then
+  PREFLIGHT_BYPASS_SECRET="$(cat .githooks/.preflight-secret)"
+fi
+
+if [[ -z "${PREFLIGHT_BYPASS_SECRET:-}" ]]; then
+  echo "ERROR: PREFLIGHT_BYPASS_SECRET not set. Run bash scripts/install-hooks.sh first." >&2
+  exit 1
+fi
+
+TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+HMAC="$(printf '%s|%s' "$REASON" "$TS" | openssl dgst -sha256 -hmac "$PREFLIGHT_BYPASS_SECRET" -hex | awk '{print $2}')"
+
+cat <<EOF
+preflight-bypass: $REASON|$TS|$HMAC
+EOF
+
+echo "" >&2
+echo "Token valid for 24 hours (expires $(date -u -d "+24 hours" +%Y-%m-%dT%H:%M:%SZ))." >&2
+echo "Paste into commit message; hook will verify on push." >&2
