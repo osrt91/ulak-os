@@ -1,5 +1,66 @@
 # Changelog
 
+## [2.2.1] — 2026-04-21 — Security hardening + scaffolder build-break close + misc polish
+
+### Context
+
+Post-v2.2.0 test pass (3 specialist agents) surfaced 42 security findings + 1 P0 cartography gap (missing component templates breaking post-scaffold `pnpm build`). This patch closes the 4 Critical + 9 High-impact security findings AND the build-break. Remaining 17 Medium + 6 Low security items carried to v2.2.2.
+
+### Security fixes (SEC-V22-C-01..04 + high-impact H series)
+
+**Critical (24h gate) — 4 closed:**
+
+- **SEC-V22-C-01** Iyzico signature compare non-constant-time → switched to `crypto.timingSafeEqual` + length precheck. Timing-leak (~280k samples) vector closed.
+- **SEC-V22-C-02** Iyzico canonical string excluded body → switched default to V3 HMAC-SHA256 over raw body. Classic SHA1-over-3-fields path kept behind `IYZICO_LEGACY_CLASSIC_SIG=1` deprecation flag for merchants not yet migrated. Attacker can no longer swap `subscriptionReferenceCode`/`status`/`price`/`currency` after capturing a sig.
+- **SEC-V22-C-03** Iyzico synthetic event_id fallback → `iyziPaymentId` now required as idempotency anchor; synthetic fallback removed; events without paymentId are dead-lettered (200 ACK) rather than replayed. Silent-ACK on sig failure now emits structured metric line for detection.
+- **SEC-V22-C-04** Bot↔API HMAC no timestamp/nonce + shared secret → new `sign_outbound()` returns `{signature, timestamp, nonce, body_hash}`. Canonical string includes `METHOD\n PATH\n TIMESTAMP\n NONCE\n SHA256(BODY)\n`. Verifier enforces ±60s timestamp window + nonce-once-only via `NonceStore` protocol (Redis `SETNX` in prod). HMAC secret is now DISTINCT from Bearer identity token.
+
+**High — 9 closed (6 highlighted in summary):**
+
+- **SEC-V22-H-02** FastAPI JWT RS256 pinned (HS256 allowed only in non-prod with explicit secret)
+- **SEC-V22-H-04** Bot api_client email URL-encoded via `urllib.parse.quote`
+- **SEC-V22-H-06** SAML `wantAuthnRequestsSigned: true` + STE signing order
+- **SEC-V22-H-07** OIDC `resolveSecret` enforces `OIDC_CLIENT_SECRET_` prefix allowlist (blocks admin env-var exfiltration)
+- **SEC-V22-H-11** member-gated `posts` RLS now joins through thread tier gate (BOLA closed)
+- **SEC-V22-H-12** Google LLM API key moved from URL query to `x-goog-api-key` header
+- **SEC-V22-H-13** Cost-cap TOCTOU → atomic `ai_relay_reserve_budget` RPC with `SELECT ... FOR UPDATE` + `reserved_cents` increment + reservation_id release
+- **SEC-V22-H-14** Traefik CSP drops `unsafe-eval`, adds `base-uri 'self' form-action 'self' object-src 'none'`
+- **SEC-V22-H-15** Compatibility matrix now enforced at code level via `docs/runtime/sectors-compat.yaml` + Phase 0 refusal with `exit 65`
+
+### Cartography P0 (build-break close)
+
+v1.1 page templates under `app/(auth|customer|admin|partner)/*` imported from component directories that did not exist on disk, breaking `pnpm build`. 26 new component templates close the gap:
+
+- `components/admin/*` (7) — stat-tile + system-health-card shims, user-row-actions, audit-log-filters, tenant-stats-card, sidebar + top-bar role shims
+- `components/customer/*` (9) — sidebar + top-bar + mobile-sidebar-trigger; welcome-card, quick-actions-grid, recent-activity-list; 5 settings forms (profile, account, preferences, billing, team)
+- `components/partner/*` (3) — commission-chart, sub-users-table, payout-status-card
+- `components/dashboard/*` (2) — stat-tile primitive, system-health-card primitive
+- `components/shared/*` (2) — empty-state re-export, confirm-dialog with type-to-confirm pattern
+- `components/ui/alert.tsx` — cva-variant Alert/AlertTitle/AlertDescription
+
+### Other polish (from tasks 45-47)
+
+- **saas-starter Dockerfile.template** — multi-stage build (deps → builder → runner) with non-root nextjs user + healthcheck. Previously only a comment reference in docker-compose.
+- **SEC-B-10 deploy rollback** — COMMIT argument strict regex validation; `.next/` cleanup on all three deploy code paths (fresh / health-fail rollback / sha-mismatch rollback)
+- **SEC-B-12 install-hooks HMAC** — `preflight-bypass:` token is now `reason|timestamp|hex-hmac` with auto-generated per-clone secret (gitignored), 24h expiry, audit logged. `scripts/mint-preflight-bypass.sh.template` helper ships.
+
+### Package metadata
+
+- `package.json` / `prompts/pack.json` / `.claude-plugin/plugin.json` — all three 2.2.0 → 2.2.1
+
+### Deferred to v2.2.2
+
+- Stripe webhook metric emission (H-01) — non-critical given other fixes
+- FastAPI JWKS no-size-cap + circuit breaker (H-03)
+- FastAPI `/internal/` webhook timestamp replay guard (H-05) — same shape as C-04
+- PHI DEK hex-stringify weak KDF (H-08)
+- `decryptPhi` audit contract not structural (H-09)
+- Break-glass 4h expiry mutable via UPDATE (H-10)
+- 17 Medium findings (Stripe PII in dead-letter, rate-limit in-memory, CSRF, AML bypass, dashboard IP allowlist, etc.)
+- 6 Low findings
+- Server actions at `app/(customer)/settings/actions.ts.template`
+- `app/(partner)/_components/` co-located partner page components
+
 ## [2.2.0] — 2026-04-21 — Phase E: 14 sector overlay kits (81 templates, 12800+ LOC)
 
 ### Context
