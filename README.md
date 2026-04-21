@@ -52,6 +52,10 @@ cd ulak-os
 
 Yeni kullanıcı için 6 somut senaryo. Her biri tek komut ile başlıyor; çıktıyı Ulak OS üretiyor.
 
+> **Hızlı başlangıç**: `selam ulak` ya da `hi ulak` yaz → `/ulak-hello` otomatik başlar. Hiç komut ezberlemene gerek yok.
+>
+> **Tam yolu gör**: [docs/walkthrough/01-first-saas-end-to-end.md](docs/walkthrough/01-first-saas-end-to-end.md) — 75 dakikalık uçtan uca senaryo (marketplace + Supabase + GitHub + Vercel + Resend + Iyzico).
+
 ### 1. Yeni SaaS başlat (5-10 dakika)
 
 ```bash

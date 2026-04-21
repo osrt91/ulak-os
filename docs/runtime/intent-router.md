@@ -15,6 +15,9 @@ Bu dosya `/ulak-ask` komutunun arkasındaki eşleme tablosudur. Operatör doğal
 
 | # | Intent | Matched Capability | Rationale |
 |---|---|---|---|
+| 0a | "selam ulak" / "merhaba ulak" / "selamlar" / "günaydın ulak" | `/ulak-hello` | greeting = onboarding tour tetikleyici |
+| 0b | "hi ulak" / "hello ulak" / "hey ulak" / "ulak!" | `/ulak-hello` | EN greeting = onboarding tour |
+| 0c | "ulak" (tek kelime, komut değil) | `/ulak-hello` | disambiguation → tour ile başla |
 | 1 | "yeni bir SaaS yapacağım" | `/ulak-scaffold` | greenfield + SaaS = scaffolder sector pack |
 | 2 | "sıfırdan proje başlatıyorum" | `/ulak-scaffold` | greenfield, CREATE mode, stack pre-wired |
 | 3 | "mevcut projeyi baştan aşağı audit et" | `/director komple` | brownfield + full program + tek verdict |
