@@ -1,0 +1,8 @@
+// {{product_name_pascal}} — Customer sidebar shim
+// Pins role="customer" on the shared DashboardSidebar.
+
+import { DashboardSidebar } from "@/components/dashboard/sidebar"
+
+export function CustomerSidebar(props: Omit<React.ComponentProps<typeof DashboardSidebar>, "role">) {
+  return <DashboardSidebar role="customer" {...props} />
+}

@@ -1,0 +1,8 @@
+// {{product_name_pascal}} — Customer top-bar shim
+// Pins role="customer" on the shared DashboardTopBar.
+
+import { DashboardTopBar } from "@/components/dashboard/top-bar"
+
+export function CustomerTopBar(props: Omit<React.ComponentProps<typeof DashboardTopBar>, "role">) {
+  return <DashboardTopBar role="customer" {...props} />
+}

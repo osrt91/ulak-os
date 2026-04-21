@@ -1,0 +1,7 @@
+// {{product_name_pascal}} — shared EmptyState shim
+//
+// Re-exports components/dashboard/empty-state as a shared primitive so pages
+// that import `@/components/shared/empty-state` resolve without duplicating
+// the component. Added v2.2.1 to close cartography cross-ref gap.
+
+export { EmptyState, type EmptyStateProps } from "@/components/dashboard/empty-state"

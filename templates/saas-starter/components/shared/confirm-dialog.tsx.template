@@ -1,0 +1,107 @@
+"use client"
+
+import * as React from "react"
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
+
+export interface ConfirmDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title: string
+  description?: string
+  confirmLabel?: string
+  cancelLabel?: string
+  variant?: "default" | "destructive"
+  /** If set, the user must type this literal phrase to unlock the confirm button. */
+  confirmPhrase?: string
+  onConfirm: () => void | Promise<void>
+}
+
+export function ConfirmDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  variant = "default",
+  confirmPhrase,
+  onConfirm,
+}: ConfirmDialogProps) {
+  const [typed, setTyped] = React.useState("")
+  const [pending, setPending] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!open) setTyped("")
+  }, [open])
+
+  const locked = confirmPhrase ? typed !== confirmPhrase : false
+
+  async function handleConfirm() {
+    setPending(true)
+    try {
+      await onConfirm()
+      onOpenChange(false)
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          {description && <DialogDescription>{description}</DialogDescription>}
+        </DialogHeader>
+
+        {confirmPhrase && (
+          <div className="space-y-2">
+            <label className="text-sm text-ink-muted" htmlFor="confirm-phrase-input">
+              Type{" "}
+              <code className="rounded bg-surface-muted px-1 py-0.5 text-xs">{confirmPhrase}</code>{" "}
+              to confirm
+            </label>
+            <Input
+              id="confirm-phrase-input"
+              value={typed}
+              onChange={(e) => setTyped(e.currentTarget.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={pending}
+          >
+            {cancelLabel}
+          </Button>
+          <Button
+            type="button"
+            variant={variant === "destructive" ? "destructive" : "default"}
+            onClick={handleConfirm}
+            disabled={locked || pending}
+            className={cn(pending && "opacity-70")}
+          >
+            {pending ? "…" : confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

@@ -1,0 +1,8 @@
+// {{product_name_pascal}} — Admin top-bar shim
+// Pins role="admin" on the shared DashboardTopBar.
+
+import { DashboardTopBar } from "@/components/dashboard/top-bar"
+
+export function AdminTopBar(props: Omit<React.ComponentProps<typeof DashboardTopBar>, "role">) {
+  return <DashboardTopBar role="admin" {...props} />
+}
