@@ -49,6 +49,10 @@ Email rather than file a public issue if your report includes any of:
 - Vulnerabilities in a scaffolded project after the operator runs `/ulak-scaffold` — those are in the operator's own repo, not this one (though if a scaffolder template is to blame, that IS in scope)
 - Social-engineering or operator-misconfiguration scenarios
 
+## Known acknowledged incidents
+
+- [SEC-INCIDENT-2026-04-21 — v2.1.4 tag credential leak](./docs/security/incidents/2026-04-21-v2.1.4-tag-credential-leak.md) — Resend + Cloudflare keys recoverable from public v2.1.4 tag. Operator rotation required before v1.0.0 public-GA push.
+
 ## Hall of fame
 
 Accepted reports will be credited here unless anonymity is requested.

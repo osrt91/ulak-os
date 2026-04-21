@@ -107,13 +107,36 @@ URLS=(
 )
 
 FOUND=0
+TMP_FETCH="$(mktemp)"
+trap 'rm -f "$TMP_FETCH"' EXIT
 for url in "${URLS[@]}"; do
-  if curl -sfL "$url" -o "$TARGET_DIR/$BRAND_LOWER/README.md" 2>/dev/null; then
+  if curl -sfL "$url" -o "$TMP_FETCH" 2>/dev/null; then
+    # Prompt-injection defense (SEC-B-06 hardening): scan fetched content for
+    # common LLM-coercion sigils before writing it into a path Claude will read.
+    # Upstream VoltAgent/awesome-design-md is third-party; a compromise or
+    # malicious PR landing in main would inject instructions into every
+    # downstream Claude session that reads the design reference. We refuse
+    # to import content that contains these sigils verbatim.
+    if grep -qEi '(ignore (all )?previous instructions|disregard (all )?previous|system:|</?s>|<\|im_start\|>|<\|endoftext\|>|\[INST\]|you are now|new instructions:|jailbreak)' "$TMP_FETCH"; then
+      echo "✗ REJECTED: fetched content from $url contains prompt-injection sigils"
+      echo "  (LLM-coercion pattern detected — refusing to import third-party instructions)"
+      echo "  File a report: https://github.com/VoltAgent/awesome-design-md/issues"
+      continue
+    fi
+    # Size sanity (an empty/huge file is suspicious)
+    SIZE=$(wc -c < "$TMP_FETCH")
+    if [[ $SIZE -lt 50 || $SIZE -gt 524288 ]]; then
+      echo "✗ REJECTED: fetched content size $SIZE bytes outside expected 50..524288 range"
+      continue
+    fi
+    cp "$TMP_FETCH" "$TARGET_DIR/$BRAND_LOWER/README.md"
     FOUND=1
-    echo "✓ Downloaded from: $url"
+    echo "✓ Downloaded from: $url (size: $SIZE bytes)"
     break
   fi
 done
+rm -f "$TMP_FETCH"
+trap - EXIT
 
 if [[ $FOUND -eq 0 ]]; then
   echo "❌ Could not find reference for '$BRAND' at any expected upstream path."

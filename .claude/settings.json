@@ -4,14 +4,28 @@
     "allow": [
       "Bash(git status)",
       "Bash(git diff *)",
-      "Bash(find *)",
+      "Bash(git log *)",
+      "Bash(find * -name *)",
+      "Bash(find * -type *)",
+      "Bash(find * -maxdepth *)",
       "Bash(ls *)",
       "Bash(cat *)"
     ],
     "deny": [
-      "Read(./.env)",
-      "Read(./.env.*)",
-      "Read(./secrets/**)"
+      "Bash(find * -exec *)",
+      "Bash(find * -execdir *)",
+      "Bash(find * -delete*)",
+      "Bash(curl * | sh*)",
+      "Bash(wget * | sh*)",
+      "Bash(curl * | bash*)",
+      "Bash(wget * | bash*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/settings.local.json)",
+      "Write(**/.env)",
+      "Write(**/.env.*)",
+      "Write(**/settings.local.json)"
     ]
   },
   "hooks": {

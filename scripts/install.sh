@@ -15,7 +15,13 @@
 # Idempotent: running twice converges to the same state (pulls instead of
 # re-cloning, verifies the symlink target, preserves existing CLAUDE.md).
 #
-# Safety: no sudo calls, no system-wide writes. Everything is under $HOME.
+# Safety:
+#   - No sudo calls, no system-wide writes. Everything is under $HOME.
+#   - No eval; attacker-controlled env vars never reach the shell parser.
+#     Every invocation uses argv directly (hardening per SEC-B-02).
+#   - ULAK_* env vars validated against strict regex allowlists before use.
+#   - Rollback rm only ever runs when ULAK_HOME resolves to a fresh clone
+#     directory we just created under $HOME (hardening per SEC-B-13).
 
 set -eu
 
@@ -47,20 +53,57 @@ HLP
   esac
 done
 
-run() {
-  if [ "$DRY_RUN" = "1" ]; then
-    printf '[ulak][dry-run] %s\n' "$*"
-  else
-    eval "$@"
+# ---------- Env-var sanitization (SEC-B-02 hardening) ----------
+# Validate every caller-controlled value against a strict regex. A value that
+# fails the regex is rejected, not quoted: quoting cannot close every shell
+# escape path, but an allowlist can refuse exotic input up front.
+validate() {
+  # $1 = name, $2 = value, $3 = regex
+  name="$1"; value="$2"; pattern="$3"
+  if ! printf '%s' "$value" | grep -Eq "^${pattern}$"; then
+    err "$name has an invalid value: $value"
+    hint "expected regex: ^${pattern}\$"
+    exit 1
   fi
 }
 
-# ---------- Trap: clean partial install ----------
+# ULAK_REPO_URL: https(s) git URL ending .git, OR ssh (git@host:path.git), no spaces/quotes
+validate ULAK_REPO_URL "$ULAK_REPO_URL" '(https?://[A-Za-z0-9._\/~:?&=+-]+\.git|git@[A-Za-z0-9.-]+:[A-Za-z0-9._\/~-]+\.git)'
+
+# ULAK_HOME: POSIX-safe absolute path, no shell metacharacters
+validate ULAK_HOME "$ULAK_HOME" '/[A-Za-z0-9._/-]+'
+
+# ULAK_BRANCH: git ref — alphanumeric + a small set of separators, no whitespace
+validate ULAK_BRANCH "$ULAK_BRANCH" '[A-Za-z0-9._/-]+'
+
+# run() dispatches to argv-positional shell calls with no eval.
+run() {
+  if [ "$DRY_RUN" = "1" ]; then
+    printf '[ulak][dry-run]'
+    for a in "$@"; do printf ' %s' "$a"; done
+    printf '\n'
+  else
+    "$@"
+  fi
+}
+
+# ---------- Trap: clean partial install (hardened rm path) ----------
 _cleanup() {
   status=$?
   if [ "$status" -ne 0 ] && [ "${ULAK_PARTIAL:-0}" = "1" ] && [ "$DRY_RUN" = "0" ]; then
-    err "install failed (exit $status); rolling back partial clone at $ULAK_HOME"
-    rm -rf "$ULAK_HOME"
+    # Only rm if ULAK_HOME is under $HOME AND basename is .ulak-os or starts with
+    # .ulak-os-. Refuses to delete anything else — even with a hostile env.
+    resolved_home="$ULAK_HOME"
+    case "$resolved_home" in
+      "$HOME"/.ulak-os|"$HOME"/.ulak-os-*)
+        err "install failed (exit $status); rolling back partial clone at $resolved_home"
+        rm -rf "$resolved_home"
+        ;;
+      *)
+        err "install failed (exit $status); REFUSING to roll back because ULAK_HOME is outside expected pattern"
+        err "partial clone may remain at: $resolved_home — inspect manually"
+        ;;
+    esac
   fi
   exit "$status"
 }
@@ -96,7 +139,7 @@ log "target bin directory: $BIN_DIR"
 
 if [ ! -d "$BIN_DIR" ]; then
   log "creating $BIN_DIR"
-  run "mkdir -p '$BIN_DIR'"
+  run mkdir -p "$BIN_DIR"
 fi
 
 if [ "$DRY_RUN" = "0" ] && [ ! -w "$BIN_DIR" ]; then
@@ -108,9 +151,9 @@ fi
 # ---------- Clone or update ----------
 if [ -d "$ULAK_HOME/.git" ]; then
   log "existing install detected at $ULAK_HOME — pulling latest"
-  run "git -C '$ULAK_HOME' fetch --tags --prune origin"
-  run "git -C '$ULAK_HOME' checkout '$ULAK_BRANCH'"
-  run "git -C '$ULAK_HOME' pull --ff-only origin '$ULAK_BRANCH'"
+  run git -C "$ULAK_HOME" fetch --tags --prune origin
+  run git -C "$ULAK_HOME" checkout "$ULAK_BRANCH"
+  run git -C "$ULAK_HOME" pull --ff-only origin "$ULAK_BRANCH"
 elif [ -d "$ULAK_HOME" ]; then
   err "$ULAK_HOME exists but is not a git checkout"
   hint "move it aside or set ULAK_HOME to a fresh path"
@@ -118,7 +161,7 @@ elif [ -d "$ULAK_HOME" ]; then
 else
   log "cloning $ULAK_REPO_URL into $ULAK_HOME"
   ULAK_PARTIAL=1
-  run "git clone --branch '$ULAK_BRANCH' --depth 50 '$ULAK_REPO_URL' '$ULAK_HOME'"
+  run git clone --branch "$ULAK_BRANCH" --depth 50 "$ULAK_REPO_URL" "$ULAK_HOME"
   ULAK_PARTIAL=0
 fi
 
@@ -129,15 +172,15 @@ if [ "$DRY_RUN" = "0" ] && [ ! -f "$WRAPPER" ]; then
   hint "the repo may be incomplete; try: rm -rf '$ULAK_HOME' && re-run the installer"
   exit 1
 fi
-run "chmod +x '$WRAPPER'"
+run chmod +x "$WRAPPER"
 
 # ---------- Symlink ----------
 LINK="$BIN_DIR/ulak"
 if [ -L "$LINK" ] || [ -f "$LINK" ]; then
   log "refreshing symlink: $LINK -> $WRAPPER"
-  run "rm -f '$LINK'"
+  run rm -f "$LINK"
 fi
-run "ln -s '$WRAPPER' '$LINK'"
+run ln -s "$WRAPPER" "$LINK"
 
 # ---------- PATH hint ----------
 case ":$PATH:" in
