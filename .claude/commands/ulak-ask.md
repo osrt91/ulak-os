@@ -141,7 +141,7 @@ Tablonun kendisi burada değil — versiyon kontrolü için ayrı dosyada:
 
 Routing yaparken **sadece bu listeyi** referans alır (uydurma komut önermez):
 
-**15 komut**: `/director`, `/ulak-scaffold`, `/ulak-audit-deep`, `/ulak-brainstorm`, `/ulak-subagent-dispatch`, `/ulak-test-driven`, `/ulak-pattern-extract`, `/ulak-mcp-discover`, `/final-verdict`, `/intake`, `/frontend-war-room`, `/pack-gap-audit`, `/triage-build`, `/ulak-design-ref`, `/ulak-intake`
+**24 komut**: `/director`, `/ulak-scaffold`, `/ulak-start`, `/ulak-next-steps`, `/ulak-audit-deep`, `/ulak-brainstorm`, `/ulak-subagent-dispatch`, `/ulak-test-driven`, `/ulak-pattern-extract`, `/ulak-mcp-discover`, `/final-verdict`, `/intake`, `/frontend-war-room`, `/pack-gap-audit`, `/triage-build`, `/ulak-design-ref`, `/ulak-intake`, `/ulak-hello`, `/ulak-packs`, `/ulak-search`, `/ulak-locale`, `/ulak-explain`, `/ulak-demo`, `/ulak-ask`
 
 **10 skill** (örn): `saas-scaffolder`, `fourteen-dimension-audit`, `project-intake`, `final-validation`, `pack-gap-completion`, `research-currency`, `multi-agent-orchestration`, `awesome-packs-index`, `mcp-governance-auto`, `god-module-decomposition`
 
@@ -166,7 +166,7 @@ Tablo dışı bir kapasiteye asla yönlendirilmez. "Bu yok ama gerekli" olduğun
 
 ## EN quick note
 
-`/ulak-ask` is the natural-language front door. User types intent in plain language (TR or EN), the command maps it to one of the existing 15 commands / 10 skills / 27 agents via `docs/runtime/intent-router.md`. Outputs a suggestion — does not execute. Ambiguous → "did you mean?" list (max 3). No match → suggests `/pack-gap-audit`. Never invents capabilities.
+`/ulak-ask` is the natural-language front door. User types intent in plain language (TR or EN), the command maps it to one of the existing 24 commands / 10 skills / 27 agents via `docs/runtime/intent-router.md`. Outputs a suggestion — does not execute. Ambiguous → "did you mean?" list (max 3). No match → suggests `/pack-gap-audit`. Never invents capabilities.
 
 ARGUMENTS:
 $ARGUMENTS

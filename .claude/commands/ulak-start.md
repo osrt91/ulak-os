@@ -1,13 +1,13 @@
 ---
-description: 5 fazlı, 27 soruluk interaktif SaaS sihirbazı. Kullanıcı prompt yazmaz; faz başına 4-7 soru, her birinde sensible default, [enter] ile hızlı geçiş. Cevaplar Ulak OS'un 24 sector pack + 8 rule pack + 22 governance + 79 anti-pattern katmanına bağlanır; onayla /ulak-scaffold otomatik dispatch edilir.
-description_en: 5-phase, 27-question interactive SaaS wizard. User writes no prompts; 4-7 questions per phase, sensible default on each, [enter] to skip. Answers map to Ulak OS's 24 sector packs + 8 rule packs + 22 governance docs + 79 anti-patterns, then /ulak-scaffold auto-dispatches on confirm.
+description: 5 fazlı, 27 soruluk interaktif SaaS sihirbazı. Kullanıcı prompt yazmaz; faz başına 4-7 soru, her birinde sensible default, [enter] ile hızlı geçiş. İki mod: [t] teknik (default, dev-kitle) veya [b] basit (ilk kez SaaS yapan için gündelik dil + inline terim açıklaması, `docs/runtime/beginner-glossary.md`'den beslenir). Cevaplar Ulak OS'un 24 sector pack + 8 rule pack + 22 governance + 79 anti-pattern katmanına bağlanır; onayla /ulak-scaffold otomatik dispatch edilir.
+description_en: 5-phase, 27-question interactive SaaS wizard. User writes no prompts; 4-7 questions per phase, sensible default on each, [enter] to skip. Two modes: [t] technical (default, for devs) or [b] beginner (plain language + inline term glossary for first-time SaaS builders, sourced from `docs/runtime/beginner-glossary.md`). Answers map to Ulak OS's 24 sector packs + 8 rule packs + 22 governance docs + 79 anti-patterns, then /ulak-scaffold auto-dispatches on confirm.
 phases_run: [0]
 ---
 
 # /ulak-start
 
-> **TR** — "Prompt yazmasın" vizyonunun derin hali. 5 faz, 27 soru, her birinde default.
-> **EN** — The deep form of the "no-prompt" vision. 5 phases, 27 questions, default on each.
+> **TR** — "Prompt yazmasın" vizyonunun derin hali. 5 faz, 27 soru, her birinde default. İki mod: teknik [t] ve basit [b].
+> **EN** — The deep form of the "no-prompt" vision. 5 phases, 27 questions, default on each. Two modes: technical [t] and beginner [b].
 
 ## Amaç / Purpose
 
@@ -34,7 +34,123 @@ Faz içinde herhangi bir anda:
 - `/skip`  → bu faz için kalan tüm soruları default'a alır, bir sonraki faza geçer.
 - `/back`  → bir önceki soruya döner (önceki cevap düzenlenebilir).
 - `/restart` → Phase 1 Q1.1'e döner (tüm cevaplar sıfırlanır, onay ister).
+- `/mode <t|b>` → herhangi bir anda teknik (t) ve basit (b) modu arasında geçiş yapar.
 - Boş `[enter]` → sorunun default'unu kabul eder.
+
+---
+
+## Phase 0 — Mod seçimi / Mode selection (1 soru, en başta)
+
+> **TR**: Bu soru wizard'ın EN BAŞINDA gelir. Her diğer soru bu cevaba göre render edilir.
+> **EN**: This question comes FIRST. Every other question renders based on this answer.
+
+### Q0 — Wizard modu / Wizard mode
+
+```
+  Ulak OS seni iki şekilde yönlendirebilir:
+
+   [t] Teknik mod — Next.js, Supabase, SSO, Traefik gibi terimlerle
+                    hızlı ve net. Önceki tecrübe varsa bunu seç.
+                    (default)
+
+   [b] Basit mod  — "sitenin motoru" (stack), "giriş yöntemi" (auth),
+                    "senin sunucun mu / hazır bir yerde mi" (deploy)
+                    gibi basitleştirilmiş sorularla. İlk kez site
+                    yapıyorsan bunu seç.
+
+  Ulak OS can guide you in two ways:
+
+   [t] Technical mode — Fast and precise, using terms like Next.js,
+                        Supabase, SSO, Traefik. Pick this if you
+                        have prior experience. (default)
+
+   [b] Beginner mode  — Plain language like "site's engine" (stack),
+                        "login method" (auth), "your own server vs
+                        managed" (deploy). Pick this if this is
+                        your first SaaS.
+
+  Seçim / Choice: _
+```
+
+- **Default**: `t` (technical) — `[enter]` ile default seçilir; mevcut kullanıcı için davranış aynı kalır
+- Cevap `wizard_mode` state değişkenine kaydedilir (`docs/runtime/wizard-defaults.md` §wizard_mode)
+- `t` → sonraki 27 soru sadece teknik blok ile render edilir (mevcut davranış)
+- `b` → sonraki 27 soru **dual-render** protokolüne göre basit blok + "Ne seçmeliyim?" rehberi + post-answer `[Anlamı]` gloss ile render edilir (bkz. §Dual-render protokolü)
+
+---
+
+## Dual-render protokolü / Dual-render protocol
+
+Q0 = `b` (basit mod) seçildiğinde Phase 1'den Phase 5'e tüm 27 soru bu protokole göre render edilir:
+
+### Render şablonu / Render template
+
+```
+Qx.y: <teknik başlık> / <basit başlık>
+
+  [Teknik mod]                 ← referans için gösterilir (dev terimi öğrenmesi için)
+    [1] <teknik seçenek 1>
+    [2] <teknik seçenek 2>
+    ...
+
+  [Basit mod]                  ← kullanıcı bu bloktaki seçenekle karar verir
+    [1] <gündelik dil seçenek 1>  — <1-cümle açıklama>
+    [2] <gündelik dil seçenek 2>  — <1-cümle açıklama>
+    ...
+
+  Ne seçmeliyim? / Which one?
+    - <senaryo 1>: [N]
+    - <senaryo 2>: [M]
+    - Emin değilsen: [default]
+
+  Seçim / Choice: _
+```
+
+### Kullanıcı cevap verdikten sonra / After user answers
+
+```
+  User: 1
+  Ulak: ✓ Seçim kaydedildi: <teknik karşılık>
+        [Anlamı / Meaning] <1-2 cümle, beginner-glossary.md'den özet>
+        [Neden default / Why default] <wizard-defaults.md rationale>
+```
+
+### Terim kaynağı / Term source
+
+- Tüm `[Anlamı]` mini-açıklamaları `docs/runtime/beginner-glossary.md`'den gelir — wizard terim icat etmez
+- Glossary'de olmayan bir terim kullanılırsa wizard önce glossary'e satır eklemeli (append-only protokol)
+- Kullanıcı daha derin açıklama isterse `/ulak-explain <term>` komutu tam 5-alanlı şemayı verir
+
+### Basit mod seçenek isimleri — kısa referans matris
+
+Aşağıdaki matris wizard'ın basit mod'da her soru için hangi gündelik-dil karşılığını kullanacağını belirler. Seçenek SAYILARI (1, 2, 3...) teknik mod ile birebir aynı kalır; sadece **görünür isim + açıklama** değişir — böylece iki mod arasında geçiş (/mode t veya /mode b) cevapları kaybetmez.
+
+| Qx.y  | Teknik başlık            | Basit başlık                         | Örnek seçenek dönüşümü (1 / teknik → basit)                          |
+|-------|--------------------------|--------------------------------------|----------------------------------------------------------------------|
+| Q1.1  | Proje adı                | Sitenin adı                          | kebab-case notu → "küçük harf + tire, boşluk yok" |
+| Q1.2  | Hedef sektör             | Ne tür site yapıyorsun?              | "E-ticaret" → "Ürün satılan site"; "Fintech" → "Para ile ilgili (cüzdan/ödeme)"; "LMS" → "Kurs/ders platformu"; "Marketplace" → "Alıcı-satıcı pazaryeri"; "Enterprise B2B" → "Şirket-içi kullanım (kendi çalışanın için)"; "AI Copilot" → "Yapay zekâ destekli asistan site"; "Health/PHI" → "Sağlık verisi taşıyan site"; "Member-gated" → "Üye aidatı alan topluluk" |
+| Q1.3  | Hedef kullanıcı kitlesi   | Kim kullanacak?                       | "solo" → "Sadece ben"; "small-team" → "2-5 kişilik ekip"; "enterprise" → "Büyük şirket (50+ kişi)"; "multi-tenant-saas" → "Pazaryeri/platform (N farklı müşteri şirketi)" |
+| Q1.4  | Dil tercihi              | Sitenin dili                          | "bilingual" → "İki dilli (TR + İngilizce)" |
+| Q2.1  | Stack                    | Sitenin teknik temeli                 | "Next.js+Supabase" → "Web sitesi + hazır database (önerilen, çoğu SaaS böyle)"; "Hybrid FastAPI" → "+ Python backend (makine öğrenmesi / özel hesaplama)"; "Hybrid mobile" → "+ Mobil uygulama (iOS + Android)"; "Hybrid bot" → "+ Telegram botu"; "Full hybrid" → "Hepsi birden (büyük platform)" |
+| Q2.2  | Auth stratejisi           | Giriş yöntemi                         | "email+password" → "Email + şifre (klasik)"; "magic link" → "Şifresiz — email'e tek-kullanımlık link gelsin"; "OAuth google+github" → "Google + GitHub ile tek-tık giriş"; "SSO (SAML/OIDC)" → "Kurumsal tek-giriş (büyük şirketlerin sistemi)"; "all" → "Hepsi bir arada" |
+| Q2.3  | Database                  | Veritabanı nerede duracak?            | "Supabase managed" → "Hazır kullanım (Supabase senin yerine yönetir — en kolay)"; "Self-hosted" → "Kendi sunucumda kuracağım (daha fazla kontrol, daha fazla iş)"; "Hybrid" → "İkisinin karışımı (büyük ölçek için)" |
+| Q2.4  | Ödeme sağlayıcı           | Para tahsilat yöntemi                 | "Stripe" → "Uluslararası kart (USD/EUR)"; "Iyzico" → "Türkiye kartı (TL tahsilat + 3D Secure)"; "both" → "İkisi birden (TR + yurt dışı)"; "none" → "Ödeme almayacağım (ücretsiz / içeride kullanılacak)" |
+| Q2.5  | Storage                   | Dosya/medya depolama                  | "Supabase Storage" → "Hazır (Supabase ile birlikte gelir)"; "S3" → "Amazon'un depolama servisi"; "R2" → "Cloudflare ucuz depolama"; "local" → "Sunucudaki klasör" |
+| Q2.6  | Email / Transactional     | Otomatik email gönderme                | "Resend" → "Modern, basit kurulum (önerilen)"; "Postmark" → "Teslim edilebilirlik odaklı"; "SES" → "Amazon'un ucuz emaili"; "SMTP" → "Kendim yöneteceğim"; "none" → "Email göndermeyeceğim" |
+| Q3.x  | Sektör-özel               | Sektörüne göre dar soru               | §Phase 3 branch'larında her soru için inline basit karşılık (fintech KYC → "kullanıcı kimlik+selfie doğrulama", marketplace escrow → "ödeme platformda bekletme", enterprise SSO → "şirket hesabıyla tek-tık giriş") |
+| Q4.1  | Hosting region            | Veriler hangi ülkede duracak?         | "Turkey" → "Türkiye (KVKK zorunlu olur)"; "EU" → "Avrupa (GDPR zorunlu olur)"; "US" → "Amerika"; "Global" → "Çok bölgeli (tüm yasalara uyumlu)" |
+| Q4.2  | Analytics                 | Ziyaretçi analitiği                   | "Plausible" → "Gizlilik-dostu, kendi sunucunda (önerilen)"; "PostHog" → "Detaylı ürün analitiği + feature flag"; "Mixpanel" → "Olay bazlı analitik (ücretli)"; "GA4" → "Ücretsiz Google Analytics"; "none" → "Ziyaretçi takibi istemem" |
+| Q4.3  | Error tracking            | Hata takibi                           | "Sentry" → "Standart hata yakalama"; "Logflare" → "Supabase-uyumlu"; "Axiom" → "Modern log + metrik"; "none" → "Production'da körüm (önerilmez)" |
+| Q4.4  | Uptime monitor            | Site ayakta mı kontrolü               | "Better Stack" → "Modern + on-call bildirimi"; "Cronitor" → "Cron + uptime beraber"; "Uptime Kuma" → "Kendim kuracağım (VPS'te ücretsiz)"; "none" → "Kontrol yok" |
+| Q4.5  | Backup strategy           | Yedekleme                             | "Daily snapshot" → "Günlük yedek (basic)"; "Continuous WAL + PITR" → "Sürekli yedek + geri dönüş (enterprise)"; "none" → "Yedek yok (riskli)" |
+| Q5.1  | Takım boyutu              | Kaç kişi kodlayacak?                  | "solo (1)" → "Sadece ben"; "small (2-5)" → "Küçük ekip"; "mid (6-20)" → "Orta ekip"; "large (20+)" → "Büyük ekip" |
+| Q5.2  | CI provider               | Kod kalite kontrol sistemi            | "GitHub Actions" → "GitHub'ın kendi sistemi (en yaygın)"; "GitLab CI" → "GitLab kullanıyorsan"; "Custom" → "Kendim kuracağım (Drone/Woodpecker)" |
+| Q5.3  | Deploy target             | Site nerede yayınlanacak?             | "VPS+Traefik" → "Senin VPS'inde (kiraladığın sunucu)"; "k8s" → "Büyük ölçek konteyner orkestrasyonu"; "Vercel" → "Hazır hosting (bir tık deploy)"; "Fly.io" → "Global edge hosting"; "docker-only" → "Basit Docker, Traefik yok" |
+| Q5.4  | Preview deploy per PR     | Her değişiklik için test URL'i        | "yes" → "Her PR'a otomatik test linki çıksın"; "no" → "Sadece main dalı deploy olsun" |
+| Q5.5  | Compliance                | Uyman gereken yasalar                 | "gdpr" → "AB veri koruma"; "kvkk" → "Türk veri koruma"; "coppa" → "Çocuk kullanıcı koruma"; "soc2" → "Kurumsal güven raporu"; "hipaa" → "Sağlık verisi yasası"; "pci-dss" → "Kart verisi standardı"; "none" → "Uyum istemem" |
+| Q5.6  | Monitoring dashboard      | Sistem metriklerini görme paneli      | "Grafana" → "Kendim kuracağım (ücretsiz, VPS'te)"; "Datadog" → "Hazır, ücretli"; "none" → "Dashboard yok" |
+
+**Not**: Teknik mod'da seçilen bir cevap basit mod'a geçildiğinde (`/mode b`) o cevap **kaybolmaz**; yalnızca ekrandaki gösterim basit karşılığa döner. Tersi de geçerli (`/mode t`).
 
 ---
 
@@ -469,9 +585,10 @@ Faz içinde herhangi bir anda:
 Tüm sorular bittiğinde wizard şu özeti basar (TR + EN satır satır):
 
 ```
-══════════════════════════════════════════════════════════
- /ulak-start — ÖZET / SUMMARY
-══════════════════════════════════════════════════════════
+═════════════════════════════════════════════════════════════════
+ /ulak-start — ÖZET + AKTİVE EDİLENLER
+ /ulak-start — SUMMARY + ACTIVATED LAYERS
+═════════════════════════════════════════════════════════════════
 
  Proje / Name        : <product_name>
  Sektör / Sector     : <--sector>
@@ -495,15 +612,52 @@ Tüm sorular bittiğinde wizard şu özeti basar (TR + EN satır satır):
  Compliance          : <csv>
  Monitoring          : <grafana|datadog|none>
 
+─ Ulak OS bu projeye otomatik aktive etti ──────────────────────
+─ Ulak OS auto-activated for this project ─────────────────────
+
+ 📦 Sector overlay (15 kitten / from 15 kits)
+    → <sector-overlay-name> (<kısa açıklama, örn: "marketplace:
+       commission + escrow + dispute flow">)
+
+ 📋 Rule pack (8'den aktif N / N of 8 active)
+    → <rp-1, örn: multi-tenant-supabase — RLS tenant isolation>
+    → <rp-2, örn: transactional-fsm-payment — pending→active FSM>
+    → <rp-3, örn: reseller-enabled-saas — 2-sided permission>
+
+ 🛡️  Anti-pattern koruması (~100 katalogdan bu projede aktif)
+ 🛡️  Anti-pattern protection (active here from ~100 catalog)
+    → AP-06 admin-role-re-read (fresh-DB role check)
+    → AP-08 sandbox ↔ live env switch (payment-aktif ise)
+    → AP-11 multi-layer auth bypass (single auth helper)
+    → AP-16 .env.local commit block
+    → <sector-özel AP'ler, örn: AP-EC-02 oversell-prevention>
+    → Toplam / Total: <N> anti-pattern DB trigger + CHECK
+      constraint + CI gate olarak ekleniyor.
+
+ 🏛️  Governance kuralları (22'den aktif / of 22 active)
+ 🏛️  Governance rules (of 22 active)
+    → <gv-1, örn: KVKK uyum (region=tr cross-rule)>
+    → <gv-2, örn: commission-immutability (marketplace sector)>
+    → <gv-3, örn: audit-retention: 1-year (team-size≥small)>
+    → <gv-N, ...>
+
+ 📄 Scaffold edilecek dosyalar (tahmini / estimated)
+    → <N> page template (auth + customer [+ seller] [+ admin]
+       [+ partner])
+    → <N> API route template (webhooks + customer + admin)
+    → <N> component template (shadcn + dashboard)
+    → <N> SQL migration (initial + RLS [+ sector schema]
+       [+ payment])
+    → <N> compliance template (<compliance listesi, örn:
+       KVKK consent + data export>)
+
  Otomatik eklenenler / Auto-added:
    - <ör: COPPA (sector=education + minors=yes)>
    - <ör: RLS policies (audience=multi-tenant-saas)>
    - <ör: AP-06 admin role re-read (team>=small)>
    - <ör: SP-08 ai-relay-cost-control bundle (sector=ai-copilot)>
 
-──────────────────────────────────────────────────────────
-
- Çalıştırılacak komut / Command to dispatch:
+─ Çalıştırılacak komut / Command to dispatch ───────────────────
 
  /ulak-scaffold product_name=<name> \
                 --sector=<sector-csv> \
@@ -520,7 +674,16 @@ Tüm sorular bittiğinde wizard şu özeti basar (TR + EN satır satır):
                 --error-tracking=<provider> \
                 [--preview-per-pr]
 
-──────────────────────────────────────────────────────────
+─ Sonraki adımlar / What happens next ──────────────────────────
+
+ Scaffold tamamlanır tamamlanmaz `/ulak-next-steps` otomatik
+ çalışır — proje nasıl çalıştırılır, hangi env var lazım, ilk
+ admin kullanıcı nasıl oluşturulur — 8-10 somut adım.
+ As soon as scaffold finishes, `/ulak-next-steps` auto-runs —
+ how to start the project, which env vars are needed, how to
+ create the first admin user — in 8-10 concrete steps.
+
+─────────────────────────────────────────────────────────────────
 
  [e] Evet, çalıştır              Enter = e
  [h] Hayır, iptal
@@ -528,8 +691,22 @@ Tüm sorular bittiğinde wizard şu özeti basar (TR + EN satır satır):
  [/restart] Baştan başla
 
  Cevabın / Your answer: _
-══════════════════════════════════════════════════════════
+═════════════════════════════════════════════════════════════════
 ```
+
+### Aktive edilen katmanlar — kaynak mantığı / Activation layer — source logic
+
+Özet bloğundaki "Ulak OS otomatik aktive etti" paneli dolduran kaynaklar:
+
+| Alan / Field | Kaynak / Source |
+|---|---|
+| Sector overlay | `templates/sectors/<overlay>/` dizin varlığı + `docs/runtime/sector-packs.md` eşleşmesi |
+| Rule pack listesi | `docs/runtime/rule-packs/*.md` + runtime-manifest sinyali (stack/sector/locale/vb.) |
+| Anti-pattern listesi | `docs/runtime/anti-patterns.md` + sector-özel AP'ler (`docs/runtime/sector-packs.md`'te sector altında) |
+| Governance listesi | `docs/governance/*.md` + rule-collision-matrix (hangi governance hangi cevap ile aktifleşir) |
+| Scaffold dosya sayıları | `.claude/skills/saas-scaffolder/SKILL.md` §Templates + sector overlay dosya sayısı |
+
+Sayılar uydurulmaz — runtime-manifest hesaplar. Tahmin sıfırsa o satır özette gösterilmez.
 
 ### Onay davranışı / Confirmation behavior
 
@@ -541,12 +718,27 @@ Tüm sorular bittiğinde wizard şu özeti basar (TR + EN satır satır):
   sorulur.
 - `/restart` → Phase 1 Q1.1'e döner; wizard onay ister (`[e]` ile sıfırlama, `[h]` ile mevcut).
 
+### Dispatch chain / Zincir dispatch
+
+Onay davranışı tek bir slash komutunu değil, **iki aşamalı zinciri** tetikler:
+
+```
+[e]  →  /ulak-scaffold <flags>   →  /ulak-next-steps <product_path>
+        (diske yazar, commit)        (ekrana rehber basar, diske dokunmaz)
+```
+
+- `/ulak-scaffold` başarılı biterse (scaffold-log.md SUCCESS) aynı turn içinde `/ulak-next-steps`
+  otomatik çağrılır — yeni user input beklenmez.
+- `/ulak-scaffold` FAILED dönerse next-steps yerine `/triage-build` önerilir.
+- Zincirdeki her handoff ekrana bir breadcrumb basar: "✓ scaffold tamam → next-steps gösteriliyor".
+
 ---
 
 ## Defaults referansı / Defaults reference
 
-- `docs/runtime/wizard-defaults.md` — sector × payment/hybrid/deploy/compliance default matrisi.
+- `docs/runtime/wizard-defaults.md` — sector × payment/hybrid/deploy/compliance default matrisi + `wizard_mode` axis.
 - `docs/runtime/sector-packs.md` — sector ID'leri (uydurulmuş sector adı yasak).
+- `docs/runtime/beginner-glossary.md` — basit mod inline `[Anlamı]` açıklamalarının otorite kaynağı (40+ terim, 5-alanlı şema).
 - `.claude/commands/ulak-scaffold.md` §Inputs — geçerli flag seti (hiçbir flag uydurulmaz).
 
 ## Yasaklar / Forbidden
@@ -573,23 +765,35 @@ Tüm sorular bittiğinde wizard şu özeti basar (TR + EN satır satır):
 
 ## Post-dispatch
 
-`/ulak-scaffold` bittikten sonra wizard şunları önerir:
+`/ulak-scaffold` başarılı biter bitmez wizard `/ulak-next-steps` komutunu otomatik olarak aynı
+turn içinde çağırır. Ekrana 8-10 adımlık kişiselleştirilmiş çalıştırma rehberi basılır:
 
-1. `cd <product_name>`
-2. `pnpm install`
-3. `cp .env.example .env.local` (gerçek değerleri el ile doldur — repo'ya asla commit etme)
-4. Opsiyonel: Ulak OS üstünden `/director komple` çalıştırarak yeni projenin baseline sağlık
-   skorunu al (14-dimension audit otomatik koşar).
+- `cd <product_name>`
+- `pnpm install`
+- `.env.local` doldur — hangi değer nereden (Supabase dashboard, Iyzico sandbox, Resend) adım
+  adım, link + 3-adım açıklama + dikkat notlarıyla.
+- `pnpm supabase:push` + `pnpm seed` + `pnpm dev` → localhost:3000
+- İlk admin kullanıcı (Supabase Studio → Authentication → Create user → SQL Editor ile `role='admin'`)
+- Admin panele giriş: http://localhost:3000/admin
+- Pre-push hook kurulumu (R-04)
+- Baseline health score için `/ulak-audit-deep`
+
+Detay: `.claude/commands/ulak-next-steps.md`. Bu komut diske dokunmaz — sadece ekrana rehber basar.
+
+Opsiyonel: Ulak OS üstünden `/director komple` çalıştırarak yeni projenin baseline sağlık skorunu
+al (14-dimension audit otomatik koşar).
 
 ## Integration points
 
 - `.claude/commands/ulak-scaffold.md` — hedef komut; flag seti burada doğrulanır.
-- `docs/runtime/wizard-defaults.md` — sector × eksen default matrisi.
+- `docs/runtime/wizard-defaults.md` — sector × eksen default matrisi + `wizard_mode` axis (t|b).
 - `docs/runtime/sector-packs.md` — sector ID katalogu + overlay detayları.
+- `docs/runtime/beginner-glossary.md` — Q0=b seçildiğinde dual-render `[Anlamı]` açıklamalarının kaynağı; 40+ terim, 5-alanlı şema.
 - `docs/runtime/output-profiles.md` — GREENFIELD_BUILDER_PROFILE tetiklenir.
 - `docs/runtime/localization-strategy.md` — Q1.4 locale kararı buraya bağlanır.
 - `docs/governance/observability-baseline.md` — Q4.2–Q4.5 kararları.
 - `docs/governance/settings-permissions-governance.md` — Q5.1 team boyutu → CI policy.
+- `.claude/commands/ulak-explain.md` — Wizard sırasında veya sonrasında terimin tam 5-alanlı açıklaması için kullanıcının bağımsız çağırabileceği komut.
 
 ## Relationship to /ulak-intake
 

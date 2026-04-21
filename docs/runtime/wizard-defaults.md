@@ -239,6 +239,39 @@ Her sector için 3 dar boyut. `saas` minimal branch taşımaz; sector-deep boyut
 | gitops            | `argocd`      | Declarative deploy. |
 | service-mesh      | `none`        | Operatör opt-in; baseline'ı şişirme. |
 
+## Faz 0 — Wizard rendering modu / Wizard rendering mode
+
+`/ulak-start` v3.1+ iki render modu taşır: **teknik** (dev-kitle için, mevcut davranış) ve **basit** (ilk kez SaaS yapan için gündelik dil + inline `[Anlamı]` açıklama). Bu eksen tek bir soruya (Q0) bağlıdır ve sector'dan bağımsızdır — tüm sector'ler için aynı default alır.
+
+| Axis          | Default     | Kabul edilen değerler    | Rationale |
+|---------------|-------------|--------------------------|-----------|
+| `wizard_mode` | `technical` | `technical` \| `beginner` | `[enter]` ile default seçilebilir olmalı — mevcut dev-kullanıcı için davranış aynı kalır. Beginner açıkça `b` seçerek girer; sessizce değişmez. |
+
+### Mod davranış farkı / Mode behavior diff
+
+| Davranış / Behavior               | `technical`                 | `beginner`                                                    |
+|-----------------------------------|-----------------------------|---------------------------------------------------------------|
+| Soru başlığı / Question heading   | Sadece teknik TR/EN         | Teknik başlık + gündelik dil karşılığı yan yana               |
+| Seçenek render                    | Tek blok (teknik isim)      | İki blok: `[Teknik mod]` + `[Basit mod]` + "Ne seçmeliyim?"   |
+| Post-answer feedback              | `✓ Seçim kaydedildi`       | `✓` + `[Anlamı]` mini-açıklama (glossary'den) + `[Neden default]` |
+| Terim kaynağı                     | Inline kısa not              | `docs/runtime/beginner-glossary.md` (40+ terim, 5-alanlı şema) |
+| Seçenek numaraları                | 1, 2, 3...                   | 1, 2, 3... (değişmez — mod arası geçiş cevabı korur)          |
+| Dual-render protokol              | Kapalı                       | `.claude/commands/ulak-start.md` §Dual-render protokolü       |
+
+### Mode-switch davranışı / Mode switch behavior
+
+- `/mode t` veya `/mode b` herhangi bir Q-soru'sunda kullanılabilir
+- Mod değişimi **cevapları kaybetmez** — yalnızca ekrandaki gösterim karşılığa döner (seçenek numaraları 1:1 eşleşir)
+- Basit mod'da kullanıcı bir terimi derinlemesine anlamak isterse `/ulak-explain <term>` bağımsız komutu ile 5-alanlı tam şema render edilir
+
+### Glossary bağımlılığı / Glossary dependency
+
+- Basit mod'da gösterilen her `[Anlamı]` açıklaması otorite olarak `docs/runtime/beginner-glossary.md`'den gelir
+- Glossary'de olmayan bir terim wizard'da görünürse önce glossary'e append-only satır eklenir, sonra wizard'da kullanılır
+- 40 terim mevcut seed; `/ulak-start` kullandığı tüm teknik terimler burada olmak zorunda
+
+---
+
 ## Cross-cutting rules
 
 Bu kurallar default matrisinin **üstüne** uygulanır; çakışma olursa kural kazanır.

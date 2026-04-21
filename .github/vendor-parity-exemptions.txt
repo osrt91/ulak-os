@@ -65,3 +65,26 @@ gemini:ulak-locale
 gemini:ulak-packs
 gemini:ulak-search
 gemini:ulak-start
+
+# ----------------------------------------------------------------------------
+# v1.3.0-cycle post-scaffold onboarding command (Claude-Code-specific).
+# `/ulak-next-steps` auto-chains after `/ulak-scaffold` to produce an 8-10
+# step personalized runbook on screen (no disk writes). Relies on Claude
+# Code's in-session chain dispatch after a successful scaffold. Gemini CLI
+# adapter scheduled for v1.3 once equivalent primitive exists.
+# ----------------------------------------------------------------------------
+gemini:ulak-next-steps
+
+# ----------------------------------------------------------------------------
+# v3.0.x beginner-expansion slash commands (Claude-Code-specific).
+# `/ulak-explain` — 5-field schema term explainer; lookup source is
+#   `docs/runtime/beginner-glossary.md`, with Grep fallback across
+#   `docs/catalog.md` + `docs/runtime/*.md` + `docs/governance/*.md`.
+# `/ulak-demo`    — 3-project tour with measured file counts
+#   (`find templates/... | wc -l`) and dev-day comparison. Relies on Claude
+#   Code's Read+Grep+Bash(find) primitives. Gemini adapter post-v1.1.
+# Both commands are inline-only (no disk writes) and join `/ulak-ask`,
+# `/ulak-hello`, `/ulak-search` as the "talk naturally" surface.
+# ----------------------------------------------------------------------------
+gemini:ulak-explain
+gemini:ulak-demo

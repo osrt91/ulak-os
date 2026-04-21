@@ -5,7 +5,7 @@
   "description": "Vendor-neutral prompt operating system — plan, audit, govern, scaffold full-stack SaaS across Claude Code / Codex / Gemini CLI",
   "core": "core/ulak-os-core-contract-2.0.0.md",
   "agents": 27,
-  "commands": 21,
+  "commands": 22,
   "skills": 10,
   "rule_packs": 8,
   "sector_packs": 24,

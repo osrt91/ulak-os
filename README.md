@@ -150,7 +150,7 @@ CLAUDE.md (3-line entry)
 
 .claude/
   ├── agents/*.md                     <- 27 specialist + persona
-  ├── commands/*.md                   <- 21 slash command
+  ├── commands/*.md                   <- 24 slash command
   ├── skills/*/SKILL.md               <- 10 skill
   └── settings.json                   <- scoped permissions + hooks
 
@@ -183,7 +183,7 @@ Detaylı mimari diagram (mermaid): [docs/architecture/](./docs/architecture/).
 
 | Vendor | Durum | Komut dosyası | Reading order |
 |---|---|---|---|
-| Claude Code | primary | 21 slash command | `CLAUDE.md` @-imports |
+| Claude Code | primary | 24 slash command | `CLAUDE.md` @-imports |
 | Codex / Copilot | supported | `AGENTS.md` plain-text | `AGENTS.md` |
 | Gemini CLI | supported | 8 `.toml` komut | `docs/adapters/gemini-cli.md` |
 
