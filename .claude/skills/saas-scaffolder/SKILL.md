@@ -249,6 +249,82 @@ By design, commit 1 of the generated project cannot contain:
 - `docs/runtime/output-profiles.md` — GREENFIELD_BUILDER_PROFILE + PACK_GENERATION_PROFILE are compatible with this skill
 - `.claude/agents/autonomous-program-director.md` — the dispatching agent
 
+## Sector overlay orchestration (v2.2+)
+
+Scaffolder skill v2.2 resolves inputs → overlay directories → merge order. The resolved file set is deterministic for any given input tuple.
+
+### Input → overlay directory mapping
+
+| Input | Template directory | Applies when |
+|---|---|---|
+| `--sector <name>` | `templates/sectors/<name>/` | operator opts into a sector |
+| `--hybrid-backend <kind>` | `templates/backends/<kind>/` (e.g., `fastapi`) | when a separate backend service is desired |
+| `--has-mobile` | `templates/apps/mobile-expo/` | when an Expo app ships alongside web |
+| `--has-bot <kind>` | `templates/apps/bot-<kind>/` (e.g., `telegram`) | when a bot ships |
+| `--deploy <kind>` | `templates/sectors/container-k8s/` OR `monorepo-root/infrastructure/` | deploy target selection |
+| `--compliance <list>` | `templates/sectors/regulated-saas/` + any listed (gdpr, kvkk, soc2) | regulatory layer |
+| base (always) | `templates/saas-starter/` | every run writes this first |
+
+### Merge order (deterministic, v2.2)
+
+1. **Monorepo root** — `templates/monorepo-root/` if any overlay activates (package.json with pnpm-workspaces + turbo.json + pnpm-workspace.yaml + root .gitignore + README). Without overlays, base saas-starter runs in flat mode at `<product_name>/` directly.
+2. **Base web app** — `templates/saas-starter/` → `<product_name>/apps/web/` (monorepo mode) or `<product_name>/` (flat mode)
+3. **Hybrid backend** — `templates/backends/<kind>/` → `<product_name>/apps/api/`
+4. **Mobile app** — `templates/apps/mobile-expo/` → `<product_name>/apps/mobile/`
+5. **Bot app** — `templates/apps/bot-<kind>/` → `<product_name>/apps/bot/`
+6. **Shared packages** — `templates/shared-packages/*/` → `<product_name>/packages/{shared,ui,config}/`
+7. **Sector overlay** — `templates/sectors/<sector>/` merged onto `apps/web/` (pages, schemas, lib) with `.override.template` files replacing base paths. Each sector's `supabase/migrations/00005_*.sql.template` lands as an additional migration alongside base 00001-00004.
+8. **Compliance overlay** — `templates/sectors/regulated-saas/docs/compliance/` to `<product_name>/docs/compliance/` (always docs-only; no code paths)
+9. **Deploy target** — `templates/monorepo-root/infrastructure/` (compose+traefik) OR `templates/sectors/container-k8s/k8s/` (k8s) based on --deploy
+10. **Scaffold log** — `reports/current/scaffold-log.yaml` per run
+
+### Override pattern
+
+When a sector overlay's path matches a base template path, the overlay replaces the base if `.override.template` suffix is present:
+
+```
+templates/saas-starter/app/layout.tsx.template            (base)
+templates/sectors/ecommerce/app/layout.tsx.override.template  (sector override)
+```
+
+Sector overrides are diffable — the merge log records which base files were superseded.
+
+### Compatibility matrix
+
+| Sector | Pairs with (recommended) | Pairs with (allowed) | Refuses |
+|---|---|---|---|
+| payment-integrated-saas (SP-03 via B.2) | reseller, regulated | ecommerce, marketplace | — |
+| ecommerce | payment-integrated-saas, ai-copilot | marketplace, multi-tenant | health-sensitive (schema overlap) |
+| fintech | regulated-saas, payment-integrated-saas | enterprise-b2b | ecommerce |
+| health-sensitive | regulated-saas | enterprise-b2b | ecommerce, marketplace |
+| education | member-gated-community | ai-copilot, regulated-saas (COPPA) | fintech |
+| enterprise-b2b | regulated-saas | media-content, ai-copilot | marketplace |
+| media-content | ai-copilot, member-gated-community | education | fintech |
+| marketplace | payment-integrated-saas | reseller | health-sensitive |
+| ai-copilot | ai-relay-cost-control | media-content, education | — |
+| pwa-desktop | any | any | container-k8s (deployment shape conflict) |
+| admin-cms-hardening | any | any | — |
+| container-k8s | self-hosted-supabase | any hybrid | pwa-desktop |
+
+Scaffolder refuses conflicting combinations at Phase 0 with actionable error: "ecommerce + health-sensitive cannot coexist; separate into two apps (monorepo mode) or pick one".
+
+### Sector-specific anti-patterns
+
+Each sector overlay carries its own anti-pattern catalogue entries (trigger-enforced where possible). Examples shipped in v2.2:
+
+- **AP-EC-02** (oversell) — ecommerce `reserve_stock_on_order_item` trigger
+- **AP-SSO-01** (IdP-trust without DB) — enterprise-b2b SSO libs
+- **AP-PHI-01** (unencrypted PHI) — health-sensitive envelope encryption
+- **AP-PWA-01** (cache poison) — pwa-desktop per-user scope hash
+- **AP-COM-01** (gated content in sitemap) — member-gated-community CHECK constraint
+- **AP-AI-01/02/03** (cost/token/fallback) — ai-relay-cost-control middleware
+- **AP-ADM-01/02** (impersonation audit + bulk cap) — admin-cms-hardening DB constraints
+- **AP-REG-01** (PHI in standard audit) — regulated-saas BEFORE INSERT trigger + separate PHI channel
+- **AP-MP-01/02/03** (commission / payout / dispute FSM) — marketplace triggers
+- **AP-SHS-01/02** (backup + kong rate limit) — self-hosted-supabase runbook + plugin enforcement
+- **AP-K8S-01/02** (resource limits + PDB) — container-k8s manifests + LimitRange
+- **AP-COPPA** (under-13 consent) — education trigger
+
 ## Determinism contract (v1.1+)
 
 Every scaffolder run is a pure function of its input + the `templates/saas-starter/` tree at the current commit. Two properties:
@@ -300,4 +376,4 @@ Total templates at v1.1: ~95 files. Scaffolder emits ≥ 85 of them for any sing
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v1.1.0**. This skill is the primary "Ulak OS produces a SaaS" capability and defines the public-GA showcase promise. Determinism contract + verification table landed in v1.1 closing the v1.0.0 UX-HI-03 finding (scaffolder promised 41 files; delivered 27; now delivers ≥ 85 with documented synthesis contract for the remainder).
+Authoritative as of Ulak OS **v2.2.0**. This skill is the primary "Ulak OS produces a SaaS" capability and defines the public-GA showcase promise. v1.1 closed UX-HI-03 via 85+ templates; v2.0 added hybrid stack support (FastAPI + Expo + Telegram + monorepo + Traefik); v2.2 added sector overlay orchestration for 14 sectors (education / fintech / ecommerce / marketplace / enterprise-b2b / media-content / health-sensitive / ai-copilot / pwa-desktop / admin-cms-hardening / ai-relay-cost-control / member-gated-community / self-hosted-supabase / regulated-saas / container-k8s). Total scaffolder template surface at v2.2: 175+ files across base + backends + apps + shared-packages + monorepo-root + 14 sectors.
