@@ -1,5 +1,95 @@
 # Changelog
 
+## [2.2.0] — 2026-04-21 — Phase E: 14 sector overlay kits (81 templates, 12800+ LOC)
+
+### Context
+
+Sector packs are no longer just governance rules — they ship as template overlays that the scaffolder merges onto the base saas-starter when `--sector <name>` is passed. Closes the "tüm sektörleri de düşün" operator directive from the v2.2 roadmap.
+
+Scaffolder now supports full hybrid-monorepo-sector invocations:
+
+```
+/ulak-scaffold my-platform \
+  --sector ecommerce \
+  --hybrid-backend fastapi \
+  --has-mobile \
+  --deploy k8s \
+  --payment stripe \
+  --compliance gdpr,coppa
+```
+
+Output: a pnpm-workspaces monorepo with web + api + mobile + ecommerce-specific schemas + checkout flow + k8s manifests + compliance runbooks — all from commit 1.
+
+### 14 sectors materialized (81 files, 12847 LOC)
+
+**Batch 1 (23 files)** — education + fintech + ecommerce + marketplace
+
+- **education** — LMS with courses + lessons + quizzes + COPPA `enforce_coppa_consent` trigger for under-13
+- **fintech** — wallet + KYC 3-step flow + AML queue + MASAK/CBRT/OFAC compliance reports; Sumsub/Onfido adapters; balance invariant via `apply_transaction_to_balance` trigger; `transactions.idempotency_key` UNIQUE
+- **ecommerce** — catalog + PDP + cart + Stripe Element checkout; AP-EC-02 stock oversell prevention via `reserve_stock_on_order_item` `SELECT FOR UPDATE` trigger
+- **marketplace** — two-sided seller + buyer + dispute 5-state FSM + payout FSM; AP-MP-01 commission-rate immutability enforced at DB layer
+
+**Batch 2 (22 files)** — enterprise-b2b + media-content + health-sensitive + ai-copilot
+
+- **enterprise-b2b** — SAML (samlify) + OIDC (openid-client) SSO; teams-within-tenant; bulk user provisioning; AP-SSO-01: IdP attestation never grants session without local `user_role_assignments`
+- **media-content** — MDX article CMS + publishing FSM (draft→review→scheduled→published→archived→rejected); comment moderation; revision history trigger
+- **health-sensitive** — PHI envelope encryption (KEK in KMS, wrapped DEK per-tenant, 5-min pod cache); granular consent manager (6 data types); break-glass with 2nd admin approval + 4h expiry; data-residency RLS (EU/TR/US isolation)
+- **ai-copilot** — streaming chat + thread resume; LLM relay with provider abstraction (anthropic/openai/google); two-level cost-cap; stream-tee token counting
+
+**Batch 3 (20 files)** — pwa-desktop + admin-cms-hardening + ai-relay-cost-control + member-gated-community
+
+- **pwa-desktop** — versioned-cache SW with per-user scope hash (AP-PWA-01 cache-poison prevention via `MessageChannel`); 4-shortcut manifest; background-sync queue with `x-replay-id` idempotency
+- **admin-cms-hardening** — impersonation with four-eyes DB constraint + 1h window; feature flags with append-only audit; bulk-actions with soft-100/hard-1000 DB cap
+- **ai-relay-cost-control** — cost-cap middleware with 402 short-circuit + `retry-after`; fallback chain per-tenant; attribution by user + feature + conversation; admin dashboard with Recharts
+- **member-gated-community** — tier-ranked RLS + AP-COM-01 sitemap CHECK constraint (`required_tier='free' OR is_indexable=false`); privacy-respecting directory; nested-reply threads; unique-solution-per-thread index
+
+**Batch 4 (16 files)** — self-hosted-supabase + regulated-saas + container-k8s
+
+- **self-hosted-supabase** — full docker-compose stack (kong + gotrue/rest/realtime/storage/meta/pgbouncer/studio/postgres) with healthcheck-gated boot order; backup runbook with `pg_dump -Fc` + rsync + continuous WAL shipping + S3 object-lock; upgrade playbook with postgres-first ordering
+- **regulated-saas** — SOC 2 Type II readiness (5 TSCs); GDPR + KVKK Madde 9 runbook with DSAR flow + 72h breach notification; 3-layer data-residency enforcement (CHECK + edge 451 + ArgoCD region pinning); `compliance_audit_log` PHI-aware channel with BEFORE INSERT trigger rejecting forbidden keys
+- **container-k8s** — RollingUpdate web-deployment + HPA (70% CPU) + PDB (minAvailable 50%); OrderedReady api-statefulset with per-pod PVC; ArgoCD Application (`selfHeal: true` + `prune: true` + PreSync alembic migrate); namespace-per-tenant-env with ResourceQuota + LimitRange defaults + default-deny NetworkPolicy + `pod-security.kubernetes.io/enforce: restricted`
+
+### Skill orchestration (E.3)
+
+`.claude/skills/saas-scaffolder/SKILL.md` v2.2 adds:
+
+- **Input → overlay directory mapping** table (8 input flags mapped to 8 template subdirectories)
+- **Merge order** — deterministic 10-step sequence from monorepo-root → base → hybrid-backend → mobile → bot → shared-packages → sector → compliance → deploy target → scaffold-log
+- **Override pattern** — `.override.template` suffix supersedes base path; merge log records supersessions
+- **Compatibility matrix** — 14 sectors × refuses/allowed/recommended pairings (e.g., ecommerce + health-sensitive refused; ai-copilot + ai-relay-cost-control recommended)
+- **Sector-specific anti-patterns** — 14 APs enforced by DB triggers or CHECK constraints; scaffolded projects prevent these by construction
+
+### Anti-patterns enforced by construction (v2.2)
+
+14 new APs across sectors, each enforced at the DB layer:
+
+- AP-EC-02 (ecommerce oversell), AP-SSO-01 (IdP-trust without DB), AP-PHI-01 (unencrypted PHI), AP-PWA-01 (cache poison), AP-COM-01 (gated content in sitemap), AP-AI-01/02/03 (cost-cap, token counting, fallback chain), AP-ADM-01/02 (impersonation audit, bulk cap), AP-REG-01 (PHI in standard audit), AP-MP-01/02/03 (commission/payout/dispute FSM), AP-SHS-01/02 (backup, kong rate limit), AP-K8S-01/02 (resource limits, PDB), AP-COPPA (under-13 consent)
+
+## [2.1.0] — 2026-04-21 — Phase D: community ecosystem integration (6 new commands + 2 new skills)
+
+### Context
+
+Brings superpowers workflow disciplines into first-class Ulak OS citizens, plus governance skills for community pack management. Closes the "web'teki kod mühendisleri için verilmiş acayi büyük komutlar + skill + plugin'ler fetch edilsin ve Ulak OS'a entegre edilsin" operator directive.
+
+### 6 new commands
+
+- `/ulak-audit-deep` — 14-dimension quality scorecard (wraps fourteen-dimension-audit skill with A-F grade + gap-analysis output)
+- `/ulak-brainstorm` — pre-implementation ideation (wraps superpowers:brainstorming with spec-file persistence under docs/superpowers/specs/)
+- `/ulak-subagent-dispatch` — parallel-subagent coordination (wraps superpowers:dispatching-parallel-agents + subagent-driven-development with orchestrator discipline: redaction sweep + validator pass + commit series)
+- `/ulak-test-driven` — Red-Green-Refactor workflow (wraps superpowers:test-driven-development with Ulak evals integration)
+- `/ulak-pattern-extract` — cross-project pattern absorption (T1/T2 evidence + pattern-import-ledger entry + native rule-pack/sector-pack/anti-pattern output; redaction-enforced)
+- `/ulak-mcp-discover` — MCP server discovery (reads community registries; trust-tier classified; operator-gated allowlist proposal; never auto-installs)
+
+### 2 new skills
+
+- `mcp-governance-auto` — drift detector between `docs/governance/mcp-governance.md` + `.mcp.json` + `settings.local.json`; produces PR-ready reconciliation diff; operator-gated
+- `awesome-packs-index` — read-only catalog of community packs from `awesome-claude-code` + MCP registry + GitHub topic scans; license + trust-tier + activity filters; surfaces Ulak OS gaps
+
+### Distribution
+
+- `docs/distribution/community-packs-catalog.md` (new) — curated reference list of community packs (superpowers, awesome-design-md, MCP registry) with classification rubric + integration workflow + reciprocal-submission plan
+- `.claude-plugin/plugin.json` — capability counts updated: commands 9 → 15, skills 8 → 10, scaffolder_templates 27 → 175, new field `sector_overlays: 17`. flagship_commands + flagship_skills arrays expanded.
+
 ## [2.0.0] — 2026-04-21 — Phase C: hybrid-systems scaffolding (monorepo + FastAPI + Expo + Telegram + Traefik)
 
 ### Context

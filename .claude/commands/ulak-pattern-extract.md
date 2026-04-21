@@ -42,10 +42,10 @@ allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 
 ## Redaction discipline
 
-The source project MUST be referred to via abstract descriptor only. Examples:
-- ❌ "extracted from scanner-project.com"
+The source project MUST be referred to via abstract descriptor only. Example pattern (don't copy the literal bad example — it teaches the anti-pattern):
+- ❌ "extracted from <real-domain>.com"
 - ✅ "extracted from a security scanner SaaS"
-- ❌ "as seen in trend-platform.com's homepage builder"
+- ❌ "as seen in <project-name>'s homepage builder"
 - ✅ "as seen in a CMS-style section builder from a multi-locale e-commerce platform"
 
 Real project names are operator-only information. Every rule-pack shipped publicly has T1/T2 evidence that does not leak portfolio identity.
