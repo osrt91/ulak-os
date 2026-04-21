@@ -225,16 +225,51 @@ create policy threads_author_update on public.threads
   for update using (tenant_id = public.current_tenant_id() and author_id = auth.uid())
   with check (tenant_id = public.current_tenant_id() and author_id = auth.uid());
 
+-- SEC-V22-H-11 fix: posts inherit their parent thread's tier gate.
+-- Previously posts only checked tenant, letting a free-tier member read the
+-- body content of premium threads via /rest/v1/posts?thread_id=eq.<premium>.
+-- Now the subquery joins through threads + member_profiles + tier ranks so a
+-- free member cannot read any post inside a tier-gated thread.
 drop policy if exists posts_read_via_thread on public.posts;
 create policy posts_read_via_thread on public.posts
   for select using (
-    exists (select 1 from public.threads th where th.id = thread_id and th.tenant_id = public.current_tenant_id())
+    exists (
+      select 1
+      from public.threads th
+      where th.id = thread_id
+        and th.tenant_id = public.current_tenant_id()
+        and (
+          th.required_tier is null
+          or th.required_tier = 'free'
+          or public.tier_rank(th.tenant_id, (
+              select mp.tier_slug
+              from public.member_profiles mp
+              where mp.user_id = auth.uid() and mp.tenant_id = th.tenant_id
+              limit 1
+          )) >= public.tier_rank(th.tenant_id, th.required_tier)
+        )
+    )
   );
 drop policy if exists posts_author_insert on public.posts;
 create policy posts_author_insert on public.posts
   for insert with check (
     author_id = auth.uid()
-    and exists (select 1 from public.threads th where th.id = thread_id and th.tenant_id = public.current_tenant_id())
+    and exists (
+      select 1
+      from public.threads th
+      where th.id = thread_id
+        and th.tenant_id = public.current_tenant_id()
+        and (
+          th.required_tier is null
+          or th.required_tier = 'free'
+          or public.tier_rank(th.tenant_id, (
+              select mp.tier_slug
+              from public.member_profiles mp
+              where mp.user_id = auth.uid() and mp.tenant_id = th.tenant_id
+              limit 1
+          )) >= public.tier_rank(th.tenant_id, th.required_tier)
+        )
+    )
   );
 
 drop policy if exists reactions_self on public.reactions;

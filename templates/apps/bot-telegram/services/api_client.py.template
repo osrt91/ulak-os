@@ -41,12 +41,20 @@ class ApiClient:
             await self._client.aclose()
 
     def _headers(self, method: str, path: str, body: bytes) -> dict[str, str]:
-        token = self._settings.api_service_token.get_secret_value()
-        signature = sign_request(token, method, path, body)
+        # SEC-V22-C-04 hardening: Bearer token and HMAC secret are now DISTINCT.
+        # Bearer authenticates the bot identity; HMAC authenticates the request
+        # payload + prevents replay. Compromising one does not yield the other.
+        bearer = self._settings.api_service_token.get_secret_value()
+        hmac_secret = self._settings.api_hmac_secret.get_secret_value()
+
+        signed = sign_outbound(hmac_secret, method, path, body)
         return {
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {bearer}",
             "X-Service-Name": "bot",
-            "X-Signature": signature,
+            "X-Signature": signed.signature,
+            "X-Timestamp": signed.timestamp,
+            "X-Nonce": signed.nonce,
+            "X-Body-SHA256": signed.body_hash,
             "Content-Type": "application/json",
         }
 
@@ -68,7 +76,9 @@ class ApiClient:
     # ---- business methods --------------------------------------------------
 
     async def get_user_by_email(self, email: str) -> dict[str, Any]:
-        return await self._get(f"/api/users/by-email?email={email}")
+        # SEC-V22-H-04 fix: URL-encode email to prevent query-param smuggling.
+        from urllib.parse import quote
+        return await self._get(f"/api/users/by-email?email={quote(email, safe='')}")
 
     async def request_magic_code(self, *, email: str, tg_user_id: int) -> dict[str, Any]:
         return await self._post("/api/telegram/magic-code", {"email": email, "tg_user_id": tg_user_id})

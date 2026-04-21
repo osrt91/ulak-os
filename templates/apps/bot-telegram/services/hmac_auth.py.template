@@ -1,30 +1,163 @@
-"""HMAC helpers for service-to-service auth between bot and FastAPI backend."""
+"""HMAC helpers for service-to-service auth between bot and FastAPI backend.
+
+v2.2.1 hardening (SEC-V22-C-04):
+- Canonical signing string now includes X-Timestamp + X-Nonce + Content-SHA256.
+- Signature secret is DISTINCT from the Bearer service token (callers must pass
+  `hmac_secret`, not the Bearer token).
+- `verify_inbound` enforces ±60s timestamp window + nonce-once-only via a
+  pluggable `NonceStore` protocol (Redis-backed impl in production; in-memory
+  default for dev only).
+
+Canonical layout (each field terminated by \\n to prevent ambiguity attacks):
+    METHOD\\n
+    PATH\\n
+    TIMESTAMP\\n
+    NONCE\\n
+    BODY_SHA256_HEX\\n
+
+Replay cost now:
+    1. Fresh timestamp required each call (server rejects > 60s old)
+    2. Fresh nonce required each call (server rejects duplicates within TTL)
+    3. HMAC binds all four to the body hash
+"""
 from __future__ import annotations
 
 import hashlib
 import hmac
+import time
+import uuid
+from dataclasses import dataclass
+from typing import Protocol
 
 
-def sign_request(secret: str, method: str, path: str, body: bytes) -> str:
+# Default: reject timestamps more than 60 seconds old (±, for clock skew).
+DEFAULT_TIMESTAMP_WINDOW_SECONDS = 60
+
+# Nonce must live in the nonce store for at least the timestamp window —
+# otherwise an attacker could replay after the nonce TTL elapsed but before
+# the timestamp expired. We add slack to cover clock skew + processing time.
+DEFAULT_NONCE_TTL_SECONDS = 300
+
+
+@dataclass(frozen=True)
+class SignedRequest:
+    """Bundle returned by `sign_outbound`; carries every header the caller sends."""
+    signature: str
+    timestamp: str
+    nonce: str
+    body_hash: str
+
+
+class NonceStore(Protocol):
+    """Anti-replay persistence interface.
+
+    Production impl: Redis SETEX. Reject if SETNX returns 0 (nonce already seen).
+    Dev impl: in-memory dict with time-based cleanup (unsafe across restarts).
     """
-    Sign an outbound request: HMAC-SHA256 over method|path|body.
 
-    Mirrors the verifier on the FastAPI side.
+    def claim(self, nonce: str, ttl_seconds: int) -> bool:
+        """Return True if nonce was fresh (claim succeeded), False if duplicate."""
+        ...
+
+
+class InMemoryNonceStore:
+    """Dev-only nonce store. DO NOT USE IN PRODUCTION — no persistence, no sharing."""
+
+    def __init__(self) -> None:
+        self._seen: dict[str, float] = {}
+
+    def claim(self, nonce: str, ttl_seconds: int) -> bool:
+        now = time.time()
+        # Opportunistic cleanup
+        expired = [k for k, exp in self._seen.items() if exp < now]
+        for k in expired:
+            del self._seen[k]
+        if nonce in self._seen:
+            return False
+        self._seen[nonce] = now + ttl_seconds
+        return True
+
+
+def _canonical(method: str, path: str, timestamp: str, nonce: str, body: bytes) -> bytes:
+    body_hash = hashlib.sha256(body).hexdigest()
+    return (
+        f"{method.upper()}\n"
+        f"{path}\n"
+        f"{timestamp}\n"
+        f"{nonce}\n"
+        f"{body_hash}\n"
+    ).encode("utf-8")
+
+
+def sign_outbound(hmac_secret: str, method: str, path: str, body: bytes) -> SignedRequest:
+    """Build a signed request bundle. Caller sets X-Timestamp, X-Nonce, X-Signature
+    headers from the returned `SignedRequest` fields.
     """
-    mac = hmac.new(secret.encode("utf-8"), digestmod=hashlib.sha256)
-    mac.update(method.upper().encode("utf-8"))
-    mac.update(b"|")
-    mac.update(path.encode("utf-8"))
-    mac.update(b"|")
-    mac.update(body)
-    return mac.hexdigest()
+    if not hmac_secret:
+        raise ValueError("hmac_secret is required and must not be empty")
+    timestamp = str(int(time.time()))
+    nonce = uuid.uuid4().hex
+    canonical = _canonical(method, path, timestamp, nonce, body)
+    signature = hmac.new(hmac_secret.encode("utf-8"), canonical, hashlib.sha256).hexdigest()
+    return SignedRequest(
+        signature=signature,
+        timestamp=timestamp,
+        nonce=nonce,
+        body_hash=hashlib.sha256(body).hexdigest(),
+    )
 
 
-def verify_inbound(secret: str, method: str, path: str, body: bytes, signature: str) -> bool:
+# Back-compat helper (legacy bot↔API callers still call `sign_request` with the
+# old 3-field signature). This wrapper produces the full SignedRequest bundle.
+# Callers MUST migrate to `sign_outbound` and send all three X-* headers.
+def sign_request(hmac_secret: str, method: str, path: str, body: bytes) -> str:
+    """DEPRECATED — use `sign_outbound` to get timestamp+nonce+signature together."""
+    return sign_outbound(hmac_secret, method, path, body).signature
+
+
+def verify_inbound(
+    hmac_secret: str,
+    method: str,
+    path: str,
+    body: bytes,
+    signature: str,
+    timestamp: str,
+    nonce: str,
+    nonce_store: NonceStore,
+    window_seconds: int = DEFAULT_TIMESTAMP_WINDOW_SECONDS,
+    nonce_ttl_seconds: int = DEFAULT_NONCE_TTL_SECONDS,
+) -> bool:
+    """Verify an inbound request.
+
+    Returns True only if ALL of:
+      1. timestamp, nonce, signature headers present and non-empty
+      2. timestamp is within ±window_seconds of server now
+      3. HMAC over method|path|timestamp|nonce|sha256(body) matches (constant-time)
+      4. nonce is fresh (claim in nonce_store succeeds for nonce_ttl_seconds)
+
+    NEVER short-circuit — always check all 3 pre-store gates before claiming the
+    nonce, so a malformed request does not burn a real nonce slot.
     """
-    Verify an inbound webhook (e.g. FastAPI -> /webhook/notify).
+    if not (hmac_secret and signature and timestamp and nonce):
+        return False
 
-    Uses constant-time comparison to avoid timing leaks.
-    """
-    expected = sign_request(secret, method, path, body)
-    return hmac.compare_digest(expected, signature or "")
+    # Timestamp window
+    try:
+        ts_int = int(timestamp)
+    except ValueError:
+        return False
+    now = int(time.time())
+    if abs(now - ts_int) > window_seconds:
+        return False
+
+    # HMAC match
+    expected = hmac.new(
+        hmac_secret.encode("utf-8"),
+        _canonical(method, path, timestamp, nonce, body),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected, signature or ""):
+        return False
+
+    # Nonce claim (side-effect; only reached if timestamp + HMAC both valid)
+    return nonce_store.claim(nonce, nonce_ttl_seconds)

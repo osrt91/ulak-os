@@ -231,9 +231,15 @@ async function callOpenAi(model: string, messages: RelayMessage[], opts: { tempe
 }
 
 async function callGoogle(model: string, messages: RelayMessage[], opts: { temperature?: number; max_tokens: number }) {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${process.env.GOOGLE_API_KEY ?? ''}`, {
+  // SEC-V22-H-12 hardening: API key goes in header, not URL query. URL query
+  // params leak to every HTTP tracer, proxy access log, and APM sidecar.
+  const apiKey = process.env.GOOGLE_API_KEY ?? ''
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify({ contents: messages, generationConfig: { temperature: opts.temperature, maxOutputTokens: opts.max_tokens } }),
   })
   if (!res.ok || !res.body) throw new Error(`google-http-${res.status}`)

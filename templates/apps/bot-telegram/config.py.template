@@ -22,7 +22,10 @@ class Settings(BaseSettings):
 
     # Backend API
     api_url: str = Field(default="{{api_url}}", description="FastAPI base URL")
-    api_service_token: SecretStr = Field(..., description="HMAC service-to-service token")
+    api_service_token: SecretStr = Field(..., description="Bearer identity token (service-to-service auth)")
+    # SEC-V22-C-04: HMAC secret DISTINCT from Bearer token. Compromising one
+    # does not yield the other. Rotate independently per secrets-rotation-policy.
+    api_hmac_secret: SecretStr = Field(..., description="HMAC secret for request payload signing")
 
     # FSM storage
     bot_storage: Literal["memory", "redis"] = Field(default="memory")
@@ -35,6 +38,11 @@ class Settings(BaseSettings):
 
     # Governance
     allowed_users: str = Field(default="", description="CSV of TG user IDs (dev allowlist)")
+    # SEC-V22-M-03 hardening: when set True (default in prod), empty allowlist
+    # is treated as 'no one is allowed' rather than 'everyone allowed'.
+    # Set via env REQUIRE_ALLOWLIST=1 in prod deployments.
+    require_allowlist: bool = Field(default=False, description="If True, empty allowed_users denies everyone")
+    env: Literal["dev", "staging", "production"] = Field(default="dev")
     default_locale: str = Field(default="{{default_locale}}")
     sentry_dsn: str = Field(default="")
 
@@ -48,3 +56,12 @@ class Settings(BaseSettings):
         if not self.allowed_users:
             return set()
         return {int(x) for x in self.allowed_users.split(",") if x.isdigit()}
+
+    def is_user_allowed(self, tg_user_id: int) -> bool:
+        """Single source of truth for 'should this user's commands be accepted'."""
+        if self.allowed_user_ids:
+            return tg_user_id in self.allowed_user_ids
+        # Empty allowlist: prod refuses by default, dev accepts.
+        if self.require_allowlist or self.env == "production":
+            return False
+        return True

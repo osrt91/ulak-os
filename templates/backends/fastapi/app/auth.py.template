@@ -78,16 +78,22 @@ async def _verify_jwt(token: str, settings: Settings) -> dict[str, Any]:
     alg = unverified_header.get("alg", "RS256")
     expected_iss = f"{settings.supabase_url.rstrip('/')}/auth/v1"
 
+    # SEC-V22-H-02 hardening: pin algorithm choice. HS256 is only accepted in
+    # local dev where SUPABASE_JWT_SECRET is explicitly set AND the environment
+    # is non-production. This closes the classic RS256 → HS256 confusion vector
+    # (operator mistakenly stores the JWKS public-key bytes in SUPABASE_JWT_SECRET
+    # and a crafted HS256 token impersonates any user).
+    is_prod = getattr(settings, "env", "production") == "production"
     try:
-        if alg.startswith("HS") and settings.supabase_jwt_secret:
+        if alg == "HS256" and settings.supabase_jwt_secret and not is_prod:
             claims = jwt.decode(
                 token,
                 settings.supabase_jwt_secret,
-                algorithms=[alg],
+                algorithms=["HS256"],
                 audience="authenticated",
                 issuer=expected_iss,
             )
-        else:
+        elif alg == "RS256":
             keys = await _fetch_jwks(settings)
             key = keys.get(kid)
             if not key:
@@ -100,10 +106,14 @@ async def _verify_jwt(token: str, settings: Settings) -> dict[str, Any]:
             claims = jwt.decode(
                 token,
                 key,
-                algorithms=[alg],
+                algorithms=["RS256"],
                 audience="authenticated",
                 issuer=expected_iss,
             )
+        else:
+            # Unrecognized algorithm — refuse categorically rather than fall
+            # through. Supabase emits RS256; anything else is suspicious.
+            raise _unauthorized("jwt_alg_rejected", f"algorithm '{alg}' not permitted")
     except JWTError as err:
         raise _unauthorized("jwt_invalid", "token verification failed") from err
 

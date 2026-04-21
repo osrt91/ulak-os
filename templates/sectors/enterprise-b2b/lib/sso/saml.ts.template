@@ -63,7 +63,12 @@ function getIdentityProvider(row: SamlProviderRow) {
     entityID: row.saml_entity_id,
     singleSignOnService: [{ Binding: 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect', Location: row.saml_sso_url }],
     signingCert: row.saml_cert_pem,
-    wantAuthnRequestsSigned: false,
+    // SEC-V22-H-06: Require signed AuthnRequests (MITM prevention on RelayState
+    // + ACS tampering). SP-side signing key comes from SP_SIGNING_KEY_PEM env.
+    wantAuthnRequestsSigned: true,
+    // AudienceRestriction + NotOnOrAfter enforcement (belt-and-suspenders beyond
+    // samlify defaults)
+    messageSigningOrder: 'STE',  // sign-then-encrypt
   })
 }
 

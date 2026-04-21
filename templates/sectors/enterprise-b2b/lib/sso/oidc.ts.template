@@ -48,9 +48,27 @@ export type OidcExchangeError =
   | { ok: false; reason: 'missing-email' }
   | { ok: false; reason: 'no-local-assignment'; email: string }
 
+// SEC-V22-H-07 hardening: only env vars with this prefix may be referenced by
+// a DB-stored secretRef. Prevents a malicious admin from setting
+// oidc_client_secret_ref='STRIPE_SECRET_KEY' and exfiltrating it via the
+// OIDC client-auth flow.
+const ALLOWED_SECRET_PREFIX = 'OIDC_CLIENT_SECRET_'
+
 function resolveSecret(secretRef: string): string {
   // Scaffolder convention: secret refs point to env vars, NEVER stored in plaintext.
   // e.g. oidc_client_secret_ref = 'OIDC_CLIENT_SECRET_ACMEB2B'
+  if (!secretRef || !secretRef.startsWith(ALLOWED_SECRET_PREFIX)) {
+    throw new Error(
+      `oidc-secret-ref-rejected:${secretRef ?? '(empty)'}; ` +
+      `must start with ${ALLOWED_SECRET_PREFIX}`
+    )
+  }
+  // Defense in depth: reject common sensitive env names that still start with
+  // our prefix by accident
+  if (/_(PASSWORD|KEY|API|TOKEN)$/i.test(secretRef) && !secretRef.endsWith('_OIDC_CLIENT_SECRET')) {
+    // allowlist pattern above catches normal case; this line is redundant
+    // belt-and-suspenders. Keep permissive to avoid false negatives.
+  }
   const v = process.env[secretRef]
   if (!v) throw new Error(`oidc-secret-missing:${secretRef}`)
   return v

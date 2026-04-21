@@ -1,0 +1,136 @@
+# Ulak OS — sector overlay compatibility matrix (SEC-V22-H-15 enforcement)
+#
+# Machine-readable version of the matrix that lives in prose in
+# `.claude/skills/saas-scaffolder/SKILL.md §Compatibility matrix`. The scaffolder
+# skill reads this file at Phase 0 and refuses with actionable error messages
+# when the operator passes `--sector X --sector Y` (or equivalent multi-sector
+# flag) pairs that land on a `refuses` entry.
+#
+# Validation: `bash scripts/validate-schemas.sh` confirms every sector referenced
+# here exists under `templates/sectors/`. Every sector in `templates/sectors/`
+# SHOULD appear in at least one row here (recommended, allowed, or refuses).
+#
+# Schema: list of sectors with per-sector {recommended, allowed, refuses} arrays.
+# Bidirectional: if A refuses B, the check also triggers for B + A.
+
+version: 1
+last_updated: "2026-04-21"
+schema_doc: "docs/runtime/sector-packs.md §compatibility-matrix"
+
+sectors:
+  - name: payment-integrated-saas
+    aliases: ["payment", "stripe", "iyzico"]
+    recommended: [reseller-enabled-saas, regulated-saas]
+    allowed: [ecommerce, marketplace, education, member-gated-community, ai-copilot, pwa-desktop, admin-cms-hardening]
+    refuses: []
+
+  - name: ecommerce
+    recommended: [payment-integrated-saas, ai-copilot]
+    allowed: [marketplace, multi-tenant-supabase, pwa-desktop, admin-cms-hardening, ai-relay-cost-control]
+    refuses:
+      - sector: health-sensitive
+        reason: "Both sectors declare `public.orders` + `public.products` with incompatible tenant_id scopes. Separate into two apps (monorepo mode) or pick one."
+      - sector: fintech
+        reason: "Both sectors maintain ledger-level tables (accounts + transactions); concurrent scaffold yields schema drift. Pick fintech for regulated money movement OR ecommerce for goods. Not both in one app."
+
+  - name: fintech
+    recommended: [regulated-saas, payment-integrated-saas]
+    allowed: [enterprise-b2b, admin-cms-hardening]
+    refuses:
+      - sector: ecommerce
+        reason: "See ecommerce.refuses — ledger table overlap."
+
+  - name: health-sensitive
+    recommended: [regulated-saas]
+    allowed: [enterprise-b2b, ai-copilot, admin-cms-hardening]
+    refuses:
+      - sector: ecommerce
+        reason: "PHI encryption pattern conflicts with ecommerce's plaintext product/order model. If you need both, split into two apps (one HIPAA-scoped, one storefront)."
+      - sector: marketplace
+        reason: "Marketplace's buyer/seller two-sided model + dispute FSM + public profile directory are incompatible with PHI consent + data-residency + access-log requirements."
+
+  - name: education
+    recommended: [member-gated-community]
+    allowed: [ai-copilot, regulated-saas, admin-cms-hardening, pwa-desktop]
+    refuses:
+      - sector: fintech
+        reason: "COPPA's under-13 data-minimization restricts the KYC + AML surface fintech requires."
+
+  - name: enterprise-b2b
+    recommended: [regulated-saas]
+    allowed: [media-content, ai-copilot, admin-cms-hardening, fintech, health-sensitive]
+    refuses:
+      - sector: marketplace
+        reason: "Two-sided marketplace commerce conflicts with SSO + team-based authz model of enterprise B2B. If you need a partner marketplace under enterprise, use reseller-enabled-saas instead."
+
+  - name: media-content
+    recommended: [ai-copilot, member-gated-community]
+    allowed: [education, enterprise-b2b, admin-cms-hardening]
+    refuses:
+      - sector: fintech
+        reason: "Content moderation model + publishing FSM has no meaningful overlap with payments/ledger primitives. Pick media OR fintech focus."
+
+  - name: marketplace
+    recommended: [payment-integrated-saas]
+    allowed: [reseller-enabled-saas, admin-cms-hardening]
+    refuses:
+      - sector: health-sensitive
+        reason: "See health-sensitive.refuses — PHI + two-sided buyer/seller model are irreconcilable."
+      - sector: enterprise-b2b
+        reason: "See enterprise-b2b.refuses — SSO + team authz model clashes with marketplace's seller onboarding."
+
+  - name: ai-copilot
+    recommended: [ai-relay-cost-control]
+    allowed: [media-content, education, member-gated-community, ecommerce, enterprise-b2b]
+    refuses: []
+
+  - name: ai-relay-cost-control
+    recommended: [ai-copilot]
+    allowed: "*"   # universal — cost-cap middleware benefits any sector
+    refuses: []
+
+  - name: pwa-desktop
+    recommended: []
+    allowed: "*"   # universal — PWA shell is orthogonal to domain sectors
+    refuses:
+      - sector: container-k8s
+        reason: "PWA service-worker deployment pattern is single-edge-node; k8s scale-out + multiple ingress paths fragment the cache scope. Pick one."
+
+  - name: admin-cms-hardening
+    recommended: []
+    allowed: "*"   # universal — every sector benefits from admin hardening
+    refuses: []
+
+  - name: member-gated-community
+    recommended: [education, media-content]
+    allowed: [payment-integrated-saas, admin-cms-hardening, pwa-desktop]
+    refuses: []
+
+  - name: self-hosted-supabase
+    recommended: [container-k8s]
+    allowed: "*"   # infrastructure overlay; orthogonal to business sectors
+    refuses: []
+
+  - name: regulated-saas
+    recommended: []  # paired with fintech / health-sensitive / enterprise-b2b above
+    allowed: "*"   # compliance overlay layered on any base
+    refuses: []
+
+  - name: container-k8s
+    recommended: [self-hosted-supabase]
+    allowed: "*"   # deployment target; works with any sector except pwa-desktop
+    refuses:
+      - sector: pwa-desktop
+        reason: "See pwa-desktop.refuses."
+
+# ---------------------------------------------------------------------------
+# Enforcement hook (consumed by .claude/skills/saas-scaffolder/SKILL.md Phase 0)
+# ---------------------------------------------------------------------------
+# The scaffolder reads this file and refuses the run with message:
+#   "Sector X + sector Y are incompatible: <reason>. Options: (a) split into
+#    monorepo with X in apps/a + Y in apps/b; (b) pick one; (c) open an issue
+#    to revisit the compatibility rule."
+enforcement:
+  on_refuse_exit_code: 65          # EX_DATAERR per sysexits.h
+  on_refuse_suggest_monorepo: true  # include (a) option in the message
+  trace_to_report: "reports/current/sector-compat-report.md"

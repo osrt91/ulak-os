@@ -308,6 +308,8 @@ Sector overrides are diffable — the merge log records which base files were su
 
 Scaffolder refuses conflicting combinations at Phase 0 with actionable error: "ecommerce + health-sensitive cannot coexist; separate into two apps (monorepo mode) or pick one".
 
+**Code enforcement (SEC-V22-H-15 fix, v2.2.1+)**: the compatibility matrix above is mirrored in `docs/runtime/sectors-compat.yaml` (machine-readable). The skill reads that file at Phase 0 and refuses the run with `exit 65 (EX_DATAERR)` when operator-selected sectors land on a `refuses` entry. The refusal message includes: (a) the reason (schema-overlap, FSM-clash, privacy-incompat, …), (b) an explicit "split into monorepo" suggestion, (c) a link to open an issue if the rule itself is wrong. Compatibility decisions are versioned in the YAML header for forward migration.
+
 ### Sector-specific anti-patterns
 
 Each sector overlay carries its own anti-pattern catalogue entries (trigger-enforced where possible). Examples shipped in v2.2:

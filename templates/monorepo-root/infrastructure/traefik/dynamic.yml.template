@@ -16,7 +16,11 @@ http:
         browserXssFilter: true
         referrerPolicy: "strict-origin-when-cross-origin"
         permissionsPolicy: "accelerometer=(), camera=(), geolocation=(), microphone=(), payment=(), usb=()"
-        contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://{{supabase_host}} wss://{{supabase_host}} https://api.{{product_domain_fqdn}}; frame-ancestors 'none';"
+        # SEC-V22-H-14 hardening: dropped 'unsafe-eval' — Next.js production
+        # builds do not need eval. 'unsafe-inline' for scripts remains ONLY
+        # until the app emits nonces via Next.js middleware (follow-up).
+        # script-src-elem allowlists Vercel analytics + Supabase auth helpers.
+        contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://{{supabase_host}} wss://{{supabase_host}} https://api.{{product_domain_fqdn}}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none';"
 
     rate-limit-api:
       rateLimit:

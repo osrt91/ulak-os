@@ -2,20 +2,28 @@
 import 'server-only'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createHash } from 'node:crypto'
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 
 // {{product_name_pascal}} — Iyzico webhook handler (Turkey-specific)
 //
-// Iyzico signature scheme (per https://docs.iyzico.com — Notification API):
-//   expected = base64( sha1( iyziEventType + iyziPaymentId + eventTime + secretKey ) )
-//   received in header: X-IYZ-SIGNATURE (some integrations: X-IYZ-SIGNATURE-V3)
+// Default signing scheme (v1.1+ hardened per SEC-V22-C-01/C-02/C-03):
+//   V3: HMAC-SHA256 over the raw body with IYZICO_WEBHOOK_SECRET
+//   header: X-IYZ-SIGNATURE-V3 (OR X-IYZ-SIGNATURE for classic path when explicitly opted in)
 //
-// Versioning: newer V3 signing uses HMAC-SHA256 over the raw body + random
-// key header; this template implements the classic SHA1 scheme and leaves a
-// hook for V3. Confirm which scheme your merchant account uses BEFORE flipping
-// to production — mismatched schemes cause 100% silent failure.
+// Legacy classic scheme (SHA1 over {eventType + paymentId + eventTime + secret})
+// is disabled by default because it does NOT sign the body — attacker can swap
+// subscriptionReferenceCode, status, price, currency while keeping the signature
+// valid. Only enable via IYZICO_LEGACY_CLASSIC_SIG=1 for merchant accounts that
+// have not migrated to V3 yet; plan to flip off within one billing cycle.
+//
+// All signature compares use timingSafeEqual — NEVER `===` (timing attack on
+// 28-char base64 output is feasible with ~280k network samples).
+//
+// Idempotency: event_id is iyziPaymentId when present; synthetic fallbacks
+// disabled (SEC-V22-C-03) — events without paymentId are dead-lettered rather
+// than replayed-risk-accepted.
 //
 // Mirrors the Stripe handler's contract:
 //   1. Read raw body (same discipline — don't JSON.parse before verify)
@@ -56,6 +64,29 @@ interface IyzicoNotification {
   [key: string]: unknown
 }
 
+function safeCompareBase64(expectedB64: string, receivedB64: string): boolean {
+  // Length mismatch short-circuits (cheap) without leaking exact differing-
+  // byte position; timingSafeEqual across equal-length buffers handles the rest.
+  if (expectedB64.length !== receivedB64.length) return false
+  try {
+    return timingSafeEqual(Buffer.from(expectedB64), Buffer.from(receivedB64))
+  } catch {
+    return false
+  }
+}
+
+// V3 (default): HMAC-SHA256 over raw body. Covers every field — swapping
+// subscriptionReferenceCode breaks the signature.
+function verifyV3Signature(rawBody: string, received: string, secretKey: string): boolean {
+  const expected = createHmac('sha256', secretKey).update(rawBody, 'utf8').digest('base64')
+  return safeCompareBase64(expected, received)
+}
+
+// Classic (legacy, opt-in): SHA1 over {eventType + paymentId + eventTime + secret}.
+// Does NOT cover body. Only accept when IYZICO_LEGACY_CLASSIC_SIG=1 AND the operator
+// has explicitly flagged their merchant account as classic-only. The missing body
+// coverage means an attacker who sees one valid (event_type, payment_id, time, sig)
+// tuple can forge any body for the same tuple. Deprecated.
 function verifyClassicSignature(
   body: IyzicoNotification,
   received: string,
@@ -66,11 +97,8 @@ function verifyClassicSignature(
     String(body.iyziPaymentId ?? '') +
     String(body.eventTime ?? '') +
     secretKey
-
   const expected = createHash('sha1').update(canonical, 'utf8').digest('base64')
-  // Constant-time compare would be ideal, but lengths are already bounded +
-  // the attacker-controlled surface is small (event type + payment id)
-  return expected === received
+  return safeCompareBase64(expected, received)
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -95,17 +123,54 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ received: true }, { status: 200 })
   }
 
-  if (!verifyClassicSignature(notification, signature, secretKey)) {
-    // Silent ACK — no retries, no details leaked
-    console.warn('[iyzico webhook] signature verification failed')
+  const legacyEnabled = process.env.IYZICO_LEGACY_CLASSIC_SIG === '1'
+  const sigV3Header = req.headers.get('x-iyz-signature-v3')
+  const sigClassicHeader = req.headers.get('x-iyz-signature')
+
+  // V3 (preferred) — signs the full body
+  let verified = false
+  let schemeUsed: 'v3' | 'classic' = 'v3'
+  if (sigV3Header && verifyV3Signature(rawBody, sigV3Header, secretKey)) {
+    verified = true
+    schemeUsed = 'v3'
+  } else if (legacyEnabled && sigClassicHeader && verifyClassicSignature(notification, sigClassicHeader, secretKey)) {
+    verified = true
+    schemeUsed = 'classic'
+    // Legacy acceptance is observable — emit warning so ops can track migration progress
+    console.warn('[iyzico webhook] classic signature path used (IYZICO_LEGACY_CLASSIC_SIG=1); migrate account to V3')
+  }
+
+  if (!verified) {
+    // Silent ACK to avoid retry-storm amplification, but emit metric for detection.
+    console.warn(
+      '[iyzico webhook] signature verification failed',
+      JSON.stringify({
+        metric: 'iyzico.webhook.signature_failed',
+        path: req.nextUrl.pathname,
+        has_v3_header: Boolean(sigV3Header),
+        has_classic_header: Boolean(sigClassicHeader),
+        legacy_enabled: legacyEnabled,
+      })
+    )
     return NextResponse.json({ received: true }, { status: 200 })
   }
 
-  // Use event type + payment id + eventTime as synthetic event id
-  const syntheticEventId =
-    notification.iyziPaymentId ??
-    notification.iyziReferenceCode ??
-    `${notification.iyziEventType}:${notification.eventTime}`
+  // SEC-V22-C-03 fix: require iyziPaymentId as the idempotency anchor.
+  // No fallback to referenceCode or synthetic key — events without paymentId
+  // are dead-lettered rather than risk-replayed.
+  const eventId = notification.iyziPaymentId
+  if (!eventId || typeof eventId !== 'string' || eventId.length < 6) {
+    console.warn(
+      '[iyzico webhook] event missing iyziPaymentId; dead-letter',
+      JSON.stringify({
+        metric: 'iyzico.webhook.missing_payment_id',
+        event_type: notification.iyziEventType,
+        scheme: schemeUsed,
+      })
+    )
+    return NextResponse.json({ received: true, dead_letter: true }, { status: 200 })
+  }
+  const syntheticEventId = eventId
 
   const admin = createAdminClient()
 

@@ -54,12 +54,30 @@ export async function enforceCostCap(
   const completionTokens = body.max_tokens ?? estimateCompletionTokens(body.model, DEFAULT_COMPLETION_CAP);
   const projected = priceOfUsd(body.model, promptTokens, completionTokens);
 
-  // Atomic budget lookup — one round-trip, snapshot isolation.
+  // SEC-V22-H-13 hardening: atomic reserve-or-deny via RPC that does
+  // SELECT ... FOR UPDATE on the per-window rows, increments reserved_cents,
+  // and returns remaining budgets. Replaces the prior read-then-compare
+  // snapshot which allowed 50 parallel requests to all see the same
+  // "remaining" value and blow the cap 3-50x on burst.
+  //
+  // The RPC contract:
+  //   INPUT: tenant_id, user_id, feature, projected_cents, reservation_id
+  //   ACTION: For each of (tenant, user, feature) budget_window rows:
+  //     BEGIN; SELECT ... FOR UPDATE; IF remaining < projected THEN ROLLBACK;
+  //     ELSE UPDATE reserved_cents = reserved_cents + projected; COMMIT;
+  //   OUTPUT: { allowed, remaining_*_usd, reservation_id, window_ends_at }
+  //
+  // Post-request: attribution.ts releases/adjusts the reservation using the
+  // same reservation_id once actual usage lands in ai_usage_log.
+  const reservationId = crypto.randomUUID();
+  const projectedCents = Math.ceil(projected * 100);
   const { data, error } = await supabaseAdmin
-    .rpc("ai_relay_budget_snapshot", {
+    .rpc("ai_relay_reserve_budget", {
       p_tenant_id: auth.tenant_id,
       p_user_id: auth.user.id,
       p_feature: body.feature,
+      p_projected_cents: projectedCents,
+      p_reservation_id: reservationId,
     });
 
   if (error || !data) {
@@ -71,23 +89,30 @@ export async function enforceCostCap(
   }
 
   const snap = data as {
+    allowed: boolean;
     remaining_tenant_usd: number;
     remaining_user_usd: number;
     remaining_feature_usd: number;
     window_ends_at: string;
+    reservation_id: string;
+    denial_reason?: "over_tenant_cap" | "over_user_cap" | "over_feature_cap";
   };
 
   const decision: CostCapResult = {
-    allowed: true,
+    allowed: snap.allowed,
     projected_usd: projected,
     remaining_tenant_usd: snap.remaining_tenant_usd,
     remaining_user_usd: snap.remaining_user_usd,
     budget_window_ends_at: snap.window_ends_at,
+    reservation_id: snap.reservation_id,
   };
 
-  if (snap.remaining_tenant_usd < projected) decision.reason = "over_tenant_cap";
-  else if (snap.remaining_user_usd < projected) decision.reason = "over_user_cap";
-  else if (snap.remaining_feature_usd < projected) decision.reason = "over_feature_cap";
+  // RPC already performed the FOR UPDATE lock + atomic increment. If it
+  // returned allowed=false, we're telling the caller what cap tripped; the
+  // reservation was rolled back server-side so no budget was consumed.
+  if (!snap.allowed && snap.denial_reason) {
+    decision.reason = snap.denial_reason;
+  }
 
   if (decision.reason) {
     decision.allowed = false;
