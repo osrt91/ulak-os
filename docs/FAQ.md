@@ -58,11 +58,11 @@ Yes. Tested on Ubuntu 22.04 / 24.04 and Fedora. Installer: `scripts/install.sh`.
 
 ## What's the license?
 
-[MIT](./LICENSE). Fork it, adapt it, apply it to your own operations. Attribution is enough.
+[MIT](../LICENSE). Fork it, adapt it, apply it to your own operations. Attribution is enough.
 
 ## How do I contribute?
 
-Read [CONTRIBUTING.md](./CONTRIBUTING.md). The short version: new sector packs / anti-patterns / rule packs all require **file:line citations from ≥2 real projects** (abstract descriptors if the projects are private). Every cross-project pattern lift gets an entry in `docs/governance/pattern-import-ledger.md` with a trust tier ≥ T2.
+Read [CONTRIBUTING.md](../CONTRIBUTING.md). The short version: new sector packs / anti-patterns / rule packs all require **file:line citations from ≥2 real projects** (abstract descriptors if the projects are private). Every cross-project pattern lift gets an entry in `docs/governance/pattern-import-ledger.md` with a trust tier ≥ T2.
 
 ## How do I report a security issue?
 
@@ -112,7 +112,7 @@ Honest list:
 
 ## How often is it updated?
 
-Approximately every 1-2 weeks during the v3.x series. The canonical source of truth is `CHANGELOG.md` + `git log`. Tags follow [semantic versioning](./VERSIONING.md): MAJOR for breaking contract changes, MINOR for append-only additions (the common case), PATCH for fixes.
+Approximately every 1-2 weeks during the v3.x series. The canonical source of truth is `CHANGELOG.md` + `git log`. Tags follow [semantic versioning](../VERSIONING.md): MAJOR for breaking contract changes, MINOR for append-only additions (the common case), PATCH for fixes.
 
 ## Where can I see a demo?
 

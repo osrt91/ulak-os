@@ -32,3 +32,8 @@ claude:market-scan
 
 # `triage-build` (Claude, v2.1.3) — not yet ported to Gemini. Scheduled for v2.2 vendor-parity pass.
 gemini:triage-build
+
+# `ulak-scaffold` (Claude, v2.2.2) — scaffolder requires Claude Code's Write + subagent
+# dispatch semantics with superpowers:saas-scaffolder skill. Gemini CLI adapter deferred to
+# post-v1.0.0 (requires skill-equivalent abstraction in the Gemini runtime).
+gemini:ulak-scaffold
