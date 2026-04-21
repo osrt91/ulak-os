@@ -1,158 +1,150 @@
 # Ulak OS
 
-> **Vendor-neutral prompt operating system** — Single-core, three-adapter, solution-focused runtime for Claude Code, Codex/Copilot, and Gemini CLI.
+> **Vendor-neutral prompt operating system** — plan, audit, govern, and **scaffold full-stack SaaS** with Claude Code, Codex, or Gemini CLI.
 
-**Version:** 2.0.0 (CLI Console + Memory + Vendor Adapters)
-**Developer:** [Oğuzhan Sert](https://github.com/osrt91)
-**License:** MIT
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE) [![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)](./CHANGELOG.md) [![Vendor](https://img.shields.io/badge/vendor-claude%20%7C%20codex%20%7C%20gemini-orange.svg)](./docs/adapters/)
 
-[Türkçe](README.md) | English
-
----
+**English (this file)** · **[Türkçe](./README.md)**
 
 ## What is Ulak OS?
 
-Ulak OS is a prompt operating system that takes a large software project from **any starting point** and drives it to validated outcomes:
+A **prompt operating system** that sits on top of AI coding CLIs (Claude Code / Codex / Gemini). Single core, three vendor adapters. Not separately an audit framework, a governance layer, and a SaaS scaffolder — **all three** in one pack.
 
-- 🟢 **If you're building from scratch** → `CREATE` mode, intake → roadmap → validation
-- 🟡 **If you're picking up unfinished work** → `RESCUE` mode, start from the evidence-register
-- 🔴 **If you're near the finish line** → `REPACKAGE` mode, focused on validation and manager-verdict
+### It does three things
 
-The same artefact chain runs in every case; **never says "done" without validation.**
-
-## Three vendors, one core
-
-| Vendor | Adapter file | First command |
+| | Command | Produces |
 |---|---|---|
-| Claude Code | `CLAUDE.md` | `/director komple` |
-| Codex / Copilot | `AGENTS.md` | "Read AGENTS.md, run program mode" |
-| Gemini CLI | `GEMINI.md` | `/director komple` |
+| **Audit** | `/director komple` | Phase 0→5 director protocol: 27 specialist agents dispatched in parallel, 15-dimension scorecard, 79 anti-pattern sweep, 13 artefacts |
+| **Govern** | `@prompts/core/ulak-os-core-contract-2.0.0.md` | Import core contract in your `CLAUDE.md` → 22 governance docs + 24 sector packs + 8 rule packs active every session |
+| **Scaffold** | `/ulak-scaffold` | Full-stack SaaS (Next.js + Supabase + payment + i18n + CI + deploy) at commit 1 — 27 template files + 8 anti-patterns gated by construction |
 
-All share the `prompts/core/ulak-os-core-contract-2.0.0.md` core contract.
+## Quickstart (3 steps, 5 minutes)
 
-## Quick start (5 minutes)
-
-### 1. Clone
+### 1. Clone the repo
 
 ```bash
-git clone https://github.com/osrt91/ulak-os
+git clone https://github.com/osrt91/ulak-os.git
 cd ulak-os
 ```
 
-### 2. Run the init script for your vendor
-
-**macOS / Linux:**
-```bash
-bash scripts/init-claude.sh    # Claude Code
-bash scripts/init-codex.sh     # Codex/Copilot
-bash scripts/init-gemini.sh    # Gemini CLI
-```
-
-**Windows:**
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\init-claude.ps1
-powershell -ExecutionPolicy Bypass -File scripts\init-codex.ps1
-powershell -ExecutionPolicy Bypass -File scripts\init-gemini.ps1
-```
-
-### 3. Start the vendor CLI and run the first command
-
-```
-$ claude
-> /memory          # Verify CLAUDE.md is loaded
-> /director komple  # Ulak OS enters program mode
-```
-
-The first command output begins writing the artefact chain under `reports/current/`.
-
-## MCP connectors (optional)
-
-The `.mcp.json` file ships with 3 MCP connector definitions: **GitHub** (official server, pre-configured), Jira and Figma (placeholder).
-
-### GitHub MCP (official, easiest)
-
-GitHub's official MCP server `https://api.githubcopilot.com/mcp/` is already wired up in `.mcp.json`. You only need to set your GitHub Personal Access Token:
+### 2. Verify
 
 ```bash
-# GitHub Personal Access Token
-# Create one at https://github.com/settings/tokens
-export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_your_token_here"
+bash scripts/validate-imports.sh # @-import chain + cycle detection
+bash scripts/validate-schemas.sh # JSON schema conformance
+bash scripts/validate-vendor-parity.sh # claude/gemini/codex command parity
 ```
 
-When Ulak OS starts, Claude Code connects automatically and gives you direct access to issues, PRs, repository search, code review, and the full GitHub API.
+All green → pack is healthy.
 
-### Jira and Figma (optional, your own endpoint)
+### 3. Two paths
+
+**Path A — Audit an existing project:**
 
 ```bash
-# Jira (optional)
-export JIRA_MCP_URL="https://your-jira-mcp-endpoint"
-export JIRA_TOKEN="your_jira_token"
-
-# Figma (optional)
-export FIGMA_MCP_URL="https://your-figma-mcp-endpoint"
-export FIGMA_TOKEN="your_figma_token"
+cd /path/to/your-project
+echo "@/absolute/path/to/ulak-os/prompts/core/ulak-os-core-contract-2.0.0.md" >> CLAUDE.md
+# Open Claude Code:
+/director komple
 ```
 
-**Note:** If none are set, Ulak OS still works; only the MCP tools remain disabled.
+The director runs: runtime-manifest → deep inventory → 4-13 specialist parallel dispatch → did-you-know findings → target-state + execution-roadmap + validation-plan + pack-gap-register → manager-verdict.
 
-## Troubleshooting
+**Path B — Scaffold a new SaaS:**
 
-| Problem | Solution |
-|---|---|
-| `/memory` does not show CLAUDE.md | Open Claude Code from the repo **root** |
-| `@import` error | Run `bash scripts/validate-imports.sh` to see which file is missing |
-| MCP connection error | Set the env vars above or accept MCP as disabled |
-| Windows `.ps1` "execution policy" error | Use the `-ExecutionPolicy Bypass -File` parameter |
-| `reports/current/` does not exist | Re-run the `bash scripts/init-<vendor>.sh` script |
-| I see a `Claude Ulak` remnant | This is a bug — open an issue |
-
-## Repository contents
-
-```
-ulak-os/
-├── CLAUDE.md / AGENTS.md / GEMINI.md      # 3 adapter entry files
-├── prompts/core/                           # vendor-agnostic core contract
-├── docs/
-│   ├── adapters/                           # platform-specific usage guides
-│   ├── governance/                         # rule collision matrix, plugin/skill decisions
-│   ├── history/                            # version lineage
-│   ├── examples/                           # complete artefact examples
-│   ├── ecosystem/                          # related-work + ecosystem references
-│   └── skills-integration/                 # superpowers + awesome-design-md mapping
-├── scripts/                                # init + validation scripts (sh + ps1)
-├── .claude/                                # 20 subagents + 8 commands + 4 native skills
-├── .gemini/                                # Gemini CLI custom commands
-├── .github/workflows/                      # CI validation + secret scan
-└── reports/current/                        # runtime artefacts written here
+```bash
+# From the Ulak OS repo, open Claude Code:
+/ulak-scaffold product_name=my-saas product_domain=saas locale_primary=en payment_provider=stripe
 ```
 
-## Multi-language
+Generates a full Next.js + Supabase + Stripe + i18n + CI + tests + deploy project in a sibling directory (`../my-saas/`). At commit 1:
+- Single auth helper (AP-11 prevention)
+- `server-only` guards (AP-13)
+- DB-sourced role, never `user_metadata` (AP-06)
+- RLS policy templates
+- Webhook deploy + health probe (AP-12 + AP-18 prevention)
+- Full `.gitignore` discipline (AP-16)
+- Gitleaks baseline + dependabot
+- VPS hardening script (SSH port + key-only + UFW + fail2ban)
 
-In Ulak OS v2.0.0:
-- 🇹🇷 **Turkish** (primary) — `*.md`
-- 🇬🇧 **English** (parallel) — `*.en.md`
+See: [Showcase walkthroughs](./docs/showcase/) (coming in v2.4.1).
 
-Planned for v2.1+: 🇫🇷 FR, 🇩🇪 DE, 🇪🇸 ES, 🇸🇦 AR, 🇯🇵 JA, 🇨🇳 ZH
+## Architecture
 
-## Ecosystem
+```
+CLAUDE.md (3-line entry)
+ └── @prompts/core/ulak-os-core-contract-2.0.0.md
+ ├── @docs/runtime/*.md ← 33 runtime rules + 8 rule packs
+ ├── @docs/governance/*.md ← 22 governance docs
+ └── @docs/adapters/*.md ← claude-code / codex-cli / gemini-cli.claude/
+ ├── agents/*.md ← 27 specialist + persona agents
+ ├── commands/*.md ← 9 slash commands
+ ├── skills/*/SKILL.md ← 9 skills
+ └── settings.json ← scoped permissions + hooks
 
-Ulak OS is not an isolated product — it is part of an ecosystem. A list of public projects it can be used alongside, was inspired by, or considers complementary: [`docs/ecosystem/related-work.md`](docs/ecosystem/related-work.md).
+templates/saas-starter/ ← 27 scaffolder templates
+evals/ ← golden prompts + assertion library
+scripts/ ← validators + install + fetch-design-references
+```
 
-Highlights:
-- **[obra/superpowers](https://github.com/obra/superpowers)** — Agentic skill framework (Ulak mapping: [`docs/skills-integration/superpowers-mapping.md`](docs/skills-integration/superpowers-mapping.md))
-- **[anthropics/skills](https://github.com/anthropics/skills)** — Anthropic official Agent Skills repo
-- **[VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md)** — DESIGN.md for 58+ brands (integrated with Ulak via `/ulak-design-ref` command)
-- **[gsd-build/gsd-2](https://github.com/gsd-build/gsd-2)** — Spec-driven development system (philosophical kinship)
-- **[hesreallyhim/awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code)** — Curated Claude Code skill list
+Detailed architecture diagrams: [docs/architecture/](./docs/architecture/) (v2.4.1).
 
-## Version history
+## What's included (v2.4.0)
 
-This release is the **public stable** successor to the 1.0.0–1.9.1 series developed under the internal codename "Claude Ulak". Details: [`docs/history/version-lineage.md`](docs/history/version-lineage.md)
+- **24 sector packs** — education, saas, fintech, ecommerce, marketplace, enterprise-b2b, media-content, health-sensitive, ai-copilot, pwa-desktop, multi-tenant-supabase, container-orchestrating-app, payment-integrated-saas, regulated-saas, reseller-enabled-saas, vps-nginx-compose-topology, admin-cms-hardening, ai-relay-cost-control, telegram-bot, member-gated-community-platform, multi-app-nextjs-expo-monorepo, self-hosted-supabase-orchestration, multi-project-traefik-edge, greenfield-saas-starter
+- **8 rule packs** — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo
+- **79 anti-patterns** — AP-01..AP-19 (new) + classics (IDOR, BOLA, N+1, RLS asymmetry, dead code, etc.)
+- **22 governance docs** — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization, and more
+- **33 runtime rules** — router, program-phases (Phase 0→5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern, strangler-fig-protocol, multi-agent-merge-sequence, audit-scoring-framework, cross-tenant-rls-verification, transactional-fsm-payment, webhook-ci-deploy-pattern, interactive-map-privacy, toolchain-precheck, architecture-currency, and more
+- **27 agents** — 26 specialists + autonomous-program-director + 7 personas (admin, customer, partner, developer, support, compliance, security-redteam)
+- **9 commands** — director, final-verdict, frontend-war-room, intake, pack-gap-audit, triage-build, ulak-design-ref, ulak-intake, ulak-scaffold
+- **9 skills** — saas-scaffolder, god-module-decomposition, fourteen-dimension-audit, multi-agent-orchestration, final-validation, pack-gap-completion, project-intake, research-currency, ulak-design-ref
+- **27 scaffolder templates** — `templates/saas-starter/`: Next.js 16 + TS 5 strict + Tailwind v4 + Supabase SSR + auth helper + RLS + CI + tests + deploy + VPS hardening + 59-brand design reference
 
-## Contributing
+## Supported stacks (for `/ulak-scaffold`)
 
-Pull requests are welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/governance/rule-collision-matrix.md`](docs/governance/rule-collision-matrix.md) first.
+| Layer | Primary | Experimental |
+|---|---|---|
+| Frontend | Next.js 16 | Remix, SvelteKit (v4.0) |
+| Backend | Supabase SSR | FastAPI + Node hybrid (v4.0) |
+| Payment | Stripe, Iyzico, both, none | — |
+| Mobile | Expo 55+ (optional) | — |
+| Hosting | Self-managed VPS + Traefik | Vercel, Fly.io, Railway |
+| i18n | en + tr baseline | localization-ssot rule pack for ≥2 locales |
+
+## Vendor adapter matrix
+
+| Vendor | Status | Commands | Reading order |
+|---|---|---|---|
+| Claude Code | primary | 9 slash commands | `CLAUDE.md` @-imports |
+| Codex / Copilot | supported | `AGENTS.md` plain-text | `AGENTS.md` |
+| Gemini CLI | supported | 8 `.toml` commands | `docs/adapters/gemini-cli.md` |
+
+## Release history
+
+- **v2.4.0** (2026-04-20) — Public launch prep Phase A: LICENSE (MIT), README bilingual rewrite, CONTRIBUTING, CODE_OF_CONDUCT, issue/PR templates
+- **v2.3.0** (2026-04-20) — Plugin packaging + 27 scaffolder templates + 6 ADRs + 3 agent expansion
+- **v2.2.3** (2026-04-20) — 10 scaffolder templates core + awesome-design-md integration (59 brand references)
+- **v2.2.2** (2026-04-20) — SaaS scaffolder command + skill + sector pack + 5 seed templates
+- **v2.2.1** (2026-04-20) — Deep-infra absorption
+- **v2.2.0** (2026-04-20) — Cross-project absorption
+- **v2.1.4** (2026-04-20) — CI hardening
+- **v2.1.3** (2026-04-18) — First cross-project pattern absorption (39 patterns)
+
+Full release notes: [CHANGELOG.md](./CHANGELOG.md) · [docs/release/](./docs/release/)
+
+## Contribution + governance
+
+To propose a new sector pack, rule pack, anti-pattern, or agent: [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
+
+Governance decisions: [docs/adr/](./docs/adr/) (6 ADRs — rule packs, Phase 5 terminal, product surface split, pattern-import ledger, SaaS scaffolder).
 
 ## License
 
-MIT — [`LICENSE`](LICENSE)
+[MIT](./LICENSE) — widely used + permissive. Fork it, adapt it, apply it to your own operation. Attribution is sufficient.
+
+## Canonical footer
+
+Authoritative as of Ulak OS **v2.4.0**. Build metadata: [`prompts/pack.json`](./prompts/pack.json). Core contract: [`prompts/core/ulak-os-core-contract-2.0.0.md`](./prompts/core/ulak-os-core-contract-2.0.0.md).
