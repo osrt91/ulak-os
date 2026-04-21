@@ -20,7 +20,23 @@ AI coding CLI'larının (Claude Code / Codex / Gemini) üstüne oturan bir **pro
 
 ## Quickstart (3 adım, 5 dakika)
 
-### 1. Repo'yu klonla
+### 1. Yükle
+
+**Tek satır installer** (önerilen):
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install.sh | sh
+```
+
+```powershell
+# Windows PowerShell 5.1+
+iwr -useb https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install.ps1 | iex
+```
+
+Installer `$HOME/.ulak-os/` altına indirir + PATH'e `ulak` komutu ekler. `sudo` istemez. Dry-run için `--dry-run` / `-DryRun` switch'i var. Alternatifler için [docs/runbooks/install-methods.md](./docs/runbooks/install-methods.md).
+
+**Manuel klon** (vendor lock-in olmadan inceleme için):
 
 ```bash
 git clone https://github.com/osrt91/ulak-os.git
@@ -28,6 +44,12 @@ cd ulak-os
 ```
 
 ### 2. Doğrula
+
+```bash
+ulak doctor # cross-platform: tüm validator'ları sırayla çalıştırır
+```
+
+Eğer manuel klonladıysanız, POSIX sistemlerde doğrudan script'ler:
 
 ```bash
 bash scripts/validate-imports.sh # @-import zinciri + cycle detection
@@ -67,7 +89,7 @@ Sibling dizinde (`../my-saas/`) tam bir Next.js + Supabase + Stripe + i18n + CI 
 - Gitleaks baseline + dependabot
 - VPS hardening script (SSH port + key-only + UFW + fail2ban)
 
-Detay: [Showcase walkthroughs](./docs/showcase/) (yakında).
+Detaylı örnekler: [Showcase walkthroughs](./docs/showcase/) — 4 abstract senaryo (audit, scaffold, persona dispatch, cross-project pattern absorption) + video scripti.
 
 ## Mimari
 
@@ -87,18 +109,18 @@ evals/ ← golden prompts + assertion library
 scripts/ ← validators + install + fetch-design-references
 ```
 
-Detaylı mimari diagram'ları: [docs/architecture/](./docs/architecture/) (v2.4.1'de).
+Detaylı mimari diagram'ları (mermaid, GitHub-native render): [docs/architecture/](./docs/architecture/) — overview · director-protocol · scaffolder-flow · vendor-adapters.
 
 ## İçerik (v2.4.0)
 
 - **24 sector pack** — education, saas, fintech, ecommerce, marketplace, enterprise-b2b, media-content, health-sensitive, ai-copilot, pwa-desktop, multi-tenant-supabase, container-orchestrating-app, payment-integrated-saas, regulated-saas, reseller-enabled-saas, vps-nginx-compose-topology, admin-cms-hardening, ai-relay-cost-control, telegram-bot, member-gated-community-platform, multi-app-nextjs-expo-monorepo, self-hosted-supabase-orchestration, multi-project-traefik-edge, greenfield-saas-starter
 - **8 rule pack** — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo
-- **79 anti-pattern** — AP-01..AP-19 (yeni) + klasik (IDOR, BOLA, N+1, RLS asymmetry, dead code, vs.)
+- **~100 anti-pattern bullet** — 19 numaralı AP-NN (AP-01..AP-19) + klasik (IDOR, BOLA, N+1, RLS asymmetry, dead code, vs.)
 - **22 governance doc** — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization, ve daha fazlası
 - **33 runtime rule** — router, program-phases (Phase 0→5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern, strangler-fig-protocol, multi-agent-merge-sequence, audit-scoring-framework, cross-tenant-rls-verification, transactional-fsm-payment, webhook-ci-deploy-pattern, interactive-map-privacy, toolchain-precheck, architecture-currency, ve daha fazlası
-- **27 agent** — 26 specialist + autonomous-program-director + 7 persona (admin, customer, bayi, developer, support, compliance, security-redteam)
+- **27 agent** — 19 specialist + 1 autonomous-program-director + 7 persona (admin, customer, bayi, developer, support, compliance, security-redteam)
 - **9 command** — director, final-verdict, frontend-war-room, intake, pack-gap-audit, triage-build, ulak-design-ref, ulak-intake, ulak-scaffold
-- **9 skill** — saas-scaffolder, god-module-decomposition, fourteen-dimension-audit, multi-agent-orchestration, final-validation, pack-gap-completion, project-intake, research-currency, ulak-design-ref
+- **8 skill** — saas-scaffolder, god-module-decomposition, fourteen-dimension-audit, multi-agent-orchestration, final-validation, pack-gap-completion, project-intake, research-currency
 - **27 scaffolder template** — `templates/saas-starter/`: Next.js 16 + TS 5 strict + Tailwind v4 + Supabase SSR + auth helper + RLS + CI + tests + deploy + VPS hardening + 59-brand design reference
 
 ## Desteklenen stack'ler (`/ulak-scaffold` için)
@@ -133,17 +155,36 @@ Detaylı mimari diagram'ları: [docs/architecture/](./docs/architecture/) (v2.4.
 
 Tam release notes: [CHANGELOG.md](./CHANGELOG.md) · [docs/release/](./docs/release/)
 
+## Yardım + daha fazla okuma
+
+- **Sık sorulan sorular:** [docs/FAQ.md](./docs/FAQ.md) — Ulak OS vs superpowers / everything-claude-code / cartographer · Windows/macOS/Linux desteği · offline kullanım · model desteği
+- **İlk saat:** [docs/runbooks/first-hour-with-ulak-os.md](./docs/runbooks/first-hour-with-ulak-os.md) — klon → ilk audit → ilk scaffold → ilk commit (60 dk)
+- **Sorun giderme:** [docs/runbooks/troubleshooting.md](./docs/runbooks/troubleshooting.md) — 16 yaygın hata + tanı + fix
+- **Yükseltme:** [docs/runbooks/upgrading-from-v2.x.md](./docs/runbooks/upgrading-from-v2.x.md) — mevcut Ulak kullanıcıları için
+- **Yükleme yöntemleri:** [docs/runbooks/install-methods.md](./docs/runbooks/install-methods.md) — 5 farklı yol + pros/cons
+- **Mimari:** [docs/architecture/](./docs/architecture/) — 4 mermaid diagram + prose
+- **Showcase:** [docs/showcase/](./docs/showcase/) — 4 walkthrough + video script
+- **Release geçmişi:** [CHANGELOG.md](./CHANGELOG.md) · [docs/history/version-lineage.md](./docs/history/version-lineage.md)
+- **Yönetişim kararları:** [docs/adr/](./docs/adr/) (6 ADR)
+
 ## Katkı + governance
 
 Yeni sector pack, rule pack, anti-pattern, veya agent önermek için: [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
 
+Güvenlik sorunu bildirmek için GitHub issue AÇMAYIN — doğrudan `info@oguzhansert.dev` adresine mail atın (CODE_OF_CONDUCT.md §Reporting).
+
 Governance kararları: [docs/adr/](./docs/adr/) (6 ADR — rule packs, Phase 5 terminal, product surface split, pattern-import ledger, SaaS scaffolder).
 
 ## License
 
 [MIT](./LICENSE) — yaygın + permissive. Fork et, uyarla, kendi operasyonuna uygula. Attribution yeterli.
+
+## Maintainer
+
+**Oğuzhan Sert** — [`@osrt91`](https://github.com/osrt91) · `info@oguzhansert.dev`
+Bug report: [`.github/ISSUE_TEMPLATE/bug_report.md`](./.github/ISSUE_TEMPLATE/bug_report.md) · Güvenlik: [`SECURITY.md`](./SECURITY.md).
 
 ## Canonical footer
 

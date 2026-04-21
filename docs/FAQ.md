@@ -6,7 +6,7 @@ Frequently-asked questions about Ulak OS — what it is, who it is for, how it d
 
 ## What is Ulak OS?
 
-Ulak OS is a **vendor-neutral prompt operating system** that sits on top of AI coding CLIs (Claude Code, Codex / Copilot, Gemini CLI). One core contract, three vendor adapters. It does three things in a single pack: **audit** (the `/director` protocol — 27 specialist agents, 15-dimension scorecard, 79 anti-pattern sweep), **govern** (22 governance docs + 24 sector packs + 8 rule packs loaded every session), and **scaffold** (`/ulak-scaffold` produces a shippable full-stack SaaS at commit 1).
+Ulak OS is a **vendor-neutral prompt operating system** that sits on top of AI coding CLIs (Claude Code, Codex / Copilot, Gemini CLI). One core contract, three vendor adapters. It does three things in a single pack: **audit** (the `/director` protocol — 27 specialist agents, 15-dimension scorecard, ~100-entry anti-pattern catalog with 19 numbered AP-NN items), **govern** (22 governance docs + 24 sector packs + 8 rule packs loaded every session), and **scaffold** (`/ulak-scaffold` produces a shippable full-stack SaaS at commit 1).
 
 ## Who is it for?
 
