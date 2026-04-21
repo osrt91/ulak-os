@@ -1,0 +1,104 @@
+// {{product_name_pascal}} — teams list (admin surface, enterprise-b2b overlay)
+//
+// Tenant = org (ExampleB2B). Teams = sub-orgs within org. Each team has N members
+// with INDEPENDENT team_role (distinct from tenant-level role).
+
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+
+import { getAuthContext } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
+import { t } from '@/lib/i18n'
+import { formatDate } from '@/lib/i18n/format'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/shared/empty-state'
+
+interface TeamRow {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  created_at: string
+  member_count: number
+}
+
+export default async function AdminTeamsPage() {
+  const ctx = await getAuthContext({ require_role: ['admin', 'support'] })
+  if (!ctx.allowed) redirect(ctx.redirectTo)
+
+  const supabase = await createServerClient()
+
+  // Query teams + aggregate member_count in single round-trip via RPC view
+  // (fallback: two-step if view missing at migration time)
+  const { data: teamsRaw } = await supabase
+    .from('teams')
+    .select('id, name, slug, description, created_at, team_members(count)')
+    .eq('tenant_id', ctx.tenantId!)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+
+  const teams: TeamRow[] = (teamsRaw ?? []).map((row: {
+    id: string; name: string; slug: string; description: string | null;
+    created_at: string; team_members: { count: number }[] | null
+  }) => ({
+    id: row.id, name: row.name, slug: row.slug, description: row.description,
+    created_at: row.created_at, member_count: row.team_members?.[0]?.count ?? 0,
+  }))
+
+  return (
+    <div className="space-y-6 max-w-6xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{t('admin.teams.title')}</h1>
+          <p className="text-ink-muted">{t('admin.teams.subtitle')}</p>
+        </div>
+        <Button asChild>
+          <Link href="/admin/teams/new">{t('admin.teams.new')}</Link>
+        </Button>
+      </header>
+
+      {teams.length === 0 ? (
+        <EmptyState
+          title={t('admin.teams.empty-title')}
+          body={t('admin.teams.empty-body')}
+          actionHref="/admin/teams/new"
+          actionLabel={t('admin.teams.empty-cta')}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {teams.map((team) => (
+            <Card key={team.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-start justify-between gap-3">
+                  <Link href={`/admin/teams/${team.id}/members`} className="hover:underline">
+                    {team.name}
+                  </Link>
+                  <Badge variant="outline">{t('admin.teams.member-count', { n: team.member_count })}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {team.description ? (
+                  <p className="text-sm text-ink-muted line-clamp-2">{team.description}</p>
+                ) : null}
+                <div className="flex items-center justify-between text-xs text-ink-muted">
+                  <span className="font-mono">/{team.slug}</span>
+                  <span>{t('admin.teams.created', { date: formatDate(team.created_at) })}</span>
+                </div>
+                <div className="flex gap-2 pt-2 border-t border-surface-strong">
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/admin/teams/${team.id}/members`}>{t('admin.teams.manage')}</Link>
+                  </Button>
+                  <Button size="sm" variant="ghost" asChild>
+                    <Link href={`/admin/teams/${team.id}/settings`}>{t('admin.teams.settings')}</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

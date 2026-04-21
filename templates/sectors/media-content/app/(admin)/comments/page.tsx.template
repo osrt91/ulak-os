@@ -1,0 +1,159 @@
+// {{product_name_pascal}} — comment moderation queue (admin, media-content overlay)
+//
+// AP-CMS-01 prevention: only approved comments ever show on public pages. This
+// queue is where they're promoted. Spam-score hint shown; shadow-ban and hard-reject
+// are both available (shadow-ban keeps comment visible to its author only — useful
+// for trolls who'd just re-register).
+
+"use client";
+
+import { useEffect, useState } from 'react'
+
+import { t } from '@/lib/i18n'
+import { formatDateTime } from '@/lib/i18n/format'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Alert } from '@/components/ui/alert'
+import { EmptyState } from '@/components/shared/empty-state'
+
+type CommentStatus = 'pending' | 'approved' | 'rejected' | 'spam' | 'shadow_banned'
+
+interface QueueItem {
+  id: string
+  article_id: string
+  article_title: string
+  article_slug: string
+  author_name: string | null
+  author_email: string | null
+  body: string
+  status: CommentStatus
+  spam_score: number | null
+  created_at: string
+}
+
+type Decision = 'approve' | 'reject' | 'spam' | 'shadow_ban'
+
+const DECISION_TO_STATUS: Record<Decision, CommentStatus> = {
+  approve: 'approved',
+  reject: 'rejected',
+  spam: 'spam',
+  shadow_ban: 'shadow_banned',
+}
+
+export default function AdminCommentsPage() {
+  const [items, setItems] = useState<QueueItem[] | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [tab, setTab] = useState<CommentStatus>('pending')
+  const [submittingId, setSubmittingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/admin/comments?status=${tab}`, { cache: 'no-store' })
+        if (!res.ok) throw new Error()
+        const json = (await res.json()) as { comments: QueueItem[] }
+        if (!cancelled) setItems(json.comments)
+      } catch {
+        if (!cancelled) setErr(t('admin.comments.load-failed'))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [tab])
+
+  async function onDecide(c: QueueItem, d: Decision) {
+    setSubmittingId(c.id)
+    try {
+      const res = await fetch(`/api/admin/comments/${c.id}`, {
+        method: 'PATCH', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: DECISION_TO_STATUS[d] }),
+      })
+      if (res.ok && items) setItems(items.filter((x) => x.id !== c.id))
+    } finally {
+      setSubmittingId(null)
+    }
+  }
+
+  const tabs: CommentStatus[] = ['pending', 'approved', 'spam', 'shadow_banned', 'rejected']
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{t('admin.comments.title')}</h1>
+          <p className="text-ink-muted">{t('admin.comments.subtitle')}</p>
+        </div>
+      </header>
+
+      <Alert variant="info" role="note">
+        <strong>{t('admin.comments.ap-warning-title')}</strong>
+        <p className="mt-1 text-sm">{t('admin.comments.ap-warning-body')}</p>
+      </Alert>
+
+      <nav role="tablist" className="flex gap-1 border-b border-surface-strong">
+        {tabs.map((s) => (
+          <button
+            key={s}
+            role="tab"
+            aria-selected={tab === s}
+            onClick={() => setTab(s)}
+            className={`px-4 py-2 text-sm border-b-2 ${tab === s ? 'border-accent-500 text-ink' : 'border-transparent text-ink-muted hover:text-ink'}`}
+          >
+            {t(`admin.comments.tab.${s}`)}
+          </button>
+        ))}
+      </nav>
+
+      {err ? <Alert variant="destructive" role="alert">{err}</Alert> : null}
+
+      {items === null ? (
+        <div className="h-64 bg-surface-muted rounded animate-pulse" aria-busy="true" />
+      ) : items.length === 0 ? (
+        <EmptyState title={t('admin.comments.empty-title')} body={t('admin.comments.empty-body')} />
+      ) : (
+        <ul className="space-y-4">
+          {items.map((c) => (
+            <li key={c.id} className="rounded-lg border border-surface-strong bg-surface-raised p-4 space-y-3">
+              <header className="flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">
+                    {c.author_name ?? t('admin.comments.anonymous')}
+                    {c.author_email ? <span className="text-ink-muted ml-2">&lt;{c.author_email}&gt;</span> : null}
+                  </p>
+                  <p className="text-xs text-ink-muted">
+                    <a href={`/articles/${c.article_slug}`} className="hover:underline">{c.article_title}</a>
+                    {' · '}
+                    <time>{formatDateTime(c.created_at)}</time>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {c.spam_score !== null && c.spam_score > 0.5 ? (
+                    <Badge variant="danger">{t('admin.comments.spam-score', { score: (c.spam_score * 100).toFixed(0) })}</Badge>
+                  ) : null}
+                  <Badge variant="neutral">{t(`admin.comments.status.${c.status}`)}</Badge>
+                </div>
+              </header>
+              <p className="text-sm whitespace-pre-wrap">{c.body}</p>
+              {tab === 'pending' ? (
+                <div className="flex gap-2 pt-2 border-t border-surface-strong">
+                  <Button size="sm" variant="default" disabled={submittingId === c.id} onClick={() => onDecide(c, 'approve')}>
+                    {t('admin.comments.approve')}
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={submittingId === c.id} onClick={() => onDecide(c, 'reject')}>
+                    {t('admin.comments.reject')}
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={submittingId === c.id} onClick={() => onDecide(c, 'spam')}>
+                    {t('admin.comments.mark-spam')}
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={submittingId === c.id} onClick={() => onDecide(c, 'shadow_ban')}>
+                    {t('admin.comments.shadow-ban')}
+                  </Button>
+                </div>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}

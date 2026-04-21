@@ -1,0 +1,78 @@
+// {{product_name_pascal}} — Service Worker registration helper
+// - No-op in dev (avoid stale caching during HMR)
+// - Register on first prod mount
+// - Handle update-found → prompt skipWaiting + reload
+// - Bridge tenant-scope to SW so AP-PWA-01 cache-poison guard has context
+
+type ScopeResolver = () => Promise<string | null> | string | null;
+
+const isDev = process.env.NODE_ENV !== "production";
+const SW_PATH = "/sw.js";
+
+export interface RegisterSwOptions {
+  /** Pull current auth scope (tenant_id + user_id hash) for cache keys. */
+  getScope: ScopeResolver;
+  /** Called when a new SW version is ready — show a refresh toast, etc. */
+  onUpdateReady?: (applyUpdate: () => void) => void;
+  /** Called after the first controller is installed (initial PWA readiness). */
+  onReady?: () => void;
+}
+
+export async function registerServiceWorker(opts: RegisterSwOptions): Promise<void> {
+  if (isDev) return;
+  if (typeof window === "undefined") return;
+  if (!("serviceWorker" in navigator)) return;
+
+  try {
+    const reg = await navigator.serviceWorker.register(SW_PATH, { scope: "/", updateViaCache: "none" });
+
+    // First install → fire onReady when the controller is active
+    if (reg.active && !navigator.serviceWorker.controller) opts.onReady?.();
+
+    // Wire scope bridge: SW asks → we answer with current tenant-scoped hash
+    navigator.serviceWorker.addEventListener("message", async (event) => {
+      if (event.data?.type !== "scope-request") return;
+      const port = event.ports[0];
+      if (!port) return;
+      const scope = await opts.getScope();
+      port.postMessage(scope ?? null);
+    });
+
+    // Update lifecycle
+    reg.addEventListener("updatefound", () => {
+      const installing = reg.installing;
+      if (!installing) return;
+      installing.addEventListener("statechange", () => {
+        if (installing.state !== "installed") return;
+        // If there's a controller, this is an update (not first install)
+        if (navigator.serviceWorker.controller) {
+          opts.onUpdateReady?.(() => {
+            installing.postMessage({ type: "skip-waiting" });
+          });
+        }
+      });
+    });
+
+    // Reload when new SW takes over
+    let refreshed = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshed) return;
+      refreshed = true;
+      window.location.reload();
+    });
+
+    // Drain offline write queue whenever we come back online
+    window.addEventListener("online", () => {
+      reg.active?.postMessage({ type: "drain-queue" });
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[pwa] sw register failed", err);
+  }
+}
+
+export async function unregisterServiceWorker(): Promise<void> {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+  const regs = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(regs.map((r) => r.unregister()));
+}

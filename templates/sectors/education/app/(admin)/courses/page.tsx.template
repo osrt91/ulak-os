@@ -1,0 +1,221 @@
+// {{product_name_pascal}} — admin course CRUD (TanStack table with search + pagination)
+// Sector overlay: education (SP-education)
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel,
+  getPaginationRowModel, getSortedRowModel, SortingState, useReactTable,
+} from "@tanstack/react-table";
+
+import { t } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/i18n/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+
+interface AdminCourseRow {
+  id: string;
+  title: string;
+  category: string | null;
+  level: "beginner" | "intermediate" | "advanced" | null;
+  lesson_count: number;
+  enrollment_count: number;
+  published_at: string | null;
+  updated_at: string;
+}
+
+type ActionType = "unpublish" | "publish" | "delete";
+type RowAction = { type: ActionType; course: AdminCourseRow };
+
+export default function AdminCoursesPage() {
+  const [data, setData] = useState<AdminCourseRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "updated_at", desc: true }]);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [pending, setPending] = useState<RowAction | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/courses", { cache: "no-store" });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = (await res.json()) as { courses: AdminCourseRow[] };
+        if (!cancelled) setData(json.courses);
+      } catch {
+        if (!cancelled) setLoadError(t("education.admin.courses.load-failed"));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const columns = useMemo<ColumnDef<AdminCourseRow>[]>(() => [
+    {
+      accessorKey: "title", header: t("education.admin.courses.col.title"),
+      cell: ({ row }) => (
+        <div>
+          <Link href={`/admin/courses/${row.original.id}`} className="font-medium hover:underline">
+            {row.original.title}
+          </Link>
+          {row.original.category ? (
+            <p className="text-xs text-ink-muted">{row.original.category}</p>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "level", header: t("education.admin.courses.col.level"),
+      cell: ({ getValue }) => {
+        const v = getValue<string | null>();
+        return v ? <Badge>{t(`education.levels.${v}`, { fallback: v })}</Badge> : <span className="text-ink-muted">—</span>;
+      },
+    },
+    { accessorKey: "lesson_count", header: t("education.admin.courses.col.lessons") },
+    { accessorKey: "enrollment_count", header: t("education.admin.courses.col.enrolled") },
+    {
+      accessorKey: "published_at", header: t("education.admin.courses.col.status"),
+      cell: ({ getValue }) => {
+        const v = getValue<string | null>();
+        return v
+          ? <Badge variant="success">{t("education.admin.courses.published")}</Badge>
+          : <Badge variant="neutral">{t("education.admin.courses.draft")}</Badge>;
+      },
+    },
+    {
+      accessorKey: "updated_at", header: t("education.admin.courses.col.updated"),
+      cell: ({ getValue }) => formatDateTime(getValue<string>()),
+    },
+    {
+      id: "actions", header: () => <span className="sr-only">{t("education.admin.courses.col.actions")}</span>,
+      cell: ({ row }) => {
+        const c = row.original;
+        return (
+          <div className="flex gap-2 justify-end">
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/admin/courses/${c.id}`}>{t("education.admin.courses.edit")}</Link>
+            </Button>
+            {c.published_at ? (
+              <Button variant="outline" size="sm" onClick={() => setPending({ type: "unpublish", course: c })}>
+                {t("education.admin.courses.unpublish")}
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => setPending({ type: "publish", course: c })}>
+                {t("education.admin.courses.publish")}
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" className="text-danger-600" onClick={() => setPending({ type: "delete", course: c })}>
+              {t("education.admin.courses.delete")}
+            </Button>
+          </div>
+        );
+      },
+    },
+  ], []);
+
+  const table = useReactTable({
+    data: data ?? [], columns,
+    state: { sorting, globalFilter },
+    onSortingChange: setSorting, onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 20 } },
+  });
+
+  const onConfirm = async () => {
+    if (!pending) return;
+    const { type, course } = pending;
+    const res = await fetch(`/api/admin/courses/${course.id}`, {
+      method: type === "delete" ? "DELETE" : "PATCH",
+      headers: { "content-type": "application/json" },
+      body: type === "delete" ? undefined : JSON.stringify({ action: type }),
+    });
+    setPending(null);
+    if (!res.ok || !data) return;
+    if (type === "delete") {
+      setData(data.filter((r) => r.id !== course.id));
+    } else {
+      setData(data.map((r) => r.id === course.id
+        ? { ...r, published_at: type === "publish" ? new Date().toISOString() : null }
+        : r));
+    }
+  };
+
+  if (loadError) return <Alert variant="destructive" role="alert">{loadError}</Alert>;
+  if (data === null) {
+    return (
+      <div className="space-y-4">
+        <div className="h-8 w-48 bg-surface-muted rounded animate-pulse" />
+        <div className="h-64 bg-surface-muted rounded animate-pulse" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-7xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            {t("education.admin.courses.title")}
+          </h1>
+          <p className="text-ink-muted">{t("education.admin.courses.subtitle")}</p>
+        </div>
+        <div className="flex gap-3">
+          <Input value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)}
+            placeholder={t("education.admin.courses.search")} className="w-64" />
+          <Button asChild>
+            <Link href="/admin/courses/new">{t("education.admin.courses.new")}</Link>
+          </Button>
+        </div>
+      </header>
+
+      {data.length === 0 ? (
+        <EmptyState
+          title={t("education.admin.courses.empty-title")}
+          body={t("education.admin.courses.empty-body")}
+          cta={{ href: "/admin/courses/new", label: t("education.admin.courses.new") }}
+        />
+      ) : (
+        <div className="rounded-lg border border-surface-strong bg-surface-raised overflow-hidden">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id}>
+                  {hg.headers.map((h) => (
+                    <TableHead key={h.id} onClick={h.column.getToggleSortingHandler()} className="cursor-pointer select-none">
+                      {flexRender(h.column.columnDef.header, h.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((c) => (
+                    <TableCell key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={pending !== null}
+        onOpenChange={(v) => !v && setPending(null)}
+        title={t(`education.admin.courses.confirm.${pending?.type ?? "delete"}.title`)}
+        body={t(`education.admin.courses.confirm.${pending?.type ?? "delete"}.body`, { title: pending?.course.title ?? "" })}
+        confirmLabel={t(`education.admin.courses.confirm.${pending?.type ?? "delete"}.confirm`)}
+        destructive={pending?.type === "delete"}
+        onConfirm={onConfirm}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,135 @@
+// {{product_name_pascal}} — SSE streaming relay with live token accounting
+// Counts tokens as they arrive; terminates the stream when cap is hit and
+// emits a final `[cap-hit]` event so the client can render partial output.
+import { countStreamTokens, priceOfUsd } from "@/lib/ai-relay/pricing";
+import { recordAttribution } from "@/lib/ai-relay/attribution";
+
+export interface StreamContext {
+  tenant_id: string;
+  user_id: string;
+  feature: string;
+  conversation_id: string | null;
+  model: string;
+  prompt_tokens: number;
+  remaining_usd: number; // from cost-cap middleware snapshot
+}
+
+export interface StreamTerminationInfo {
+  reason: "finished" | "cap_hit" | "upstream_error" | "client_aborted";
+  completion_tokens: number;
+  total_usd: number;
+}
+
+export async function streamWithCostCap(
+  upstreamRes: Response,
+  ctx: StreamContext,
+): Promise<Response> {
+  if (!upstreamRes.body) {
+    return new Response("upstream returned no body", { status: 502 });
+  }
+
+  const reader = upstreamRes.body.getReader();
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  let completionTokens = 0;
+  let termination: StreamTerminationInfo["reason"] = "finished";
+  let buffered = "";
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffered += decoder.decode(value, { stream: true });
+          const events = buffered.split("\n\n");
+          buffered = events.pop() ?? "";
+
+          for (const ev of events) {
+            const delta = extractDelta(ev);
+            if (delta) completionTokens += countStreamTokens(ctx.model, delta);
+
+            // Live cap check — stop as soon as projected > remaining
+            const projected = priceOfUsd(ctx.model, ctx.prompt_tokens, completionTokens);
+            if (projected > ctx.remaining_usd) {
+              termination = "cap_hit";
+              controller.enqueue(encoder.encode(formatCapHitEvent(projected)));
+              controller.close();
+              await reader.cancel("cost_cap_hit");
+              await finalize(ctx, { reason: termination, completion_tokens: completionTokens, total_usd: projected });
+              return;
+            }
+
+            controller.enqueue(encoder.encode(`${ev}\n\n`));
+          }
+        }
+        if (buffered) controller.enqueue(encoder.encode(buffered));
+        controller.close();
+        await finalize(ctx, {
+          reason: termination,
+          completion_tokens: completionTokens,
+          total_usd: priceOfUsd(ctx.model, ctx.prompt_tokens, completionTokens),
+        });
+      } catch (err) {
+        termination = err instanceof Error && err.name === "AbortError" ? "client_aborted" : "upstream_error";
+        controller.error(err);
+        await finalize(ctx, {
+          reason: termination,
+          completion_tokens: completionTokens,
+          total_usd: priceOfUsd(ctx.model, ctx.prompt_tokens, completionTokens),
+        });
+      }
+    },
+    cancel() {
+      termination = "client_aborted";
+      reader.cancel().catch(() => undefined);
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "content-type": "text/event-stream",
+      "cache-control": "no-store",
+      "x-accel-buffering": "no",
+    },
+  });
+}
+
+function extractDelta(eventBlock: string): string {
+  // naive SSE parse — handles both OpenAI `data: {...}` and Anthropic shapes
+  for (const line of eventBlock.split("\n")) {
+    if (!line.startsWith("data:")) continue;
+    const payload = line.slice(5).trim();
+    if (!payload || payload === "[DONE]") continue;
+    try {
+      const obj = JSON.parse(payload) as {
+        choices?: Array<{ delta?: { content?: string } }>;
+        delta?: { text?: string };
+      };
+      return obj.choices?.[0]?.delta?.content ?? obj.delta?.text ?? "";
+    } catch { /* skip malformed */ }
+  }
+  return "";
+}
+
+function formatCapHitEvent(totalUsd: number): string {
+  const payload = JSON.stringify({ type: "cap-hit", total_usd: totalUsd, message: "budget_exhausted_partial_response_delivered" });
+  return `event: cap-hit\ndata: ${payload}\n\n`;
+}
+
+async function finalize(ctx: StreamContext, info: StreamTerminationInfo): Promise<void> {
+  await recordAttribution({
+    tenant_id: ctx.tenant_id,
+    user_id: ctx.user_id,
+    feature: ctx.feature,
+    conversation_id: ctx.conversation_id,
+    model: ctx.model,
+    prompt_tokens: ctx.prompt_tokens,
+    completion_tokens: info.completion_tokens,
+    total_usd: info.total_usd,
+    outcome: info.reason,
+  });
+}

@@ -1,0 +1,138 @@
+// {{product_name_pascal}} — streaming chat POST endpoint (ai-copilot overlay)
+//
+// Flow:
+//   1. getAuthContext — user must be authenticated customer
+//   2. Rate-limit check (60 req/min per user — baseline)
+//   3. Resolve conversation (create if missing) and append user message
+//   4. Call lib/ai/relay.stream() which:
+//      - validates model against model_allowlist
+//      - enforces cost-cap (AP-AI-01) via lib/ai/cost-cap
+//      - writes ai_usage_log (AP-AI-02) post-stream
+//      - persists assistant message
+//   5. Return the stream body directly as text/event-stream
+
+import { NextResponse } from 'next/server'
+
+import { getAuthContext } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
+import { stream, type RelayMessage, type Provider } from '@/lib/ai/relay'
+
+interface ChatRequestBody {
+  conversation_id?: string
+  messages: RelayMessage[]
+  provider?: Provider
+  model?: string
+  temperature?: number
+  max_tokens?: number
+}
+
+// Basic in-memory rate limiter — real deploys replace with Redis or Supabase Edge KV
+const RATE_LIMIT_BUCKET = new Map<string, number[]>()
+const MAX_PER_MINUTE = 60
+
+function rateLimitOk(userId: string): boolean {
+  const now = Date.now()
+  const cutoff = now - 60_000
+  const bucket = (RATE_LIMIT_BUCKET.get(userId) ?? []).filter((t) => t >= cutoff)
+  if (bucket.length >= MAX_PER_MINUTE) return false
+  bucket.push(now)
+  RATE_LIMIT_BUCKET.set(userId, bucket)
+  return true
+}
+
+export async function POST(req: Request) {
+  const ctx = await getAuthContext({ require_role: 'customer' })
+  if (!ctx.allowed) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
+  if (!rateLimitOk(ctx.user.id)) {
+    return NextResponse.json({ error: 'rate-limit-exceeded', retry_after_seconds: 60 }, { status: 429 })
+  }
+
+  let body: ChatRequestBody
+  try {
+    body = (await req.json()) as ChatRequestBody
+  } catch {
+    return NextResponse.json({ error: 'invalid-json' }, { status: 400 })
+  }
+
+  if (!Array.isArray(body.messages) || body.messages.length === 0) {
+    return NextResponse.json({ error: 'messages-required' }, { status: 400 })
+  }
+
+  const supabase = await createServerClient()
+
+  // Resolve or create conversation (scoped to user)
+  let conversationId = body.conversation_id
+  if (!conversationId) {
+    const { data: created, error: convErr } = await supabase
+      .from('conversations')
+      .insert({ tenant_id: ctx.tenantId!, user_id: ctx.user.id, default_model: body.model ?? 'claude-opus-4-5' })
+      .select('id')
+      .single()
+    if (convErr || !created) {
+      return NextResponse.json({ error: 'conversation-create-failed' }, { status: 500 })
+    }
+    conversationId = created.id as string
+  } else {
+    // Verify ownership before appending (RLS also enforces, but fail-fast nicer)
+    const { data: owner } = await supabase
+      .from('conversations')
+      .select('user_id, tenant_id')
+      .eq('id', conversationId)
+      .maybeSingle()
+    if (!owner || owner.user_id !== ctx.user.id) {
+      return NextResponse.json({ error: 'conversation-not-found' }, { status: 404 })
+    }
+  }
+
+  // Persist user's turn (the last message in body.messages)
+  const userTurn = body.messages[body.messages.length - 1]
+  if (userTurn.role === 'user') {
+    await supabase.from('messages').insert({
+      conversation_id: conversationId,
+      tenant_id: ctx.tenantId!,
+      role: 'user',
+      content: userTurn.content,
+    })
+  }
+
+  // Resolve tier from plan_capabilities (string array → prefer 'pro' > 'team' > 'free')
+  const tier = ctx.planCapabilities.includes('ai_pro') ? 'pro'
+              : ctx.planCapabilities.includes('ai_team') ? 'team'
+              : 'free'
+
+  try {
+    const outcome = await stream(body.messages, {
+      provider: body.provider ?? 'anthropic',
+      model: body.model ?? 'claude-opus-4-5',
+      temperature: body.temperature,
+      max_tokens: body.max_tokens,
+      tenantId: ctx.tenantId!,
+      userId: ctx.user.id,
+      conversationId,
+      tier,
+    })
+
+    // Fire-and-forget the finalized promise so DB writes complete after response
+    outcome.finalized.catch((err) => {
+      console.error('[ai/chat] finalize failed', err)
+    })
+
+    return new Response(outcome.stream, {
+      status: 200,
+      headers: {
+        'content-type': 'text/event-stream',
+        'cache-control': 'no-store, no-transform',
+        'x-conversation-id': conversationId,
+      },
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'relay-failed'
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'

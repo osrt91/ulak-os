@@ -1,0 +1,54 @@
+// {{product_name_pascal}} — offline fallback page
+// Served by the SW when navigation fails. Branded, minimal, no external fetches.
+import Link from "next/link";
+import { t } from "@/lib/i18n";
+
+export const metadata = {
+  title: "{{product_name_pascal}} — offline",
+  robots: { index: false, follow: false },
+};
+
+export const dynamic = "force-static";
+
+export default function OfflinePage(): JSX.Element {
+  return (
+    <main className="min-h-[100dvh] flex items-center justify-center bg-surface-base px-6">
+      <div className="max-w-md text-center space-y-6">
+        <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-surface-muted" aria-hidden>
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-ink-muted">
+            <path d="M3 12c0-4.97 4.03-9 9-9 2.6 0 4.95 1.1 6.6 2.86" />
+            <path d="M21 12c0 4.97-4.03 9-9 9-2.6 0-4.95-1.1-6.6-2.86" />
+            <path d="M3 3l18 18" />
+          </svg>
+        </div>
+
+        <div className="space-y-2">
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
+            {t("offline.title")}
+          </h1>
+          <p className="text-ink-muted">{t("offline.body")}</p>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <button
+            type="button"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary-500 px-4 text-sm font-medium text-white hover:bg-primary-600"
+            onClick={() => typeof window !== "undefined" && window.location.reload()}
+          >
+            {t("offline.retry")}
+          </button>
+          <Link
+            href="/dashboard"
+            className="inline-flex h-10 items-center justify-center rounded-md border border-surface-strong px-4 text-sm font-medium hover:bg-surface-muted"
+          >
+            {t("offline.cached-link")}
+          </Link>
+        </div>
+
+        <p className="text-xs text-ink-subtle">
+          {t("offline.queue-hint")}
+        </p>
+      </div>
+    </main>
+  );
+}

@@ -1,0 +1,113 @@
+# DeltaK8s — Argo CD Application manifest
+# One per environment. Drop these into your Argo CD project that watches the
+# platform repo; Argo will reconcile the state from the Helm chart + values file.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: deltak8s-{{TENANT_SLUG}}-{{ENVIRONMENT}}
+  namespace: argocd
+  labels:
+    delta.k8s/tenant: "{{TENANT_SLUG}}"
+    delta.k8s/environment: "{{ENVIRONMENT}}"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    notifications.argoproj.io/subscribe.on-sync-failed.slack: "deltak8s-alerts"
+    notifications.argoproj.io/subscribe.on-health-degraded.slack: "deltak8s-alerts"
+spec:
+  project: deltak8s
+  source:
+    repoURL: "{{GIT_REPO_URL}}"
+    path: "k8s"
+    targetRevision: "{{GIT_REVISION}}"              # tag for prod, branch for dev/staging
+    helm:
+      releaseName: "deltak8s-{{TENANT_SLUG}}-{{ENVIRONMENT}}"
+      valueFiles:
+        - "helm/values.yaml"
+        - "helm/values-{{ENVIRONMENT}}.yaml"
+      parameters:
+        - name: global.tenantSlug
+          value: "{{TENANT_SLUG}}"
+        - name: global.environment
+          value: "{{ENVIRONMENT}}"
+        - name: global.dataRegion
+          value: "{{DATA_REGION}}"
+
+  destination:
+    server: "{{CLUSTER_API_SERVER}}"                # https://kubernetes.default.svc for in-cluster
+    namespace: "delta-{{TENANT_SLUG}}-{{ENVIRONMENT}}"
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+
+  # Health checks — Argo will mark the app degraded until these all report healthy
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas      # HPA owns replica count at runtime
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+      jsonPointers:
+        - /status
+
+  revisionHistoryLimit: 10
+
+---
+# Optional pre-sync hook — runs DB migrations before web/api rollout
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: deltak8s-migrate-{{ENVIRONMENT}}
+  namespace: "delta-{{TENANT_SLUG}}-{{ENVIRONMENT}}"
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded,BeforeHookCreation
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: delta-migrate
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10003
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: "{{IMAGE_REGISTRY}}/delta-api:{{IMAGE_TAG}}"
+          command: ["/bin/sh", "-c", "alembic upgrade head"]
+          envFrom:
+            - secretRef:
+                name: delta-api-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

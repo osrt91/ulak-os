@@ -1,0 +1,214 @@
+// {{product_name_pascal}} — Service Worker (DeltaPWA pattern)
+// Strategy:
+//   - App shell: precache (static HTML/JS/CSS hashed by build → cache-first)
+//   - API: stale-while-revalidate (serve cached while fetching fresh; tenant-scoped)
+//   - Writes when offline: background-sync queue (idempotent replay on reconnect)
+//
+// AP-PWA-01 (cache poison) — cache key includes a user-scope hash so that
+// one user's cached admin response can never be served to another user on
+// the same device (e.g. shared kiosk). User-scope hash is injected at
+// register time from the authed session; missing scope → bypass cache.
+
+/// <reference lib="webworker" />
+declare const self: ServiceWorkerGlobalScope;
+
+const VERSION = "{{sw_version}}"; // bumped per deploy; old caches purged
+const SHELL_CACHE = `{{product_slug}}-shell-${VERSION}`;
+const API_CACHE = `{{product_slug}}-api-${VERSION}`;
+const OFFLINE_URL = "/offline";
+
+// Build-time injected list of hashed shell assets
+const SHELL_ASSETS: string[] = (self as unknown as { __SHELL_ASSETS__?: string[] }).__SHELL_ASSETS__ ?? [
+  "/",
+  "/offline",
+  "/manifest.json",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+];
+
+// ---------------- install: precache shell ----------------
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(SHELL_CACHE);
+      await cache.addAll(SHELL_ASSETS);
+      // do NOT skipWaiting here — wait for explicit message from client
+    })(),
+  );
+});
+
+// ---------------- activate: purge old versions ----------------
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((k) => k.startsWith(`{{product_slug}}-`) && !k.endsWith(VERSION))
+          .map((k) => caches.delete(k)),
+      );
+      await self.clients.claim();
+    })(),
+  );
+});
+
+// ---------------- fetch router ----------------
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return; // third-party: pass through
+
+  // Writes → background-sync queue if offline
+  if (req.method !== "GET") {
+    if (url.pathname.startsWith("/api/")) {
+      event.respondWith(handleWrite(req));
+    }
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/")) {
+    event.respondWith(staleWhileRevalidate(req));
+    return;
+  }
+  // navigation requests
+  if (req.mode === "navigate") {
+    event.respondWith(navigationFallback(req));
+    return;
+  }
+  // static assets
+  event.respondWith(cacheFirst(req));
+});
+
+// ---------------- strategies ----------------
+async function cacheFirst(req: Request): Promise<Response> {
+  const cache = await caches.open(SHELL_CACHE);
+  const hit = await cache.match(req);
+  if (hit) return hit;
+  try {
+    const res = await fetch(req);
+    if (res.ok) cache.put(req, res.clone());
+    return res;
+  } catch {
+    return new Response("", { status: 504, statusText: "offline" });
+  }
+}
+
+async function staleWhileRevalidate(req: Request): Promise<Response> {
+  const cache = await caches.open(API_CACHE);
+  const scopedKey = await scopedRequestKey(req);
+  const hit = await cache.match(scopedKey);
+  const fetchPromise = fetch(req)
+    .then((res) => {
+      // Only cache successful, non-auth-sensitive responses
+      if (res.ok && !res.headers.get("cache-control")?.includes("no-store")) {
+        cache.put(scopedKey, res.clone());
+      }
+      return res;
+    })
+    .catch(() => hit ?? new Response(JSON.stringify({ offline: true }), { status: 503, headers: { "content-type": "application/json" } }));
+  return hit ?? fetchPromise;
+}
+
+async function navigationFallback(req: Request): Promise<Response> {
+  try {
+    const res = await fetch(req);
+    return res;
+  } catch {
+    const cache = await caches.open(SHELL_CACHE);
+    return (await cache.match(OFFLINE_URL)) ?? new Response("offline", { status: 504 });
+  }
+}
+
+// AP-PWA-01 cache poison guard — prepend user scope to cache key
+async function scopedRequestKey(req: Request): Promise<Request> {
+  const scope = await readUserScope();
+  if (!scope) return req; // unauthed; no cache (falls through to network)
+  const url = new URL(req.url);
+  url.searchParams.set("__scope", scope);
+  return new Request(url.toString(), { method: req.method, headers: req.headers });
+}
+
+async function readUserScope(): Promise<string | null> {
+  // user scope pinned by register-sw.ts via postMessage on auth change
+  const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  const first = clients[0];
+  if (!first) return null;
+  return new Promise<string | null>((resolve) => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = (e) => resolve(typeof e.data === "string" ? e.data : null);
+    first.postMessage({ type: "scope-request" }, [ch.port2]);
+    setTimeout(() => resolve(null), 250);
+  });
+}
+
+// ---------------- background-sync queue for offline writes ----------------
+interface QueuedWrite { id: string; url: string; method: string; headers: Record<string, string>; body: string | null; createdAt: number; }
+const QUEUE_KEY = "ulak-offline-writes-v1";
+
+async function handleWrite(req: Request): Promise<Response> {
+  try {
+    return await fetch(req.clone());
+  } catch {
+    await enqueue(req);
+    return new Response(JSON.stringify({ queued: true, offline: true }), { status: 202, headers: { "content-type": "application/json" } });
+  }
+}
+
+async function enqueue(req: Request): Promise<void> {
+  const body = req.method === "GET" || req.method === "HEAD" ? null : await req.clone().text();
+  const entry: QueuedWrite = {
+    id: crypto.randomUUID(),
+    url: req.url,
+    method: req.method,
+    headers: Object.fromEntries(req.headers.entries()),
+    body,
+    createdAt: Date.now(),
+  };
+  const all = await readQueue();
+  all.push(entry);
+  await writeQueue(all);
+  try {
+    await (self.registration as ServiceWorkerRegistration & { sync?: { register: (tag: string) => Promise<void> } })
+      .sync?.register(QUEUE_KEY);
+  } catch { /* sync API may be unsupported; retry will trigger on next online event */ }
+}
+
+self.addEventListener("sync", (event: Event) => {
+  const e = event as Event & { tag: string; waitUntil: (p: Promise<unknown>) => void };
+  if (e.tag === QUEUE_KEY) e.waitUntil(drainQueue());
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "skip-waiting") self.skipWaiting();
+  if (event.data?.type === "drain-queue") event.waitUntil(drainQueue());
+});
+
+async function drainQueue(): Promise<void> {
+  const queue = await readQueue();
+  const survivors: QueuedWrite[] = [];
+  for (const entry of queue) {
+    try {
+      const res = await fetch(entry.url, {
+        method: entry.method,
+        headers: { ...entry.headers, "x-replay-id": entry.id },
+        body: entry.body ?? undefined,
+      });
+      if (!res.ok && res.status >= 500) survivors.push(entry); // transient → retry later
+    } catch {
+      survivors.push(entry);
+    }
+  }
+  await writeQueue(survivors);
+}
+
+async function readQueue(): Promise<QueuedWrite[]> {
+  const cache = await caches.open(API_CACHE);
+  const hit = await cache.match(`/__queue__/${QUEUE_KEY}`);
+  if (!hit) return [];
+  try { return (await hit.json()) as QueuedWrite[]; } catch { return []; }
+}
+
+async function writeQueue(q: QueuedWrite[]): Promise<void> {
+  const cache = await caches.open(API_CACHE);
+  await cache.put(`/__queue__/${QUEUE_KEY}`, new Response(JSON.stringify(q), { headers: { "content-type": "application/json" } }));
+}

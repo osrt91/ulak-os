@@ -1,0 +1,139 @@
+// {{product_name_pascal}} — bulk actions console
+// AP-ADM-02 guard: every bulk action requires explicit confirmation + audit log.
+// Batch-size caps: soft 100 (warn), hard 1000 (reject).
+"use client";
+
+import { useMemo, useState } from "react";
+import { t } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+
+type BulkKind = "email" | "role_change" | "export" | "delete";
+const SOFT_CAP = 100;
+const HARD_CAP = 1000;
+
+interface BulkResult {
+  batch_id: string;
+  queued: number;
+  rejected_reason?: string;
+}
+
+export default function BulkActionsPage(): JSX.Element {
+  const [kind, setKind] = useState<BulkKind>("email");
+  const [rawIds, setRawIds] = useState("");
+  const [payload, setPayload] = useState<Record<string, string>>({});
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [result, setResult] = useState<BulkResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const userIds = useMemo(
+    () => Array.from(new Set(rawIds.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean))),
+    [rawIds],
+  );
+
+  const overSoft = userIds.length > SOFT_CAP;
+  const overHard = userIds.length > HARD_CAP;
+  const destructive = kind === "delete" || kind === "role_change";
+
+  const run = async () => {
+    setConfirmOpen(false); setError(null); setResult(null);
+    if (overHard) { setError(t("admin.bulk.hard-cap", { cap: HARD_CAP })); return; }
+    const res = await fetch("/api/admin/bulk-actions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kind, user_ids: userIds, payload }),
+    });
+    if (!res.ok) { setError(t("admin.bulk.dispatch-failed")); return; }
+    setResult((await res.json()) as BulkResult);
+    setRawIds(""); setPayload({});
+  };
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+      <header>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">{t("admin.bulk.title")}</h1>
+        <p className="text-ink-muted">{t("admin.bulk.subtitle")}</p>
+      </header>
+
+      <Alert variant="warning">{t("admin.bulk.policy", { soft: SOFT_CAP, hard: HARD_CAP })}</Alert>
+
+      <div className="rounded-lg border border-surface-strong bg-surface-raised p-4 space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">{t("admin.bulk.kind-label")}</label>
+          <select
+            value={kind}
+            onChange={(e) => { setKind(e.target.value as BulkKind); setPayload({}); }}
+            className="w-full h-10 rounded-md border border-surface-strong bg-surface-base px-3 text-sm"
+          >
+            <option value="email">{t("admin.bulk.kind.email")}</option>
+            <option value="role_change">{t("admin.bulk.kind.role_change")}</option>
+            <option value="export">{t("admin.bulk.kind.export")}</option>
+            <option value="delete">{t("admin.bulk.kind.delete")}</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">{t("admin.bulk.ids-label")}</label>
+          <textarea
+            rows={6}
+            value={rawIds}
+            onChange={(e) => setRawIds(e.target.value)}
+            placeholder={t("admin.bulk.ids-ph")}
+            className="w-full rounded-md border border-surface-strong bg-surface-base p-2 text-sm font-mono"
+          />
+          <p className="text-xs text-ink-muted mt-1">
+            {t("admin.bulk.parsed-count", { n: userIds.length })}
+            {overSoft && !overHard ? <Badge variant="warning" className="ml-2">{t("admin.bulk.soft-warn")}</Badge> : null}
+            {overHard ? <Badge variant="danger" className="ml-2">{t("admin.bulk.hard-block")}</Badge> : null}
+          </p>
+        </div>
+
+        {kind === "email" ? (
+          <div className="space-y-2">
+            <Input placeholder={t("admin.bulk.email-subject")} value={payload.subject ?? ""} onChange={(e) => setPayload({ ...payload, subject: e.target.value })} aria-label={t("admin.bulk.email-subject")} />
+            <textarea rows={4} placeholder={t("admin.bulk.email-body")} className="w-full rounded-md border border-surface-strong bg-surface-base p-2 text-sm" value={payload.body ?? ""} onChange={(e) => setPayload({ ...payload, body: e.target.value })} aria-label={t("admin.bulk.email-body")} />
+          </div>
+        ) : null}
+
+        {kind === "role_change" ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">{t("admin.bulk.new-role")}</label>
+            <select value={payload.role ?? "customer"} onChange={(e) => setPayload({ ...payload, role: e.target.value })}
+              className="w-full h-10 rounded-md border border-surface-strong bg-surface-base px-3 text-sm">
+              <option value="customer">customer</option>
+              <option value="partner">partner</option>
+              <option value="support">support</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+        ) : null}
+
+        {error ? <Alert variant="destructive" role="alert">{error}</Alert> : null}
+        {result ? (
+          <Alert variant="success">
+            {t("admin.bulk.queued", { batch: result.batch_id, n: result.queued })}
+          </Alert>
+        ) : null}
+
+        <div className="flex justify-end">
+          <Button disabled={userIds.length === 0 || overHard} onClick={() => setConfirmOpen(true)} variant={destructive ? "destructive" : "default"}>
+            {t(`admin.bulk.run.${kind}`, { n: userIds.length })}
+          </Button>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={t(`admin.bulk.confirm.${kind}.title`)}
+        body={t(`admin.bulk.confirm.${kind}.body`, { n: userIds.length })}
+        confirmLabel={t(`admin.bulk.confirm.${kind}.confirm`)}
+        destructive={destructive}
+        onConfirm={run}
+      />
+    </div>
+  );
+}

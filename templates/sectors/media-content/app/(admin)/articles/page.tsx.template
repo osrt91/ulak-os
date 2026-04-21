@@ -1,0 +1,199 @@
+// {{product_name_pascal}} — editorial dashboard (admin surface, media-content overlay)
+//
+// Editorial workflow FSM: draft → review → scheduled → published → archived
+// (plus rejected as hard-fail from review). Bulk action triggers transition on
+// selected rows via /api/admin/articles/bulk-transition.
+
+"use client";
+
+import { useEffect, useMemo, useState } from 'react'
+
+import { t } from '@/lib/i18n'
+import { formatDateTime } from '@/lib/i18n/format'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Alert } from '@/components/ui/alert'
+import { EmptyState } from '@/components/shared/empty-state'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+
+type ArticleStatus = 'draft' | 'review' | 'scheduled' | 'published' | 'archived' | 'rejected'
+
+interface ArticleListRow {
+  id: string
+  title: string
+  slug: string
+  status: ArticleStatus
+  scheduled_for: string | null
+  published_at: string | null
+  updated_at: string
+  author_name: string | null
+}
+
+const STATUS_TABS: ArticleStatus[] = ['draft', 'review', 'scheduled', 'published', 'archived', 'rejected']
+
+function statusVariant(s: ArticleStatus): 'neutral' | 'warning' | 'success' | 'danger' | 'info' {
+  if (s === 'published') return 'success'
+  if (s === 'scheduled') return 'info'
+  if (s === 'review') return 'warning'
+  if (s === 'rejected' || s === 'archived') return 'danger'
+  return 'neutral'
+}
+
+// Allowed transitions per FSM contract — client hints; server re-validates
+const ALLOWED: Record<ArticleStatus, ArticleStatus[]> = {
+  draft: ['review', 'archived'],
+  review: ['draft', 'scheduled', 'published', 'rejected'],
+  scheduled: ['draft', 'published', 'archived'],
+  published: ['archived'],
+  archived: ['draft'],
+  rejected: ['draft'],
+}
+
+export default function AdminArticlesPage() {
+  const [rows, setRows] = useState<ArticleListRow[] | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [tab, setTab] = useState<ArticleStatus>('draft')
+  const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [transitioning, setTransitioning] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/admin/articles?status=${tab}`, { cache: 'no-store' })
+        if (!res.ok) throw new Error()
+        const json = (await res.json()) as { articles: ArticleListRow[] }
+        if (!cancelled) { setRows(json.articles); setSelected(new Set()) }
+      } catch {
+        if (!cancelled) setErr(t('admin.articles.load-failed'))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [tab])
+
+  const filtered = useMemo(() => {
+    if (!rows) return []
+    const q = search.trim().toLowerCase()
+    return q ? rows.filter((r) => r.title.toLowerCase().includes(q) || r.slug.includes(q)) : rows
+  }, [rows, search])
+
+  const nextStates = ALLOWED[tab]
+
+  async function onBulkTransition(target: ArticleStatus) {
+    if (!selected.size) return
+    setTransitioning(true)
+    try {
+      const res = await fetch('/api/admin/articles/bulk-transition', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: [...selected], target }),
+      })
+      if (res.ok && rows) {
+        setRows(rows.filter((r) => !selected.has(r.id)))
+        setSelected(new Set())
+      }
+    } finally {
+      setTransitioning(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6 max-w-7xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{t('admin.articles.title')}</h1>
+          <p className="text-ink-muted">{t('admin.articles.subtitle')}</p>
+        </div>
+        <div className="flex gap-2">
+          <a href="/admin/articles/new" className="inline-flex items-center rounded-md bg-accent-600 text-white px-3 py-2 text-sm hover:bg-accent-700">
+            {t('admin.articles.new')}
+          </a>
+        </div>
+      </header>
+
+      <nav role="tablist" className="flex gap-1 border-b border-surface-strong">
+        {STATUS_TABS.map((s) => (
+          <button
+            key={s}
+            role="tab"
+            aria-selected={tab === s}
+            onClick={() => setTab(s)}
+            className={`px-4 py-2 text-sm border-b-2 ${tab === s ? 'border-accent-500 text-ink' : 'border-transparent text-ink-muted hover:text-ink'}`}
+          >
+            {t(`admin.articles.tab.${s}`)}
+          </button>
+        ))}
+      </nav>
+
+      <div className="flex items-center gap-3">
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('admin.articles.search-placeholder')} className="max-w-xs" />
+        {selected.size > 0 && nextStates.length > 0 && (
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-sm text-ink-muted">{t('admin.articles.selected', { n: selected.size })}</span>
+            {nextStates.map((ns) => (
+              <Button key={ns} variant="outline" size="sm" disabled={transitioning} onClick={() => onBulkTransition(ns)}>
+                → {t(`admin.articles.transition.${ns}`)}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {err ? <Alert variant="destructive" role="alert">{err}</Alert> : null}
+
+      {rows === null ? (
+        <div className="h-64 bg-surface-muted rounded animate-pulse" aria-busy="true" />
+      ) : filtered.length === 0 ? (
+        <EmptyState title={t('admin.articles.empty-title')} body={t('admin.articles.empty-body')} />
+      ) : (
+        <div className="rounded-lg border border-surface-strong bg-surface-raised overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={selected.size === filtered.length && filtered.length > 0}
+                    onCheckedChange={(v) => setSelected(v ? new Set(filtered.map((r) => r.id)) : new Set())}
+                    aria-label={t('admin.articles.select-all')}
+                  />
+                </TableHead>
+                <TableHead>{t('admin.articles.col.title')}</TableHead>
+                <TableHead>{t('admin.articles.col.author')}</TableHead>
+                <TableHead>{t('admin.articles.col.status')}</TableHead>
+                <TableHead>{t('admin.articles.col.updated')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selected.has(r.id)}
+                      onCheckedChange={(v) => {
+                        const next = new Set(selected)
+                        if (v) next.add(r.id); else next.delete(r.id)
+                        setSelected(next)
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <a href={`/admin/articles/${r.id}/edit`} className="font-medium hover:underline">{r.title}</a>
+                    <p className="text-xs text-ink-muted font-mono">/{r.slug}</p>
+                  </TableCell>
+                  <TableCell>{r.author_name ?? <span className="text-ink-muted">—</span>}</TableCell>
+                  <TableCell>
+                    <Badge variant={statusVariant(r.status)}>{t(`admin.articles.status.${r.status}`)}</Badge>
+                    {r.scheduled_for ? <p className="text-xs text-ink-muted mt-1">→ {formatDateTime(r.scheduled_for)}</p> : null}
+                  </TableCell>
+                  <TableCell>{formatDateTime(r.updated_at)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  )
+}

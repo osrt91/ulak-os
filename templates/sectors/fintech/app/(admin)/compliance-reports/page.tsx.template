@@ -1,0 +1,144 @@
+// {{product_name_pascal}} — regulatory compliance reports (MASAK / CBRT export generator)
+// Sector overlay: fintech
+//
+// Report formats are placeholders — actual regulator specs evolve. The server
+// side builds the XML/JSON payload; this page is the operator's generator UI.
+import { getAuthContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/i18n/format";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/shared/empty-state";
+
+export const dynamic = "force-dynamic";
+
+interface ReportRow {
+  id: string;
+  report_type: "masak_str" | "cbrt_monthly" | "ofac_screening" | "ctr";
+  period_start: string;
+  period_end: string;
+  status: "queued" | "generating" | "ready" | "filed" | "error";
+  row_count: number | null;
+  generated_at: string | null;
+  filed_at: string | null;
+  filed_reference: string | null;
+  download_url: string | null;
+}
+
+export default async function ComplianceReportsPage() {
+  const authCtx = await getAuthContext({ require_role: "admin" });
+  if (!authCtx.allowed || !authCtx.session.tenantId) return null;
+
+  const supabase = await createClient();
+
+  const { data: rows } = await supabase
+    .from("compliance_reports")
+    .select("id, report_type, period_start, period_end, status, row_count, generated_at, filed_at, filed_reference, download_url")
+    .eq("tenant_id", authCtx.session.tenantId)
+    .order("period_end", { ascending: false })
+    .limit(100);
+  const reports: ReportRow[] = rows ?? [];
+
+  const reportTypes: ReportRow["report_type"][] = ["masak_str", "cbrt_monthly", "ofac_screening", "ctr"];
+
+  return (
+    <div className="space-y-6 max-w-6xl">
+      <header className="space-y-2">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          {t("fintech.compliance.title")}
+        </h1>
+        <p className="text-ink-muted">{t("fintech.compliance.subtitle")}</p>
+      </header>
+
+      <Card>
+        <CardHeader><CardTitle>{t("fintech.compliance.generate.title")}</CardTitle></CardHeader>
+        <CardContent>
+          <form action="/api/admin/compliance-reports" method="post" className="grid gap-3 sm:grid-cols-4">
+            <label className="text-sm sm:col-span-2">
+              {t("fintech.compliance.generate.type")}
+              <select
+                name="report_type"
+                required
+                className="w-full rounded-md border border-surface-strong bg-surface-raised px-3 py-2"
+              >
+                {reportTypes.map((rt) => (
+                  <option key={rt} value={rt}>
+                    {t(`fintech.compliance.type.${rt}`, { fallback: rt })}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm">
+              {t("fintech.compliance.generate.period-start")}
+              <input type="date" name="period_start" required
+                className="w-full rounded-md border border-surface-strong bg-surface-raised px-3 py-2" />
+            </label>
+            <label className="text-sm">
+              {t("fintech.compliance.generate.period-end")}
+              <input type="date" name="period_end" required
+                className="w-full rounded-md border border-surface-strong bg-surface-raised px-3 py-2" />
+            </label>
+            <div className="sm:col-span-4">
+              <Button type="submit">{t("fintech.compliance.generate.submit")}</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-ink-muted">
+          {t("fintech.compliance.history")}
+        </h2>
+        {reports.length === 0 ? (
+          <EmptyState title={t("fintech.compliance.history-empty")} body="" />
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <ul className="divide-y divide-surface-strong">
+                {reports.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between px-6 py-4">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {t(`fintech.compliance.type.${r.report_type}`, { fallback: r.report_type })}
+                      </p>
+                      <p className="text-xs text-ink-muted">
+                        {r.period_start} → {r.period_end}
+                        {r.row_count != null ? ` · ${r.row_count} rows` : ""}
+                      </p>
+                      {r.filed_reference ? (
+                        <p className="text-xs text-ink-muted">
+                          {t("fintech.compliance.filed-ref")}: {r.filed_reference}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <Badge variant={
+                          r.status === "ready" || r.status === "filed" ? "success"
+                          : r.status === "error" ? "warning"
+                          : "neutral"
+                        }>
+                          {t(`fintech.compliance.status.${r.status}`, { fallback: r.status })}
+                        </Badge>
+                        <p className="text-xs text-ink-muted mt-1">
+                          {r.generated_at ? formatDateTime(r.generated_at) : "—"}
+                        </p>
+                      </div>
+                      {r.download_url ? (
+                        <Button asChild size="sm" variant="outline">
+                          <a href={r.download_url} download>{t("fintech.compliance.download")}</a>
+                        </Button>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+    </div>
+  );
+}

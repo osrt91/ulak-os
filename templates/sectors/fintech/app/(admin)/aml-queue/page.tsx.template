@@ -1,0 +1,190 @@
+// {{product_name_pascal}} — AML review queue (flag reasons + approve/reject workflow)
+// Sector overlay: fintech
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import {
+  ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel,
+  getPaginationRowModel, getSortedRowModel, SortingState, useReactTable,
+} from "@tanstack/react-table";
+
+import { t } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/i18n/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+
+interface AmlFlagRow {
+  id: string;
+  user_email: string;
+  user_id: string;
+  transaction_id: string | null;
+  risk_score: number;
+  flag_reason: "high_value" | "velocity" | "pep_match" | "ofac_match" | "country_risk" | "structuring";
+  status: "open" | "under_review" | "cleared" | "escalated" | "reported";
+  assigned_to: string | null;
+  created_at: string;
+  provider_reference: string | null;
+}
+
+type Decision = "clear" | "escalate" | "report";
+type PendingAction = { decision: Decision; flag: AmlFlagRow; note: string };
+
+export default function AmlQueuePage() {
+  const [data, setData] = useState<AmlFlagRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "risk_score", desc: true }]);
+  const [filter, setFilter] = useState("");
+  const [pending, setPending] = useState<PendingAction | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/aml-flags", { cache: "no-store" });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = (await res.json()) as { flags: AmlFlagRow[] };
+        if (!cancelled) setData(json.flags);
+      } catch {
+        if (!cancelled) setLoadError(t("fintech.aml.load-failed"));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const columns = useMemo<ColumnDef<AmlFlagRow>[]>(() => [
+    {
+      accessorKey: "risk_score", header: t("fintech.aml.col.risk"),
+      cell: ({ getValue }) => {
+        const v = getValue<number>();
+        const variant = v >= 80 ? "warning" : v >= 50 ? "neutral" : "success";
+        return <Badge variant={variant}>{v}</Badge>;
+      },
+    },
+    {
+      accessorKey: "user_email", header: t("fintech.aml.col.user"),
+      cell: ({ row }) => <span className="font-medium">{row.original.user_email}</span>,
+    },
+    {
+      accessorKey: "flag_reason", header: t("fintech.aml.col.reason"),
+      cell: ({ getValue }) => <Badge>{t(`fintech.aml.reason.${getValue<string>()}`, { fallback: getValue<string>() })}</Badge>,
+    },
+    {
+      accessorKey: "status", header: t("fintech.aml.col.status"),
+      cell: ({ getValue }) => {
+        const s = getValue<AmlFlagRow["status"]>();
+        return <Badge variant={s === "open" ? "warning" : s === "cleared" ? "success" : "neutral"}>{t(`fintech.aml.status.${s}`)}</Badge>;
+      },
+    },
+    {
+      accessorKey: "created_at", header: t("fintech.aml.col.flagged"),
+      cell: ({ getValue }) => formatDateTime(getValue<string>()),
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">{t("fintech.aml.col.actions")}</span>,
+      cell: ({ row }) => {
+        const f = row.original;
+        if (f.status !== "open" && f.status !== "under_review") {
+          return <span className="text-ink-muted text-sm">—</span>;
+        }
+        return (
+          <div className="flex gap-2 justify-end">
+            <Button size="sm" variant="outline" onClick={() => setPending({ decision: "clear", flag: f, note: "" })}>
+              {t("fintech.aml.action.clear")}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setPending({ decision: "escalate", flag: f, note: "" })}>
+              {t("fintech.aml.action.escalate")}
+            </Button>
+            <Button size="sm" variant="ghost" className="text-danger-600" onClick={() => setPending({ decision: "report", flag: f, note: "" })}>
+              {t("fintech.aml.action.report")}
+            </Button>
+          </div>
+        );
+      },
+    },
+  ], []);
+
+  const table = useReactTable({
+    data: data ?? [], columns,
+    state: { sorting, globalFilter: filter },
+    onSortingChange: setSorting, onGlobalFilterChange: setFilter,
+    getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 25 } },
+  });
+
+  const onConfirm = async () => {
+    if (!pending) return;
+    const { decision, flag, note } = pending;
+    const res = await fetch(`/api/admin/aml-flags/${flag.id}`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ decision, note }),
+    });
+    setPending(null);
+    if (!res.ok || !data) return;
+    setData(data.map((r) => r.id !== flag.id ? r : {
+      ...r,
+      status: decision === "clear" ? "cleared" : decision === "escalate" ? "escalated" : "reported",
+    }));
+  };
+
+  if (loadError) return <Alert variant="destructive" role="alert">{loadError}</Alert>;
+  if (data === null) return <div className="h-64 bg-surface-muted rounded animate-pulse" />;
+
+  return (
+    <div className="space-y-6 max-w-7xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{t("fintech.aml.title")}</h1>
+          <p className="text-ink-muted">{t("fintech.aml.subtitle")}</p>
+        </div>
+        <Input value={filter} onChange={(e) => setFilter(e.target.value)}
+          placeholder={t("fintech.aml.search")} className="w-64" />
+      </header>
+
+      {data.length === 0 ? (
+        <EmptyState title={t("fintech.aml.empty")} body={t("fintech.aml.empty-body")} />
+      ) : (
+        <div className="rounded-lg border border-surface-strong bg-surface-raised overflow-hidden">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id}>
+                  {hg.headers.map((h) => (
+                    <TableHead key={h.id} onClick={h.column.getToggleSortingHandler()} className="cursor-pointer select-none">
+                      {flexRender(h.column.columnDef.header, h.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((c) => (
+                    <TableCell key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={pending !== null}
+        onOpenChange={(v) => !v && setPending(null)}
+        title={t(`fintech.aml.confirm.${pending?.decision ?? "clear"}.title`)}
+        body={t(`fintech.aml.confirm.${pending?.decision ?? "clear"}.body`, { user: pending?.flag.user_email ?? "" })}
+        confirmLabel={t(`fintech.aml.confirm.${pending?.decision ?? "clear"}.confirm`)}
+        destructive={pending?.decision === "report"}
+        onConfirm={onConfirm}
+      />
+    </div>
+  );
+}

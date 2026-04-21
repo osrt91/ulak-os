@@ -1,0 +1,191 @@
+// {{product_name_pascal}} — streaming chat (customer, ai-copilot overlay)
+//
+// DeltaCopilot: new-thread chat view w/ streaming SSE consumer, token meter,
+// cost-per-conversation display, cost-cap warning banner when budget is low.
+
+"use client";
+
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+import { t } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Alert } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+
+interface UiMessage { role: 'user' | 'assistant'; content: string; pending?: boolean }
+
+interface BudgetState {
+  scope: 'user' | 'tier'
+  spentCents: number
+  ceilingCents: number
+  remainingCents: number
+}
+
+const encoder = new TextDecoder()
+
+export default function ChatPage() {
+  const router = useRouter()
+  const [input, setInput] = useState('')
+  const [messages, setMessages] = useState<UiMessage[]>([])
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [streaming, setStreaming] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [budget, setBudget] = useState<BudgetState | null>(null)
+  const [tokenIn, setTokenIn] = useState(0)
+  const [tokenOut, setTokenOut] = useState(0)
+  const [costCents, setCostCents] = useState(0)
+  const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    fetch('/api/ai/budget').then((r) => r.ok ? r.json() : null).then((b) => b && setBudget(b.budget))
+  }, [])
+
+  async function onSend() {
+    if (!input.trim() || streaming) return
+    const user: UiMessage = { role: 'user', content: input.trim() }
+    const next = [...messages, user, { role: 'assistant' as const, content: '', pending: true }]
+    setMessages(next)
+    setInput('')
+    setStreaming(true)
+    setErr(null)
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          messages: [...messages, user].map((m) => ({ role: m.role, content: m.content })),
+        }),
+      })
+
+      if (!res.ok || !res.body) {
+        const json = await res.json().catch(() => ({ error: `http-${res.status}` }))
+        setErr(t(`chat.error.${json.error ?? 'unknown'}`, { fallback: json.error }))
+        setMessages(next.slice(0, -1))
+        return
+      }
+
+      const newConvId = res.headers.get('x-conversation-id')
+      if (newConvId && !conversationId) setConversationId(newConvId)
+
+      const reader = res.body.getReader()
+      let assembled = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = encoder.decode(value, { stream: true })
+        // Extract data events from SSE
+        for (const line of chunk.split('\n')) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim()
+            if (!data || data === '[DONE]') continue
+            try {
+              const parsed = JSON.parse(data) as { delta?: string; error?: string }
+              if (parsed.error) { setErr(parsed.error); continue }
+              if (parsed.delta) {
+                assembled += parsed.delta
+                setMessages((prev) => {
+                  const clone = [...prev]
+                  clone[clone.length - 1] = { role: 'assistant', content: assembled, pending: true }
+                  return clone
+                })
+              }
+            } catch { /* tolerate malformed chunks */ }
+          }
+        }
+      }
+
+      setMessages((prev) => {
+        const clone = [...prev]
+        clone[clone.length - 1] = { role: 'assistant', content: assembled }
+        return clone
+      })
+
+      // Refresh meters
+      fetch('/api/ai/budget').then((r) => r.ok ? r.json() : null).then((b) => {
+        if (b) { setBudget(b.budget); setCostCents(b.conversation_cost_cents ?? costCents) }
+      })
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') return
+      setErr((e as Error).message)
+    } finally {
+      setStreaming(false)
+      abortRef.current = null
+    }
+  }
+
+  function onStop() {
+    abortRef.current?.abort()
+  }
+
+  const budgetLow = budget && budget.remainingCents < budget.ceilingCents * 0.1
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-6 flex flex-col h-[calc(100vh-5rem)]">
+      <header className="flex items-center justify-between pb-4 border-b border-surface-strong">
+        <h1 className="font-display text-2xl font-semibold tracking-tight">{t('chat.title')}</h1>
+        <div className="flex items-center gap-2 text-xs">
+          <Badge variant="outline">{t('chat.tokens', { n: tokenIn + tokenOut })}</Badge>
+          <Badge variant={budgetLow ? 'warning' : 'neutral'}>
+            {t('chat.cost', { cents: costCents })}
+          </Badge>
+          {budget ? (
+            <Badge variant={budgetLow ? 'danger' : 'success'}>
+              {t('chat.budget-remaining', { cents: budget.remainingCents })}
+            </Badge>
+          ) : null}
+        </div>
+      </header>
+
+      {budgetLow ? (
+        <Alert variant="warning" role="note" className="my-3">
+          {t('chat.budget-low-warning')}
+        </Alert>
+      ) : null}
+
+      {err ? <Alert variant="destructive" role="alert" className="my-3">{err}</Alert> : null}
+
+      <ol className="flex-1 overflow-y-auto py-4 space-y-4">
+        {messages.map((m, i) => (
+          <li key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
+            <div className={`max-w-[80%] rounded-lg px-4 py-2 ${m.role === 'user' ? 'bg-accent-600 text-white' : 'bg-surface-raised border border-surface-strong'}`}>
+              <p className="whitespace-pre-wrap text-sm">{m.content || (m.pending ? '…' : '')}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <footer className="pt-3 border-t border-surface-strong space-y-2">
+        <Textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder={t('chat.input-placeholder')}
+          rows={3}
+          onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) onSend() }}
+          disabled={streaming}
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-ink-muted">{t('chat.keybind-hint')}</span>
+          <div className="flex gap-2">
+            {streaming ? (
+              <Button variant="outline" onClick={onStop}>{t('chat.stop')}</Button>
+            ) : (
+              <Button onClick={onSend} disabled={!input.trim()}>{t('chat.send')}</Button>
+            )}
+            {conversationId ? (
+              <Button variant="ghost" onClick={() => router.push(`/chat/${conversationId}`)}>
+                {t('chat.open-thread')}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </footer>
+    </main>
+  )
+}

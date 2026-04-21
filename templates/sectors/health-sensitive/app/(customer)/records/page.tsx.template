@@ -1,0 +1,182 @@
+// {{product_name_pascal}} — patient health records viewer (customer, health-sensitive overlay)
+//
+// AP-PHI-01: PHI decrypted here via decryptPhi() on the server side ONLY.
+// AP-PHI-02: EVERY render writes a phi_access_log row with phi_access=true
+// before sending decrypted plaintext to the client.
+//
+// Consent enforcement: consent_grants.granted=true required per data_type.
+// If consent is absent or withdrawn, the record is marked as [redacted] and
+// no plaintext decryption happens.
+
+import { redirect } from 'next/navigation'
+
+import { getAuthContext } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
+import { decryptPhi } from '@/lib/phi/encryption'
+import { t } from '@/lib/i18n'
+import { formatDateTime } from '@/lib/i18n/format'
+import { Alert } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmptyState } from '@/components/shared/empty-state'
+import { headers } from 'next/headers'
+
+type DataType = 'diagnosis' | 'prescription' | 'imaging' | 'lab' | 'clinical_notes' | 'family_history'
+
+interface RawRecord {
+  id: string
+  tenant_id: string
+  mrn: string
+  record_type: DataType
+  data_residency: string
+  created_at: string
+  diagnosis_ct: Uint8Array | null
+  prescription_ct: Uint8Array | null
+  imaging_ct: Uint8Array | null
+  lab_ct: Uint8Array | null
+  clinical_notes_ct: Uint8Array | null
+  family_history_ct: Uint8Array | null
+}
+
+interface ConsentMap { [dataType: string]: boolean }
+
+interface DecryptedRecord {
+  id: string
+  mrn: string
+  data_type: DataType
+  data_residency: string
+  created_at: string
+  plaintext: string | null
+  redacted_reason: 'consent-withdrawn' | 'no-consent' | null
+}
+
+function extractCiphertext(r: RawRecord): Uint8Array | null {
+  switch (r.record_type) {
+    case 'diagnosis': return r.diagnosis_ct
+    case 'prescription': return r.prescription_ct
+    case 'imaging': return r.imaging_ct
+    case 'lab': return r.lab_ct
+    case 'clinical_notes': return r.clinical_notes_ct
+    case 'family_history': return r.family_history_ct
+  }
+}
+
+export default async function PatientRecordsPage() {
+  const ctx = await getAuthContext({ require_role: 'customer' })
+  if (!ctx.allowed) redirect(ctx.redirectTo)
+
+  const supabase = await createServerClient()
+  const hdrs = await headers()
+  const userAgent = hdrs.get('user-agent') ?? ''
+  const requestIp = hdrs.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
+
+  // 1. Load raw (encrypted) records scoped to this patient via RLS
+  const { data: raw } = await supabase
+    .from('patient_records')
+    .select('id, tenant_id, mrn, record_type, data_residency, created_at, diagnosis_ct, prescription_ct, imaging_ct, lab_ct, clinical_notes_ct, family_history_ct')
+    .eq('patient_user_id', ctx.user.id)
+    .order('created_at', { ascending: false })
+
+  // 2. Load current consent map
+  const { data: consents } = await supabase
+    .from('consent_grants')
+    .select('data_type, granted')
+    .eq('patient_user_id', ctx.user.id)
+
+  const consentMap: ConsentMap = {}
+  for (const c of (consents ?? []) as { data_type: DataType; granted: boolean }[]) {
+    consentMap[c.data_type] = c.granted
+  }
+
+  // 3. Decrypt in-memory only if consent granted, log every access
+  const records: DecryptedRecord[] = []
+  for (const r of (raw ?? []) as RawRecord[]) {
+    const consented = consentMap[r.record_type] === true
+    const ct = extractCiphertext(r)
+
+    if (!consented) {
+      records.push({
+        id: r.id, mrn: r.mrn, data_type: r.record_type, data_residency: r.data_residency,
+        created_at: r.created_at, plaintext: null,
+        redacted_reason: consentMap[r.record_type] === false ? 'consent-withdrawn' : 'no-consent',
+      })
+      continue
+    }
+
+    let plaintext: string | null = null
+    if (ct) {
+      try {
+        plaintext = await decryptPhi({ tenantId: r.tenant_id, ciphertext: ct })
+      } catch {
+        plaintext = null
+      }
+    }
+
+    // AP-PHI-02: log EVERY successful PHI read
+    await supabase.from('phi_access_log').insert({
+      tenant_id: r.tenant_id,
+      actor_user_id: ctx.user.id,
+      patient_user_id: ctx.user.id,
+      data_type: r.record_type,
+      access_reason: 'care',
+      phi_access: true,
+      request_ip: requestIp,
+      user_agent: userAgent,
+    })
+
+    records.push({
+      id: r.id, mrn: r.mrn, data_type: r.record_type, data_residency: r.data_residency,
+      created_at: r.created_at, plaintext, redacted_reason: null,
+    })
+  }
+
+  return (
+    <main className="mx-auto max-w-4xl px-4 py-12 space-y-8">
+      <header className="space-y-2">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">{t('records.title')}</h1>
+        <p className="text-ink-muted">{t('records.subtitle')}</p>
+      </header>
+
+      <Alert variant="info" role="note">
+        <strong>{t('records.consent-hint-title')}</strong>
+        <p className="mt-1 text-sm">
+          {t('records.consent-hint-body')} <a href="/consent" className="underline">{t('records.consent-link')}</a>
+        </p>
+      </Alert>
+
+      {records.length === 0 ? (
+        <EmptyState title={t('records.empty-title')} body={t('records.empty-body')} />
+      ) : (
+        <ul className="space-y-4">
+          {records.map((r) => (
+            <Card key={r.id}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between gap-3">
+                  <span>{t(`records.type.${r.data_type}`)}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{r.data_residency}</Badge>
+                    <span className="text-xs font-mono text-ink-muted">MRN {r.mrn}</span>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {r.plaintext ? (
+                  <pre className="whitespace-pre-wrap text-sm font-sans">{r.plaintext}</pre>
+                ) : (
+                  <Alert variant="warning" role="note">
+                    {r.redacted_reason === 'consent-withdrawn'
+                      ? t('records.redacted-withdrawn')
+                      : t('records.redacted-no-consent')}
+                  </Alert>
+                )}
+                <p className="text-xs text-ink-muted pt-2 border-t border-surface-strong">
+                  {t('records.recorded-at', { when: formatDateTime(r.created_at) })}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </ul>
+      )}
+    </main>
+  )
+}

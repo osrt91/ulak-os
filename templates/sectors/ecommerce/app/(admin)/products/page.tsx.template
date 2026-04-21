@@ -1,0 +1,215 @@
+// {{product_name_pascal}} — admin product CRUD with inventory count + low-stock warning
+// Sector overlay: ecommerce
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel,
+  getPaginationRowModel, getSortedRowModel, SortingState, useReactTable,
+} from "@tanstack/react-table";
+
+import { t } from "@/lib/i18n";
+import { formatCurrency, formatDateTime } from "@/lib/i18n/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+
+interface AdminProductRow {
+  id: string;
+  slug: string;
+  name: string;
+  category: string | null;
+  price_minor: number;
+  currency: "USD" | "TRY" | "EUR";
+  stock_available: number;
+  reserved_stock: number;
+  low_stock_threshold: number;
+  status: "active" | "archived";
+  updated_at: string;
+}
+
+const LOW_STOCK_DEFAULT = 5;
+
+export default function AdminProductsPage() {
+  const [data, setData] = useState<AdminProductRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "updated_at", desc: true }]);
+  const [filter, setFilter] = useState("");
+  const [archiveTarget, setArchiveTarget] = useState<AdminProductRow | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/products", { cache: "no-store" });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = (await res.json()) as { products: AdminProductRow[] };
+        if (!cancelled) setData(json.products);
+      } catch {
+        if (!cancelled) setLoadError(t("ecommerce.admin.products.load-failed"));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const columns = useMemo<ColumnDef<AdminProductRow>[]>(() => [
+    {
+      accessorKey: "name", header: t("ecommerce.admin.products.col.name"),
+      cell: ({ row }) => (
+        <div>
+          <Link href={`/admin/products/${row.original.id}`} className="font-medium hover:underline">
+            {row.original.name}
+          </Link>
+          {row.original.category ? <p className="text-xs text-ink-muted">{row.original.category}</p> : null}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "price_minor", header: t("ecommerce.admin.products.col.price"),
+      cell: ({ row }) => formatCurrency(row.original.price_minor / 100, row.original.currency),
+    },
+    {
+      accessorKey: "stock_available", header: t("ecommerce.admin.products.col.stock"),
+      cell: ({ row }) => {
+        const p = row.original;
+        const threshold = p.low_stock_threshold ?? LOW_STOCK_DEFAULT;
+        const low = p.stock_available <= threshold;
+        return (
+          <div>
+            <span className={low ? "text-danger-600 font-semibold" : ""}>{p.stock_available}</span>
+            {p.reserved_stock > 0 ? (
+              <span className="text-xs text-ink-muted"> ({p.reserved_stock} {t("ecommerce.admin.products.reserved")})</span>
+            ) : null}
+            {low ? <Badge variant="warning" className="ml-2">{t("ecommerce.admin.products.low-stock")}</Badge> : null}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "status", header: t("ecommerce.admin.products.col.status"),
+      cell: ({ getValue }) => {
+        const v = getValue<string>();
+        return <Badge variant={v === "active" ? "success" : "neutral"}>{t(`ecommerce.admin.products.status.${v}`, { fallback: v })}</Badge>;
+      },
+    },
+    {
+      accessorKey: "updated_at", header: t("ecommerce.admin.products.col.updated"),
+      cell: ({ getValue }) => formatDateTime(getValue<string>()),
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">{t("ecommerce.admin.products.col.actions")}</span>,
+      cell: ({ row }) => {
+        const p = row.original;
+        return (
+          <div className="flex gap-2 justify-end">
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/admin/products/${p.id}`}>{t("ecommerce.admin.products.edit")}</Link>
+            </Button>
+            {p.status === "active" ? (
+              <Button variant="ghost" size="sm" className="text-danger-600" onClick={() => setArchiveTarget(p)}>
+                {t("ecommerce.admin.products.archive")}
+              </Button>
+            ) : null}
+          </div>
+        );
+      },
+    },
+  ], []);
+
+  const table = useReactTable({
+    data: data ?? [], columns,
+    state: { sorting, globalFilter: filter },
+    onSortingChange: setSorting, onGlobalFilterChange: setFilter,
+    getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 25 } },
+  });
+
+  const confirmArchive = async () => {
+    if (!archiveTarget) return;
+    const res = await fetch(`/api/admin/products/${archiveTarget.id}`, {
+      method: "PATCH", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "archive" }),
+    });
+    setArchiveTarget(null);
+    if (!res.ok || !data) return;
+    setData(data.map((r) => r.id !== archiveTarget.id ? r : { ...r, status: "archived" }));
+  };
+
+  if (loadError) return <Alert variant="destructive" role="alert">{loadError}</Alert>;
+  if (data === null) return <div className="h-64 bg-surface-muted rounded animate-pulse" />;
+
+  const lowCount = data.filter((p) => p.stock_available <= (p.low_stock_threshold ?? LOW_STOCK_DEFAULT)).length;
+
+  return (
+    <div className="space-y-6 max-w-7xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            {t("ecommerce.admin.products.title")}
+          </h1>
+          <p className="text-ink-muted">
+            {t("ecommerce.admin.products.subtitle")}
+            {lowCount > 0 ? ` · ${lowCount} ${t("ecommerce.admin.products.low-stock-count")}` : ""}
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Input value={filter} onChange={(e) => setFilter(e.target.value)}
+            placeholder={t("ecommerce.admin.products.search")} className="w-64" />
+          <Button asChild>
+            <Link href="/admin/products/new">{t("ecommerce.admin.products.new")}</Link>
+          </Button>
+        </div>
+      </header>
+
+      {data.length === 0 ? (
+        <EmptyState
+          title={t("ecommerce.admin.products.empty")}
+          body={t("ecommerce.admin.products.empty-body")}
+          cta={{ href: "/admin/products/new", label: t("ecommerce.admin.products.new") }}
+        />
+      ) : (
+        <div className="rounded-lg border border-surface-strong bg-surface-raised overflow-hidden">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id}>
+                  {hg.headers.map((h) => (
+                    <TableHead key={h.id} onClick={h.column.getToggleSortingHandler()} className="cursor-pointer select-none">
+                      {flexRender(h.column.columnDef.header, h.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((c) => (
+                    <TableCell key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={archiveTarget !== null}
+        onOpenChange={(v) => !v && setArchiveTarget(null)}
+        title={t("ecommerce.admin.products.archive-confirm.title")}
+        body={t("ecommerce.admin.products.archive-confirm.body", { name: archiveTarget?.name ?? "" })}
+        confirmLabel={t("ecommerce.admin.products.archive-confirm.confirm")}
+        destructive
+        onConfirm={confirmArchive}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,175 @@
+// {{product_name_pascal}} — team members management w/ bulk CSV invite + role editor
+//
+// Team-level roles: owner / admin / member / viewer (independent of tenant role).
+// Bulk invite: paste CSV (email,team_role per line) → parse client-side → POST to
+// /api/admin/teams/:id/invitations (server validates + writes invitations rows).
+
+"use client";
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+
+import { t } from '@/lib/i18n'
+import { formatDateTime } from '@/lib/i18n/format'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Alert } from '@/components/ui/alert'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { EmptyState } from '@/components/shared/empty-state'
+
+type TeamRole = 'owner' | 'admin' | 'member' | 'viewer'
+
+interface MemberRow {
+  id: string
+  user_id: string
+  email: string
+  full_name: string | null
+  team_role: TeamRole
+  joined_at: string
+}
+
+interface PendingInvite {
+  email: string
+  team_role: TeamRole
+  error?: string
+}
+
+const ROLE_OPTIONS: TeamRole[] = ['owner', 'admin', 'member', 'viewer']
+
+export default function TeamMembersPage() {
+  const params = useParams<{ id: string }>()
+  const teamId = params.id
+
+  const [members, setMembers] = useState<MemberRow[] | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [bulkCsv, setBulkCsv] = useState('')
+  const [bulkParsed, setBulkParsed] = useState<PendingInvite[]>([])
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/admin/teams/${teamId}/members`, { cache: 'no-store' })
+        if (!res.ok) throw new Error()
+        const json = (await res.json()) as { members: MemberRow[] }
+        if (!cancelled) setMembers(json.members)
+      } catch {
+        if (!cancelled) setErr(t('admin.team-members.load-failed'))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [teamId])
+
+  function parseCsv(raw: string): PendingInvite[] {
+    return raw.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
+      const [email, role] = line.split(',').map((p) => p?.trim() ?? '')
+      const team_role: TeamRole = (ROLE_OPTIONS.includes(role as TeamRole) ? role : 'member') as TeamRole
+      const error = email && email.includes('@') ? undefined : t('admin.team-members.csv.bad-email')
+      return { email, team_role, error }
+    })
+  }
+
+  async function onUpdateRole(m: MemberRow, newRole: TeamRole) {
+    const res = await fetch(`/api/admin/teams/${teamId}/members/${m.id}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ team_role: newRole }),
+    })
+    if (!res.ok || !members) return
+    setMembers(members.map((row) => row.id === m.id ? { ...row, team_role: newRole } : row))
+  }
+
+  async function onBulkInvite() {
+    const parsed = parseCsv(bulkCsv)
+    setBulkParsed(parsed)
+    const valid = parsed.filter((p) => !p.error)
+    if (!valid.length) return
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/invitations`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ invites: valid }),
+      })
+      if (res.ok) {
+        setBulkCsv('')
+        setBulkParsed([])
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (err) return <Alert variant="destructive" role="alert">{err}</Alert>
+  if (members === null) {
+    return <div className="h-64 bg-surface-muted rounded animate-pulse" aria-busy="true" />
+  }
+
+  return (
+    <div className="space-y-8 max-w-5xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{t('admin.team-members.title')}</h1>
+          <p className="text-ink-muted">{t('admin.team-members.subtitle')}</p>
+        </div>
+      </header>
+
+      <section className="rounded-lg border border-surface-strong bg-surface-raised p-4 space-y-3">
+        <h2 className="font-semibold">{t('admin.team-members.bulk.title')}</h2>
+        <p className="text-sm text-ink-muted">{t('admin.team-members.bulk.hint')}</p>
+        <Textarea
+          value={bulkCsv}
+          onChange={(e) => setBulkCsv(e.target.value)}
+          placeholder="alice@acmehealth.example,member&#10;bob@acmehealth.example,admin"
+          rows={6}
+          className="font-mono text-sm"
+        />
+        {bulkParsed.length > 0 && (
+          <ul className="text-xs space-y-1 max-h-32 overflow-y-auto">
+            {bulkParsed.map((p, i) => (
+              <li key={i} className={p.error ? 'text-danger-600' : 'text-ink-muted'}>
+                {p.email} → {p.team_role} {p.error ? `(${p.error})` : ''}
+              </li>
+            ))}
+          </ul>
+        )}
+        <Button onClick={onBulkInvite} disabled={submitting || !bulkCsv.trim()}>
+          {submitting ? t('admin.team-members.bulk.submitting') : t('admin.team-members.bulk.submit')}
+        </Button>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-semibold">{t('admin.team-members.current')} ({members.length})</h2>
+        {members.length === 0 ? (
+          <EmptyState title={t('admin.team-members.empty-title')} body={t('admin.team-members.empty-body')} />
+        ) : (
+          <ul className="divide-y divide-surface-strong rounded-lg border border-surface-strong bg-surface-raised">
+            {members.map((m) => (
+              <li key={m.id} className="flex items-center gap-4 p-3">
+                <div className="flex-1">
+                  <p className="font-medium">{m.email}</p>
+                  {m.full_name ? <p className="text-xs text-ink-muted">{m.full_name}</p> : null}
+                  <p className="text-xs text-ink-muted">
+                    {t('admin.team-members.joined', { when: formatDateTime(m.joined_at) })}
+                  </p>
+                </div>
+                <Select value={m.team_role} onValueChange={(v) => onUpdateRole(m, v as TeamRole)}>
+                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((r) => (
+                      <SelectItem key={r} value={r}>{t(`admin.team-members.role.${r}`)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Badge variant={m.team_role === 'owner' ? 'success' : 'neutral'}>{m.team_role}</Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  )
+}

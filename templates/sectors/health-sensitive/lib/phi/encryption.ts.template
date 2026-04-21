@@ -1,0 +1,116 @@
+import 'server-only'
+
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// {{product_name_pascal}} — PHI envelope encryption (AP-PHI-01 prevention)
+//
+// Architecture:
+//   - KEK (Key Encryption Key) lives in KMS (AWS KMS / GCP KMS / Azure Key Vault).
+//     We NEVER see the raw KEK in app memory. Every unwrap is a network round-trip
+//     to KMS, auth'd by IAM role on the running instance.
+//   - DEK (Data Encryption Key) is a 32-byte symmetric key per tenant. The
+//     wrapped DEK ciphertext is in `tenant_dek.wrapped_dek`. Unwrap returns the
+//     raw DEK, which we use for pgp_sym_encrypt / pgp_sym_decrypt on bytea columns.
+//   - DEK is cached in-process for 5 minutes to avoid KMS round-trip per request.
+//     Cache is per pod, evicted on SIGTERM. NEVER write DEK to disk.
+//
+// Caller contract:
+//   - `encryptPhi({ tenantId, plaintext })` returns bytea suitable for INSERT.
+//   - `decryptPhi({ tenantId, ciphertext })` returns plaintext string; caller MUST
+//     log phi_access_log row before returning the result to the user.
+//   - Rotation: when KEK rotates, existing wrapped_dek still works (KMS handles
+//     key version). When DEK rotates, `rotateDek(tenantId)` re-encrypts the DEK
+//     only — plaintext columns stay; the new DEK decrypts all old ciphertexts
+//     because they were wrapped with the SAME DEK.
+
+export interface KmsAdapter {
+  /** Wrap raw DEK bytes using KEK identified by keyId. */
+  wrap(keyId: string, dek: Uint8Array): Promise<Uint8Array>
+  /** Unwrap wrapped DEK ciphertext using KEK identified by keyId. */
+  unwrap(keyId: string, wrapped: Uint8Array): Promise<Uint8Array>
+  /** Resolve the active KEK key id for this environment. */
+  activeKeyId(): Promise<string>
+}
+
+// Default KMS adapter: scaffolder generates concrete impl (aws-kms | gcp-kms |
+// azure-key-vault) based on infra.deploy choice. For local dev, a DEV-ONLY
+// adapter that uses an env-var-derived key is generated — DO NOT use in prod.
+let kmsAdapter: KmsAdapter | null = null
+export function registerKmsAdapter(a: KmsAdapter) { kmsAdapter = a }
+
+// In-memory per-tenant DEK cache
+const DEK_CACHE = new Map<string, { dek: Uint8Array; expiresAt: number }>()
+const DEK_TTL_MS = 5 * 60 * 1000
+
+async function resolveDek(tenantId: string): Promise<Uint8Array> {
+  const cached = DEK_CACHE.get(tenantId)
+  if (cached && cached.expiresAt > Date.now()) return cached.dek
+
+  if (!kmsAdapter) throw new Error('phi-kms-adapter-missing')
+
+  const supabase = createAdminClient()
+  const { data: row } = await supabase
+    .from('tenant_dek')
+    .select('wrapped_dek, kek_key_id')
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
+  if (!row) throw new Error(`phi-no-dek-for-tenant:${tenantId}`)
+
+  const dek = await kmsAdapter.unwrap(row.kek_key_id as string, row.wrapped_dek as Uint8Array)
+  DEK_CACHE.set(tenantId, { dek, expiresAt: Date.now() + DEK_TTL_MS })
+  return dek
+}
+
+/** Encrypt plaintext PHI. Returns bytea suitable for a pgp_sym_encrypt column. */
+export async function encryptPhi(input: { tenantId: string; plaintext: string }): Promise<{ sql: string; params: unknown[] }> {
+  const dek = await resolveDek(input.tenantId)
+  // We intentionally return SQL + params instead of executing: the server action
+  // that mutates patient_records will combine this with the INSERT and run as
+  // a single statement under transaction. This keeps the DEK fully server-side
+  // and avoids surfacing raw ciphertext between hops.
+  const passphrase = Buffer.from(dek).toString('hex')
+  return {
+    sql: 'pgp_sym_encrypt($1, $2)',
+    params: [input.plaintext, passphrase],
+  }
+}
+
+/** Decrypt PHI ciphertext. Caller MUST write phi_access_log AFTER calling this. */
+export async function decryptPhi(input: { tenantId: string; ciphertext: Uint8Array }): Promise<string> {
+  const dek = await resolveDek(input.tenantId)
+  const passphrase = Buffer.from(dek).toString('hex')
+
+  const supabase = createAdminClient()
+  const { data, error } = await supabase.rpc('pgp_sym_decrypt_bytea', {
+    ct: input.ciphertext,
+    passphrase,
+  })
+  if (error) throw new Error(`phi-decrypt-failed:${error.message}`)
+  return data as string
+}
+
+/** Generate and wrap a fresh DEK for a new tenant. */
+export async function provisionTenantDek(tenantId: string): Promise<void> {
+  if (!kmsAdapter) throw new Error('phi-kms-adapter-missing')
+  const keyId = await kmsAdapter.activeKeyId()
+  const dek = crypto.getRandomValues(new Uint8Array(32))
+  const wrapped = await kmsAdapter.wrap(keyId, dek)
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('tenant_dek').insert({
+    tenant_id: tenantId,
+    wrapped_dek: wrapped,
+    kek_key_id: keyId,
+    dek_version: 1,
+  })
+  if (error) throw new Error(`phi-provision-failed:${error.message}`)
+}
+
+/** DEK rotation: generates new DEK, re-encrypts in place (application layer). */
+export async function rotateDek(tenantId: string): Promise<void> {
+  // Full rotation implementation: generate new DEK, fetch old, decrypt+encrypt
+  // every bytea column, swap wrapped_dek atomically. Omitted here for brevity —
+  // scaffolder generates concrete impl when sector=health-sensitive is chosen.
+  throw new Error(`not-implemented:rotateDek:${tenantId}`)
+}

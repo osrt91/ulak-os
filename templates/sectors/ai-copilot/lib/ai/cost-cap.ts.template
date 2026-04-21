@@ -1,0 +1,118 @@
+import 'server-only'
+
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// {{product_name_pascal}} — per-user + per-tier daily cost ceiling (AP-AI-01)
+//
+// Architecture:
+//   - cost_caps table holds ceiling for scope=user (specific user) and scope=tier
+//     (plan-level, e.g. 'pro' = 500 cents/day).
+//   - checkBudget() sums today's ai_usage_log.cost_cents for the user.
+//     - If user-level cap exists, enforce that.
+//     - Else fall back to tier-level cap resolved via plan_capabilities.
+//   - Throws `CostCapExceededError` w/ remaining budget hint to be shown in UI.
+
+export class CostCapExceededError extends Error {
+  constructor(public readonly spentCents: number, public readonly ceilingCents: number, public readonly scope: 'user' | 'tier') {
+    super(`cost-cap-exceeded:${scope}:${spentCents}/${ceilingCents}`)
+    this.name = 'CostCapExceededError'
+  }
+  remainingCents(): number { return Math.max(0, this.ceilingCents - this.spentCents) }
+}
+
+export interface BudgetCheckInput {
+  tenantId: string
+  userId: string
+  /** Tier derived from tenants.plan or user_role_assignments.plan_capabilities. */
+  tier: string
+  /** Cost of the pending request in cents. Must be <= remainingCents to proceed. */
+  pendingCostCents: number
+}
+
+export interface BudgetState {
+  scope: 'user' | 'tier'
+  spentCents: number
+  ceilingCents: number
+  remainingCents: number
+}
+
+/**
+ * Reads today's spend + active cap. Precedence: user-scoped cap overrides tier cap.
+ */
+export async function getBudgetState(input: Omit<BudgetCheckInput, 'pendingCostCents'>): Promise<BudgetState | null> {
+  const supabase = createAdminClient()
+
+  // 1. Look for user-scoped cap first
+  const { data: userCap } = await supabase
+    .from('cost_caps')
+    .select('daily_cents_ceiling')
+    .eq('tenant_id', input.tenantId)
+    .eq('scope', 'user')
+    .eq('scope_ref', input.userId)
+    .maybeSingle()
+
+  let ceilingCents: number | null = userCap?.daily_cents_ceiling as number | undefined ?? null
+  let scope: 'user' | 'tier' = 'user'
+
+  if (ceilingCents === null) {
+    const { data: tierCap } = await supabase
+      .from('cost_caps')
+      .select('daily_cents_ceiling')
+      .eq('tenant_id', input.tenantId)
+      .eq('scope', 'tier')
+      .eq('scope_ref', input.tier)
+      .maybeSingle()
+    if (!tierCap) return null                     // no cap configured = unbounded (tenant choice)
+    ceilingCents = tierCap.daily_cents_ceiling as number
+    scope = 'tier'
+  }
+
+  // 2. Sum today's spend
+  const today = new Date(); today.setUTCHours(0, 0, 0, 0)
+  const { data: spendRows } = await supabase
+    .from('ai_usage_log')
+    .select('cost_cents')
+    .eq('user_id', input.userId)
+    .gte('created_at', today.toISOString())
+
+  const spentCents = (spendRows ?? []).reduce((acc: number, r: { cost_cents: number }) => acc + (r.cost_cents ?? 0), 0)
+
+  return {
+    scope,
+    spentCents,
+    ceilingCents: ceilingCents as number,
+    remainingCents: Math.max(0, (ceilingCents as number) - spentCents),
+  }
+}
+
+/**
+ * Check + enforce. Throws CostCapExceededError when pending request would breach.
+ * Call this BEFORE invoking the LLM provider. Never call provider and log cost
+ * without this gate.
+ */
+export async function checkBudget(input: BudgetCheckInput): Promise<BudgetState> {
+  const state = await getBudgetState(input)
+  if (!state) {
+    // Unbounded tenant — return placeholder state for telemetry
+    return { scope: 'tier', spentCents: 0, ceilingCents: Number.POSITIVE_INFINITY, remainingCents: Number.POSITIVE_INFINITY }
+  }
+  if (state.spentCents + input.pendingCostCents > state.ceilingCents) {
+    throw new CostCapExceededError(state.spentCents, state.ceilingCents, state.scope)
+  }
+  return state
+}
+
+/**
+ * Helper: estimate cost of a pending request from token counts + model rates.
+ * Relay calls this before invoking provider, passes result to checkBudget.
+ */
+export function estimatePendingCost(args: {
+  tokensInputEstimate: number
+  tokensOutputEstimate: number
+  rateCentsPerInput1k: number
+  rateCentsPerOutput1k: number
+}): number {
+  const i = (args.tokensInputEstimate / 1000) * args.rateCentsPerInput1k
+  const o = (args.tokensOutputEstimate / 1000) * args.rateCentsPerOutput1k
+  return Math.ceil(i + o)
+}

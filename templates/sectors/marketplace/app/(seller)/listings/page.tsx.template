@@ -1,0 +1,202 @@
+// {{product_name_pascal}} — seller listings management (draft/active/sold/withdrawn)
+// Sector overlay: marketplace
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel,
+  getPaginationRowModel, getSortedRowModel, SortingState, useReactTable,
+} from "@tanstack/react-table";
+
+import { t } from "@/lib/i18n";
+import { formatCurrency, formatDateTime } from "@/lib/i18n/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+
+type ListingStatus = "draft" | "active" | "sold" | "withdrawn";
+
+interface SellerListingRow {
+  id: string;
+  title: string;
+  category: string | null;
+  price_minor: number;
+  currency: "USD" | "TRY" | "EUR";
+  status: ListingStatus;
+  commission_rate_bps: number;   // basis points — IMMUTABLE after listing creation
+  views_count: number;
+  watch_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export default function SellerListingsPage() {
+  const [data, setData] = useState<SellerListingRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "updated_at", desc: true }]);
+  const [filter, setFilter] = useState("");
+  const [withdrawTarget, setWithdrawTarget] = useState<SellerListingRow | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/seller/listings", { cache: "no-store" });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = (await res.json()) as { listings: SellerListingRow[] };
+        if (!cancelled) setData(json.listings);
+      } catch {
+        if (!cancelled) setLoadError(t("marketplace.seller.listings.load-failed"));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const columns = useMemo<ColumnDef<SellerListingRow>[]>(() => [
+    {
+      accessorKey: "title", header: t("marketplace.seller.listings.col.title"),
+      cell: ({ row }) => (
+        <div>
+          <Link href={`/seller/listings/${row.original.id}`} className="font-medium hover:underline">
+            {row.original.title}
+          </Link>
+          {row.original.category ? <p className="text-xs text-ink-muted">{row.original.category}</p> : null}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "price_minor", header: t("marketplace.seller.listings.col.price"),
+      cell: ({ row }) => formatCurrency(row.original.price_minor / 100, row.original.currency),
+    },
+    {
+      accessorKey: "status", header: t("marketplace.seller.listings.col.status"),
+      cell: ({ getValue }) => {
+        const s = getValue<ListingStatus>();
+        const variant = s === "active" ? "success" : s === "draft" ? "neutral" : s === "sold" ? "neutral" : "warning";
+        return <Badge variant={variant}>{t(`marketplace.listing.status.${s}`, { fallback: s })}</Badge>;
+      },
+    },
+    {
+      accessorKey: "commission_rate_bps",
+      header: t("marketplace.seller.listings.col.commission"),
+      cell: ({ getValue }) => `${(getValue<number>() / 100).toFixed(2)}%`,
+    },
+    {
+      accessorKey: "views_count", header: t("marketplace.seller.listings.col.views"),
+    },
+    {
+      accessorKey: "updated_at", header: t("marketplace.seller.listings.col.updated"),
+      cell: ({ getValue }) => formatDateTime(getValue<string>()),
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">{t("marketplace.seller.listings.col.actions")}</span>,
+      cell: ({ row }) => {
+        const l = row.original;
+        return (
+          <div className="flex gap-2 justify-end">
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/seller/listings/${l.id}`}>{t("marketplace.seller.listings.edit")}</Link>
+            </Button>
+            {l.status === "active" || l.status === "draft" ? (
+              <Button variant="outline" size="sm" onClick={() => setWithdrawTarget(l)}>
+                {t("marketplace.seller.listings.withdraw")}
+              </Button>
+            ) : null}
+          </div>
+        );
+      },
+    },
+  ], []);
+
+  const table = useReactTable({
+    data: data ?? [], columns,
+    state: { sorting, globalFilter: filter },
+    onSortingChange: setSorting, onGlobalFilterChange: setFilter,
+    getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 25 } },
+  });
+
+  const confirmWithdraw = async () => {
+    if (!withdrawTarget) return;
+    const res = await fetch(`/api/seller/listings/${withdrawTarget.id}`, {
+      method: "PATCH", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "withdraw" }),
+    });
+    setWithdrawTarget(null);
+    if (!res.ok || !data) return;
+    setData(data.map((r) => r.id !== withdrawTarget.id ? r : { ...r, status: "withdrawn" as const }));
+  };
+
+  if (loadError) return <Alert variant="destructive" role="alert">{loadError}</Alert>;
+  if (data === null) return <div className="h-64 bg-surface-muted rounded animate-pulse" />;
+
+  return (
+    <div className="space-y-6 max-w-7xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            {t("marketplace.seller.listings.title")}
+          </h1>
+          <p className="text-ink-muted">{t("marketplace.seller.listings.subtitle")}</p>
+        </div>
+        <div className="flex gap-3">
+          <Input value={filter} onChange={(e) => setFilter(e.target.value)}
+            placeholder={t("marketplace.seller.listings.search")} className="w-64" />
+          <Button asChild>
+            <Link href="/seller/listings/new">{t("marketplace.seller.listings.new")}</Link>
+          </Button>
+        </div>
+      </header>
+
+      {data.length === 0 ? (
+        <EmptyState
+          title={t("marketplace.seller.listings.empty")}
+          body={t("marketplace.seller.listings.empty-body")}
+          cta={{ href: "/seller/listings/new", label: t("marketplace.seller.listings.new") }}
+        />
+      ) : (
+        <div className="rounded-lg border border-surface-strong bg-surface-raised overflow-hidden">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id}>
+                  {hg.headers.map((h) => (
+                    <TableHead key={h.id} onClick={h.column.getToggleSortingHandler()} className="cursor-pointer select-none">
+                      {flexRender(h.column.columnDef.header, h.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((c) => (
+                    <TableCell key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={withdrawTarget !== null}
+        onOpenChange={(v) => !v && setWithdrawTarget(null)}
+        title={t("marketplace.seller.listings.withdraw-confirm.title")}
+        body={t("marketplace.seller.listings.withdraw-confirm.body", { title: withdrawTarget?.title ?? "" })}
+        confirmLabel={t("marketplace.seller.listings.withdraw-confirm.confirm")}
+        destructive
+        onConfirm={confirmWithdraw}
+      />
+    </div>
+  );
+}

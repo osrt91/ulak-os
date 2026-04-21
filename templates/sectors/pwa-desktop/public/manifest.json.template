@@ -1,0 +1,63 @@
+{
+  "name": "{{product_name_pascal}}",
+  "short_name": "{{product_short_name}}",
+  "description": "{{product_description}}",
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "{{theme_color}}",
+  "background_color": "{{background_color}}",
+  "lang": "{{default_locale}}",
+  "dir": "ltr",
+  "categories": ["productivity", "business"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-monochrome.png", "sizes": "512x512", "type": "image/png", "purpose": "monochrome" }
+  ],
+  "screenshots": [
+    { "src": "/screenshots/desktop-1280x800.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "{{product_name_pascal}} dashboard" },
+    { "src": "/screenshots/mobile-750x1334.png", "sizes": "750x1334", "type": "image/png", "form_factor": "narrow", "label": "{{product_name_pascal}} on mobile" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open dashboard",
+      "short_name": "Dashboard",
+      "description": "Jump to your {{product_name_pascal}} dashboard",
+      "url": "/dashboard?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/shortcut-dashboard.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "New item",
+      "short_name": "New",
+      "description": "Create a new record",
+      "url": "/dashboard/new?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/shortcut-new.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Notifications",
+      "short_name": "Inbox",
+      "description": "View recent notifications",
+      "url": "/notifications?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/shortcut-inbox.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "description": "Account and workspace settings",
+      "url": "/settings?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/shortcut-settings.png", "sizes": "96x96", "type": "image/png" }]
+    }
+  ],
+  "launch_handler": { "client_mode": ["navigate-existing", "auto"] },
+  "handle_links": "preferred",
+  "protocol_handlers": [
+    { "protocol": "web+{{product_slug}}", "url": "/open?ref=%s" }
+  ]
+}

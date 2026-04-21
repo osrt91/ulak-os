@@ -1,0 +1,190 @@
+# AcmeHosted — Self-hosted Supabase stack
+# Boot order: postgres → meta → pgbouncer → auth/rest/realtime/storage → kong → studio
+# Reference: AP-SHS-01 enforces backup runbook; AP-SHS-02 enforces kong rate-limit.
+
+version: "3.9"
+
+x-restart: &default-restart
+  restart: unless-stopped
+
+x-logging: &default-logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  postgres:
+    image: supabase/postgres:15.6.1.146
+    <<: [*default-restart, *default-logging]
+    container_name: acmehosted-postgres
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c wal_level=logical
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXP: 3600
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  pgbouncer:
+    image: bitnami/pgbouncer:1.22.1
+    <<: [*default-restart, *default-logging]
+    container_name: acmehosted-pgbouncer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRESQL_HOST: postgres
+      POSTGRESQL_PASSWORD: ${POSTGRES_PASSWORD}
+      PGBOUNCER_DATABASE: postgres
+      PGBOUNCER_POOL_MODE: transaction
+      PGBOUNCER_PORT: 6432
+    volumes:
+      - pgbouncer-data:/bitnami/pgbouncer
+    ports:
+      - "127.0.0.1:6432:6432"
+
+  meta:
+    image: supabase/postgres-meta:v0.80.0
+    <<: [*default-restart, *default-logging]
+    container_name: acmehosted-meta
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: postgres
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: supabase_admin
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+  auth:
+    image: supabase/gotrue:v2.156.0
+    <<: [*default-restart, *default-logging]
+    container_name: acmehosted-auth
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@postgres:5432/postgres?search_path=auth
+      GOTRUE_SITE_URL: ${SITE_URL}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_SMTP_HOST: ${SMTP_HOST}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT}
+      GOTRUE_SMTP_USER: ${SMTP_USER}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL}
+
+  rest:
+    image: postgrest/postgrest:v12.2.0
+    <<: [*default-restart, *default-logging]
+    container_name: acmehosted-rest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@pgbouncer:6432/postgres
+      PGRST_DB_SCHEMA: public,storage,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+
+  realtime:
+    image: supabase/realtime:v2.30.20
+    <<: [*default-restart, *default-logging]
+    container_name: acmehosted-realtime
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_AFTER_CONNECT_QUERY: "SET search_path TO _realtime"
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET}
+      SECRET_KEY_BASE: ${REALTIME_SECRET_KEY_BASE}
+
+  storage:
+    image: supabase/storage-api:v1.11.13
+    <<: [*default-restart, *default-logging]
+    container_name: acmehosted-storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: acmehosted
+    volumes:
+      - storage-data:/var/lib/storage
+
+  kong:
+    image: kong:3.6-alpine
+    <<: [*default-restart, *default-logging]
+    container_name: acmehosted-kong
+    depends_on:
+      - auth
+      - rest
+      - realtime
+      - storage
+      - meta
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,rate-limiting
+    volumes:
+      - ./kong.yml:/home/kong/kong.yml:ro
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+
+  studio:
+    image: supabase/studio:20240729-ce42139
+    <<: [*default-restart, *default-logging]
+    container_name: acmehosted-studio
+    depends_on:
+      - kong
+    environment:
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DEFAULT_ORGANIZATION_NAME: AcmeHosted
+      DEFAULT_PROJECT_NAME: AcmeHosted
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  pg-data:
+  pgbouncer-data:
+  storage-data:

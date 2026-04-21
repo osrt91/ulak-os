@@ -1,0 +1,184 @@
+// {{product_name_pascal}} — customer wallet (balance + recent tx + deposit/withdraw)
+// Sector overlay: fintech
+//
+// SECURITY: balance is read from DB only. Never trust client-reported amounts.
+// All deposits/withdrawals go through server-side routes that re-verify
+// authorization, KYC status, and AML flags before mutating accounts.
+import Link from "next/link";
+
+import { getAuthContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
+import { formatCurrency, formatDateTime } from "@/lib/i18n/format";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/shared/empty-state";
+
+export const dynamic = "force-dynamic";
+
+interface AccountRow {
+  id: string;
+  currency: "USD" | "TRY" | "EUR";
+  balance_minor: number;    // amount in smallest unit (cents/kuruş)
+  status: "active" | "frozen" | "closed";
+}
+
+interface TransactionRow {
+  id: string;
+  kind: "deposit" | "withdrawal" | "transfer_in" | "transfer_out" | "fee";
+  amount_minor: number;
+  currency: "USD" | "TRY" | "EUR";
+  status: "pending" | "posted" | "reversed";
+  reference: string | null;
+  created_at: string;
+}
+
+export default async function WalletPage() {
+  const authCtx = await getAuthContext({ require_role: "customer" });
+  if (!authCtx.allowed || !authCtx.session.user || !authCtx.session.tenantId) {
+    return (
+      <EmptyState
+        title={t("fintech.wallet.session-lost")}
+        body={t("customer.dashboard.session-lost-body")}
+        cta={{ href: "/login", label: t("auth.login.cta") }}
+      />
+    );
+  }
+
+  const supabase = await createClient();
+
+  // KYC gate — wallet is visible without KYC, but CTAs are gated
+  const { data: kyc } = await supabase
+    .from("kyc_status")
+    .select("status, level")
+    .eq("tenant_id", authCtx.session.tenantId)
+    .eq("user_id", authCtx.session.user.id)
+    .maybeSingle();
+  const kycApproved = kyc?.status === "approved";
+
+  const { data: accountRows } = await supabase
+    .from("accounts")
+    .select("id, currency, balance_minor, status")
+    .eq("tenant_id", authCtx.session.tenantId)
+    .eq("owner_user_id", authCtx.session.user.id)
+    .order("currency", { ascending: true });
+  const accounts: AccountRow[] = accountRows ?? [];
+
+  const { data: txRows } = await supabase
+    .from("transactions")
+    .select("id, kind, amount_minor, currency, status, reference, created_at")
+    .eq("tenant_id", authCtx.session.tenantId)
+    .in("account_id", accounts.map((a) => a.id))
+    .order("created_at", { ascending: false })
+    .limit(25);
+  const transactions: TransactionRow[] = txRows ?? [];
+
+  return (
+    <div className="space-y-8 max-w-5xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            {t("fintech.wallet.title")}
+          </h1>
+          <p className="text-ink-muted">{t("fintech.wallet.subtitle")}</p>
+        </div>
+        {!kycApproved ? (
+          <Button asChild variant="outline">
+            <Link href="/kyc">{t("fintech.wallet.complete-kyc")}</Link>
+          </Button>
+        ) : null}
+      </header>
+
+      {accounts.length === 0 ? (
+        <EmptyState
+          title={t("fintech.wallet.no-accounts-title")}
+          body={t("fintech.wallet.no-accounts-body")}
+        />
+      ) : (
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {accounts.map((acc) => (
+            <Card key={acc.id}>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium text-ink-muted">
+                  {t(`fintech.currency.${acc.currency}`, { fallback: acc.currency })}
+                </CardTitle>
+                {acc.status === "frozen" ? (
+                  <Badge variant="warning">{t("fintech.account.frozen")}</Badge>
+                ) : null}
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="font-display text-3xl font-semibold tabular-nums">
+                  {formatCurrency(acc.balance_minor / 100, acc.currency)}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    asChild
+                    size="sm"
+                    disabled={!kycApproved || acc.status !== "active"}
+                    variant="outline"
+                  >
+                    <Link href={`/wallet/deposit?account=${acc.id}`}>
+                      {t("fintech.wallet.deposit")}
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    size="sm"
+                    disabled={!kycApproved || acc.status !== "active"}
+                    variant="outline"
+                  >
+                    <Link href={`/wallet/withdraw?account=${acc.id}`}>
+                      {t("fintech.wallet.withdraw")}
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      )}
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-ink-muted">
+          {t("fintech.wallet.recent-tx")}
+        </h2>
+        {transactions.length === 0 ? (
+          <EmptyState title={t("fintech.wallet.no-tx")} body="" />
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <ul className="divide-y divide-surface-strong">
+                {transactions.map((tx) => {
+                  const sign = tx.kind === "deposit" || tx.kind === "transfer_in" ? "+" : "−";
+                  const amountCls = sign === "+" ? "text-success-600" : "text-danger-600";
+                  return (
+                    <li key={tx.id} className="flex items-center justify-between px-6 py-3">
+                      <div>
+                        <p className="text-sm font-medium">
+                          {t(`fintech.tx.kind.${tx.kind}`, { fallback: tx.kind })}
+                        </p>
+                        <p className="text-xs text-ink-muted">
+                          {tx.reference ?? ""} · {formatDateTime(tx.created_at)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-semibold tabular-nums ${amountCls}`}>
+                          {sign}
+                          {formatCurrency(tx.amount_minor / 100, tx.currency)}
+                        </p>
+                        <Badge variant={tx.status === "posted" ? "success" : tx.status === "pending" ? "neutral" : "warning"}>
+                          {t(`fintech.tx.status.${tx.status}`, { fallback: tx.status })}
+                        </Badge>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+    </div>
+  );
+}

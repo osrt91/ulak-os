@@ -1,0 +1,153 @@
+import 'server-only'
+
+import { Issuer, generators, type Client, type TokenSet } from 'openid-client'
+
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// {{product_name_pascal}} — OIDC code-flow exchange + ID token verify
+//
+// Protocol:
+//   1. Admin saves sso_providers row (oidc_issuer, client_id, client_secret_ref)
+//   2. User hits /login/sso?provider=<id> → buildAuthzUrl() → browser redirects
+//      to IdP with PKCE challenge + state + nonce
+//   3. IdP returns code to /api/auth/sso/oidc/callback → exchangeCode() pulls
+//      id_token + userinfo
+//   4. AP-SSO-01: id_token claims are inputs to claim mapping, NEVER final authz.
+//      exchangeCode() returns the raw claims; caller must reconcile against
+//      user_role_assignments before granting a session.
+
+export interface OidcProviderRow {
+  id: string
+  tenant_id: string
+  oidc_issuer: string | null
+  oidc_client_id: string | null
+  oidc_client_secret_ref: string | null
+  oidc_discovery_url: string | null
+  default_role: 'customer' | 'admin' | 'partner' | 'support'
+}
+
+export interface OidcAuthzArtifact {
+  redirectUrl: string
+  state: string
+  nonce: string
+  codeVerifier: string
+}
+
+export interface OidcExchangeResult {
+  ok: true
+  email: string
+  sub: string
+  claims: Record<string, unknown>
+  confirmedRole: 'customer' | 'admin' | 'partner' | 'support'
+  tenantId: string
+}
+
+export type OidcExchangeError =
+  | { ok: false; reason: 'bad-token' }
+  | { ok: false; reason: 'nonce-mismatch' }
+  | { ok: false; reason: 'missing-email' }
+  | { ok: false; reason: 'no-local-assignment'; email: string }
+
+function resolveSecret(secretRef: string): string {
+  // Scaffolder convention: secret refs point to env vars, NEVER stored in plaintext.
+  // e.g. oidc_client_secret_ref = 'OIDC_CLIENT_SECRET_ACMEB2B'
+  const v = process.env[secretRef]
+  if (!v) throw new Error(`oidc-secret-missing:${secretRef}`)
+  return v
+}
+
+async function getClient(row: OidcProviderRow): Promise<Client> {
+  if (!row.oidc_issuer || !row.oidc_client_id || !row.oidc_client_secret_ref) {
+    throw new Error('oidc-provider-incomplete')
+  }
+  const discovery = row.oidc_discovery_url
+    ? await Issuer.discover(row.oidc_discovery_url)
+    : await Issuer.discover(row.oidc_issuer)
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.example.com'
+  return new discovery.Client({
+    client_id: row.oidc_client_id,
+    client_secret: resolveSecret(row.oidc_client_secret_ref),
+    redirect_uris: [`${baseUrl}/api/auth/sso/oidc/callback`],
+    response_types: ['code'],
+  })
+}
+
+export async function buildAuthzUrl(row: OidcProviderRow): Promise<OidcAuthzArtifact> {
+  const client = await getClient(row)
+  const state = generators.state()
+  const nonce = generators.nonce()
+  const codeVerifier = generators.codeVerifier()
+  const codeChallenge = generators.codeChallenge(codeVerifier)
+
+  const redirectUrl = client.authorizationUrl({
+    scope: 'openid profile email',
+    state,
+    nonce,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+  })
+
+  return { redirectUrl, state, nonce, codeVerifier }
+}
+
+export async function exchangeCode(
+  row: OidcProviderRow,
+  params: { code: string; state: string; expectedState: string; expectedNonce: string; codeVerifier: string }
+): Promise<OidcExchangeResult | OidcExchangeError> {
+  if (params.state !== params.expectedState) {
+    return { ok: false, reason: 'bad-token' }
+  }
+
+  const client = await getClient(row)
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.example.com'
+
+  let tokenSet: TokenSet
+  try {
+    tokenSet = await client.callback(
+      `${baseUrl}/api/auth/sso/oidc/callback`,
+      { code: params.code, state: params.state },
+      { state: params.expectedState, nonce: params.expectedNonce, code_verifier: params.codeVerifier }
+    )
+  } catch {
+    return { ok: false, reason: 'bad-token' }
+  }
+
+  const claims = tokenSet.claims()
+  if (claims.nonce !== params.expectedNonce) {
+    return { ok: false, reason: 'nonce-mismatch' }
+  }
+
+  const email = typeof claims.email === 'string' ? claims.email : null
+  if (!email) {
+    return { ok: false, reason: 'missing-email' }
+  }
+
+  // AP-SSO-01: confirm local user_role_assignments row before granting access
+  const supabase = createAdminClient()
+  const { data: authUser } = await supabase.auth.admin.getUserByEmail?.(email) ?? { data: null }
+  const userId = authUser?.user?.id
+  if (!userId) {
+    return { ok: false, reason: 'no-local-assignment', email }
+  }
+
+  const { data: assignment } = await supabase
+    .from('user_role_assignments')
+    .select('role, tenant_id')
+    .eq('user_id', userId)
+    .eq('tenant_id', row.tenant_id)
+    .maybeSingle()
+
+  if (!assignment) {
+    return { ok: false, reason: 'no-local-assignment', email }
+  }
+
+  return {
+    ok: true,
+    email,
+    sub: claims.sub,
+    claims: claims as Record<string, unknown>,
+    confirmedRole: assignment.role as OidcExchangeResult['confirmedRole'],
+    tenantId: assignment.tenant_id as string,
+  }
+}

@@ -1,0 +1,124 @@
+// {{product_name_pascal}} — member directory with privacy-respecting filters
+// Only fields that the member opted to show appear; others are omitted on
+// the server, not just hidden on the client.
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { t } from "@/lib/i18n";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/shared/empty-state";
+
+type Tier = "free" | "basic" | "pro" | "founder";
+
+interface MemberCard {
+  user_id: string;
+  handle: string;
+  display_name: string;
+  tier: Tier;
+  // Only present if member opted in (server omits when privacy flag off)
+  location?: string;
+  expertise?: string[];
+  bio_excerpt?: string;
+  avatar_url?: string;
+  joined_at?: string;
+}
+
+interface MemberResponse { members: MemberCard[]; facets: { expertise: string[]; locations: string[]; tiers: Tier[] }; }
+
+export default function MembersDirectoryPage(): JSX.Element {
+  const [data, setData] = useState<MemberResponse | null>(null);
+  const [query, setQuery] = useState("");
+  const [expertise, setExpertise] = useState<string>("any");
+  const [location, setLocation] = useState<string>("any");
+  const [tier, setTier] = useState<Tier | "any">("any");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/customer/members", { cache: "no-store" });
+        setData((await res.json()) as MemberResponse);
+      } catch { setError(t("members.load-failed")); }
+    })();
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    const q = query.trim().toLowerCase();
+    return data.members.filter((m) => {
+      if (q && !(m.display_name.toLowerCase().includes(q) || m.handle.toLowerCase().includes(q))) return false;
+      if (expertise !== "any" && !(m.expertise ?? []).includes(expertise)) return false;
+      if (location !== "any" && m.location !== location) return false;
+      if (tier !== "any" && m.tier !== tier) return false;
+      return true;
+    });
+  }, [data, query, expertise, location, tier]);
+
+  if (error) return <Alert variant="destructive" role="alert">{error}</Alert>;
+  if (!data) return <div className="h-64 bg-surface-muted rounded animate-pulse" />;
+
+  return (
+    <div className="space-y-6 max-w-6xl">
+      <header>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">{t("members.title")}</h1>
+        <p className="text-ink-muted">{t("members.subtitle")}</p>
+      </header>
+
+      <Alert variant="info">{t("members.privacy-notice")}</Alert>
+
+      <div className="flex flex-wrap gap-3">
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} className="sm:max-w-xs" placeholder={t("members.search-ph")} aria-label={t("members.search-label")} />
+        <select value={expertise} onChange={(e) => setExpertise(e.target.value)} className="h-10 rounded-md border border-surface-strong bg-surface-base px-3 text-sm" aria-label={t("members.filter-expertise")}>
+          <option value="any">{t("members.any-expertise")}</option>
+          {data.facets.expertise.map((x) => <option key={x} value={x}>{x}</option>)}
+        </select>
+        <select value={location} onChange={(e) => setLocation(e.target.value)} className="h-10 rounded-md border border-surface-strong bg-surface-base px-3 text-sm" aria-label={t("members.filter-location")}>
+          <option value="any">{t("members.any-location")}</option>
+          {data.facets.locations.map((x) => <option key={x} value={x}>{x}</option>)}
+        </select>
+        <select value={tier} onChange={(e) => setTier(e.target.value as Tier | "any")} className="h-10 rounded-md border border-surface-strong bg-surface-base px-3 text-sm" aria-label={t("members.filter-tier")}>
+          <option value="any">{t("members.any-tier")}</option>
+          {data.facets.tiers.map((x) => <option key={x} value={x}>{t(`tier.${x}`)}</option>)}
+        </select>
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyState title={t("members.empty-title")} body={t("members.empty-body")} />
+      ) : (
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((m) => (
+            <li key={m.user_id} className="rounded-lg border border-surface-strong bg-surface-raised p-4">
+              <Link href={`/members/${m.handle}`} className="flex items-start gap-3 hover:underline">
+                <div className="h-12 w-12 rounded-full bg-surface-muted overflow-hidden shrink-0" aria-hidden>
+                  {m.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.avatar_url} alt="" className="h-full w-full object-cover" />
+                  ) : null}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{m.display_name}</p>
+                  <p className="text-xs text-ink-muted">@{m.handle}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="neutral">{t(`tier.${m.tier}`)}</Badge>
+                    {m.location ? <Badge variant="neutral">{m.location}</Badge> : null}
+                  </div>
+                </div>
+              </Link>
+              {m.expertise && m.expertise.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {m.expertise.slice(0, 4).map((x) => (
+                    <span key={x} className="text-xs px-2 py-0.5 rounded-full border border-surface-strong">{x}</span>
+                  ))}
+                </div>
+              ) : null}
+              {m.bio_excerpt ? <p className="text-sm text-ink-muted mt-3 line-clamp-3">{m.bio_excerpt}</p> : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

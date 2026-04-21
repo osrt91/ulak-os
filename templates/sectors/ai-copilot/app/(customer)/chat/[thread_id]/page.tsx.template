@@ -1,0 +1,106 @@
+// {{product_name_pascal}} — resume existing chat thread (customer, ai-copilot overlay)
+//
+// Loads full message history server-side (respects RLS: owner-only).
+// Shows context_window_truncated_at banner when summarize-on-overflow has run.
+// Client uses the same streaming component as /chat; this page provides initial state.
+
+import { notFound, redirect } from 'next/navigation'
+
+import { getAuthContext } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
+import { t } from '@/lib/i18n'
+import { formatDateTime } from '@/lib/i18n/format'
+import { Alert } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import ChatResumeClient from './chat-resume-client'
+
+interface MessageRow {
+  id: string
+  role: 'user' | 'assistant' | 'system' | 'tool'
+  content: string
+  model: string | null
+  tokens_input: number | null
+  tokens_output: number | null
+  cost_cents: number | null
+  created_at: string
+}
+
+interface ConversationRow {
+  id: string
+  title: string | null
+  default_model: string | null
+  system_prompt: string | null
+  total_tokens_input: number
+  total_tokens_output: number
+  total_cost_cents: number
+  context_window_truncated_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export default async function ChatThreadPage({ params }: { params: Promise<{ thread_id: string }> }) {
+  const { thread_id } = await params
+  const ctx = await getAuthContext({ require_role: 'customer' })
+  if (!ctx.allowed) redirect(ctx.redirectTo)
+
+  const supabase = await createServerClient()
+
+  const { data: conv } = await supabase
+    .from('conversations')
+    .select('id, title, default_model, system_prompt, total_tokens_input, total_tokens_output, total_cost_cents, context_window_truncated_at, created_at, updated_at')
+    .eq('id', thread_id)
+    .eq('user_id', ctx.user.id)
+    .maybeSingle()
+
+  if (!conv) notFound()
+  const conversation = conv as ConversationRow
+
+  const { data: msgs } = await supabase
+    .from('messages')
+    .select('id, role, content, model, tokens_input, tokens_output, cost_cents, created_at')
+    .eq('conversation_id', conversation.id)
+    .order('created_at', { ascending: true })
+    .limit(500)
+
+  const messages = (msgs ?? []) as MessageRow[]
+
+  // If context_window_truncated_at is set, find index of truncation marker
+  const truncatedIndex = conversation.context_window_truncated_at
+    ? messages.findIndex((m) => m.id === conversation.context_window_truncated_at)
+    : -1
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-6">
+      <header className="flex items-center justify-between pb-4 border-b border-surface-strong">
+        <div>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
+            {conversation.title ?? t('chat.thread.untitled')}
+          </h1>
+          <p className="text-xs text-ink-muted">
+            {t('chat.thread.started', { when: formatDateTime(conversation.created_at) })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <Badge variant="outline">
+            {t('chat.thread.tokens', { n: conversation.total_tokens_input + conversation.total_tokens_output })}
+          </Badge>
+          <Badge variant="outline">
+            {t('chat.thread.cost', { cents: conversation.total_cost_cents })}
+          </Badge>
+        </div>
+      </header>
+
+      {truncatedIndex >= 0 ? (
+        <Alert variant="info" role="note" className="my-3">
+          {t('chat.thread.context-truncated')}
+        </Alert>
+      ) : null}
+
+      <ChatResumeClient
+        initialMessages={messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))}
+        conversationId={conversation.id}
+        defaultModel={conversation.default_model ?? 'claude-opus-4-5'}
+      />
+    </main>
+  )
+}

@@ -1,0 +1,151 @@
+// {{product_name_pascal}} — marketplace browse & filter (category + price + rating + location)
+// Sector overlay: marketplace
+import Link from "next/link";
+
+import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
+import { formatCurrency } from "@/lib/i18n/format";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/empty-state";
+
+export const dynamic = "force-dynamic";
+
+interface ListingRow {
+  id: string;
+  slug: string;
+  title: string;
+  category: string | null;
+  price_minor: number;
+  currency: "USD" | "TRY" | "EUR";
+  cover_url: string | null;
+  location_city: string | null;
+  location_country: string | null;
+  seller_display_name: string;
+  seller_rating_avg: number | null;
+  status: string;
+}
+
+interface SearchParams {
+  q?: string;
+  category?: string;
+  min?: string;
+  max?: string;
+  rating?: string;
+  city?: string;
+}
+
+export default async function MarketplaceSearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const supabase = await createClient();
+
+  // NB: marketplace search is public-ish; policies grant read on status='active'
+  let query = supabase
+    .from("listings")
+    .select("id, slug, title, category, price_minor, currency, cover_url, location_city, location_country, seller_display_name, seller_rating_avg, status")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (params.q) query = query.ilike("title", `%${params.q}%`);
+  if (params.category) query = query.eq("category", params.category);
+  if (params.min) query = query.gte("price_minor", Number(params.min) * 100);
+  if (params.max) query = query.lte("price_minor", Number(params.max) * 100);
+  if (params.rating) query = query.gte("seller_rating_avg", Number(params.rating));
+  if (params.city) query = query.ilike("location_city", `%${params.city}%`);
+
+  const { data: rows } = await query.limit(60);
+  const listings: ListingRow[] = rows ?? [];
+
+  const { data: catRows } = await supabase
+    .from("listings")
+    .select("category")
+    .eq("status", "active")
+    .not("category", "is", null);
+  const categories = Array.from(new Set((catRows ?? []).map((r) => r.category as string))).sort();
+
+  return (
+    <div className="space-y-8 max-w-7xl">
+      <header className="space-y-2">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          {t("marketplace.search.title")}
+        </h1>
+        <p className="text-ink-muted">{t("marketplace.search.subtitle")}</p>
+      </header>
+
+      <form className="grid gap-3 md:grid-cols-6" role="search">
+        <input type="search" name="q" defaultValue={params.q ?? ""}
+          placeholder={t("marketplace.search.q-placeholder")}
+          aria-label={t("marketplace.search.q-label")}
+          className="md:col-span-2 rounded-md border border-surface-strong bg-surface-raised px-3 py-2" />
+        <select name="category" defaultValue={params.category ?? ""}
+          className="rounded-md border border-surface-strong bg-surface-raised px-3 py-2">
+          <option value="">{t("marketplace.search.all-categories")}</option>
+          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <input type="number" name="min" defaultValue={params.min ?? ""} min={0}
+          placeholder={t("marketplace.search.min-price")}
+          className="rounded-md border border-surface-strong bg-surface-raised px-3 py-2" />
+        <input type="number" name="max" defaultValue={params.max ?? ""} min={0}
+          placeholder={t("marketplace.search.max-price")}
+          className="rounded-md border border-surface-strong bg-surface-raised px-3 py-2" />
+        <div className="flex gap-2">
+          <select name="rating" defaultValue={params.rating ?? ""}
+            className="flex-1 rounded-md border border-surface-strong bg-surface-raised px-3 py-2">
+            <option value="">{t("marketplace.search.any-rating")}</option>
+            <option value="4">4+ ★</option>
+            <option value="4.5">4.5+ ★</option>
+          </select>
+          <Button type="submit" variant="outline">{t("marketplace.search.apply")}</Button>
+        </div>
+        <input type="text" name="city" defaultValue={params.city ?? ""}
+          placeholder={t("marketplace.search.city")}
+          className="md:col-span-6 rounded-md border border-surface-strong bg-surface-raised px-3 py-2" />
+      </form>
+
+      {listings.length === 0 ? (
+        <EmptyState
+          title={t("marketplace.search.empty-title")}
+          body={t("marketplace.search.empty-body")}
+        />
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {listings.map((l) => (
+            <Card key={l.id} className="overflow-hidden group">
+              <Link href={`/listing/${l.slug}`} className="block">
+                {l.cover_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={l.cover_url} alt={l.title} className="h-48 w-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+                ) : (
+                  <div className="h-48 w-full bg-surface-muted" aria-hidden />
+                )}
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-medium line-clamp-2">{l.title}</h3>
+                    {l.category ? <Badge variant="neutral">{l.category}</Badge> : null}
+                  </div>
+                  <p className="font-display text-lg font-semibold tabular-nums">
+                    {formatCurrency(l.price_minor / 100, l.currency)}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-ink-muted">
+                    <span>
+                      {l.seller_display_name}
+                      {l.seller_rating_avg != null ? ` · ★ ${l.seller_rating_avg.toFixed(1)}` : ""}
+                    </span>
+                    <span>
+                      {[l.location_city, l.location_country].filter(Boolean).join(", ")}
+                    </span>
+                  </div>
+                </CardContent>
+              </Link>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

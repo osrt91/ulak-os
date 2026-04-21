@@ -1,0 +1,114 @@
+// {{product_name_pascal}} — community hub (AcmeCommunity pattern)
+// Tenant-scoped via RLS + getAuthContext(). Premium threads hidden from sitemap
+// (AP-COM-01 guard) — see next.config.ts `robots` + generated robots.txt.
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { t } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/i18n/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/shared/empty-state";
+
+interface Category { id: string; slug: string; name: string; thread_count: number; }
+interface ThreadRow {
+  id: string;
+  slug: string;
+  title: string;
+  category_id: string;
+  category_name: string;
+  author_display_name: string;
+  reply_count: number;
+  last_reply_at: string;
+  is_solved: boolean;
+  required_tier: "free" | "basic" | "pro" | "founder";
+  gated_for_me: boolean;
+}
+
+export default function CommunityHubPage(): JSX.Element {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [threads, setThreads] = useState<ThreadRow[] | null>(null);
+  const [catFilter, setCatFilter] = useState<string>("all");
+  const [query, setQuery] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [c, t] = await Promise.all([
+          fetch("/api/customer/community/categories", { cache: "no-store" }).then((r) => r.json() as Promise<{ categories: Category[] }>),
+          fetch("/api/customer/community/threads", { cache: "no-store" }).then((r) => r.json() as Promise<{ threads: ThreadRow[] }>),
+        ]);
+        setCategories(c.categories); setThreads(t.threads);
+      } catch { setError("community.load-failed"); }
+    })();
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!threads) return [];
+    const q = query.trim().toLowerCase();
+    return threads.filter((th) => (catFilter === "all" || th.category_id === catFilter) && (q === "" || th.title.toLowerCase().includes(q)));
+  }, [threads, catFilter, query]);
+
+  if (error) return <Alert variant="destructive" role="alert">{t(error)}</Alert>;
+  if (threads === null) return <div className="h-64 bg-surface-muted rounded animate-pulse" />;
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{t("community.title")}</h1>
+          <p className="text-ink-muted">{t("community.subtitle")}</p>
+        </div>
+        <Button asChild><Link href="/community/new">{t("community.new-thread")}</Link></Button>
+      </header>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("community.search-ph")} className="sm:max-w-sm" aria-label={t("community.search-label")} />
+        <div className="flex gap-2 flex-wrap" role="tablist">
+          <button onClick={() => setCatFilter("all")} aria-pressed={catFilter === "all"}
+            className={`px-3 py-1.5 rounded-md text-sm border ${catFilter === "all" ? "bg-primary-500 text-white border-primary-500" : "border-surface-strong hover:bg-surface-muted"}`}>
+            {t("community.all")} <span className="opacity-70 ml-1">{threads.length}</span>
+          </button>
+          {categories.map((c) => (
+            <button key={c.id} onClick={() => setCatFilter(c.id)} aria-pressed={catFilter === c.id}
+              className={`px-3 py-1.5 rounded-md text-sm border ${catFilter === c.id ? "bg-primary-500 text-white border-primary-500" : "border-surface-strong hover:bg-surface-muted"}`}>
+              {c.name} <span className="opacity-70 ml-1">{c.thread_count}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyState title={t("community.empty-title")} body={t("community.empty-body")} />
+      ) : (
+        <ul className="rounded-lg border border-surface-strong bg-surface-raised divide-y divide-surface-strong overflow-hidden">
+          {filtered.map((th) => (
+            <li key={th.id}>
+              <Link href={`/community/threads/${th.id}`} className="flex items-start justify-between gap-4 p-4 hover:bg-surface-muted">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium truncate">{th.title}</span>
+                    {th.is_solved ? <Badge variant="success">{t("community.solved")}</Badge> : null}
+                    {th.required_tier !== "free" ? <Badge variant="warning">{t(`tier.${th.required_tier}`)}</Badge> : null}
+                    {th.gated_for_me ? <Badge variant="neutral">{t("community.gated")}</Badge> : null}
+                  </div>
+                  <p className="text-xs text-ink-muted mt-1">
+                    {th.category_name} · {th.author_display_name} · {t("community.last-reply")}: {formatDateTime(th.last_reply_at)}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-medium tabular-nums">{th.reply_count}</p>
+                  <p className="text-xs text-ink-muted">{t("community.replies")}</p>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

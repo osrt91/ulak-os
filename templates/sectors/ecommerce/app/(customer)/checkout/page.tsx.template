@@ -1,0 +1,174 @@
+// {{product_name_pascal}} — checkout (shipping address + Stripe Payment Element + terms)
+// Sector overlay: ecommerce
+//
+// Uses the v1.1 payment provider adapter at lib/payments/*. Stripe Payment
+// Element is mounted client-side after the server creates a PaymentIntent.
+// AP-EC-02 prevention: the server re-reads cart contents + reserves inventory
+// with SELECT FOR UPDATE before creating the PaymentIntent. Client-reported
+// amounts are ignored.
+"use client";
+
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+import { t } from "@/lib/i18n";
+import { formatCurrency } from "@/lib/i18n/format";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
+
+const addressSchema = z.object({
+  full_name: z.string().min(1).max(120),
+  line1: z.string().min(1).max(200),
+  line2: z.string().max(200).optional(),
+  city: z.string().min(1).max(100),
+  postal_code: z.string().min(1).max(20),
+  country: z.string().length(2),
+  phone: z.string().min(4).max(40),
+  accept_terms: z.literal<boolean>(true),
+});
+type AddressValues = z.infer<typeof addressSchema>;
+
+interface CartSummary {
+  subtotal_minor: number;
+  shipping_minor: number;
+  tax_minor: number;
+  total_minor: number;
+  currency: "USD" | "TRY" | "EUR";
+  items: Array<{
+    product_id: string;
+    variant_id: string | null;
+    name: string;
+    quantity: number;
+    unit_price_minor: number;
+  }>;
+}
+
+export default function CheckoutPage() {
+  const [summary, setSummary] = useState<CartSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const form = useForm<AddressValues>({
+    resolver: zodResolver(addressSchema),
+    defaultValues: { accept_terms: false as unknown as true },
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch("/api/cart/summary", { cache: "no-store" });
+      if (!res.ok) { setError(t("ecommerce.checkout.cart-error")); return; }
+      const json = (await res.json()) as { summary: CartSummary };
+      if (!cancelled) setSummary(json.summary);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const onSubmit = async (values: AddressValues) => {
+    setError(null);
+    setSubmitting(true);
+    // Server re-validates cart, reserves inventory (SELECT FOR UPDATE), and
+    // creates a PaymentIntent. Never trust client-computed totals.
+    const res = await fetch("/api/checkout/create-intent", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ shipping_address: values }),
+    });
+    setSubmitting(false);
+    if (!res.ok) { setError(t("ecommerce.checkout.intent-error")); return; }
+    const { client_secret, order_id } = (await res.json()) as { client_secret: string; order_id: string };
+
+    // Delegate to the existing Stripe Payment Element mount helper from v1.1 lib/payments/*
+    const { mountStripePaymentElement } = await import("@/lib/payments/stripe-client");
+    await mountStripePaymentElement({
+      clientSecret: client_secret,
+      returnUrl: `${window.location.origin}/checkout/confirm?order=${order_id}`,
+      containerId: "stripe-payment-element",
+    });
+  };
+
+  return (
+    <div className="max-w-5xl grid gap-8 md:grid-cols-[1.4fr_1fr]">
+      <div className="space-y-6">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          {t("ecommerce.checkout.title")}
+        </h1>
+
+        {error ? <Alert variant="destructive" role="alert">{error}</Alert> : null}
+
+        <Card>
+          <CardHeader><CardTitle>{t("ecommerce.checkout.shipping")}</CardTitle></CardHeader>
+          <CardContent>
+            <form id="checkout-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+              <Input placeholder={t("ecommerce.checkout.full-name")} {...form.register("full_name")} />
+              <Input placeholder={t("ecommerce.checkout.line1")} {...form.register("line1")} />
+              <Input placeholder={t("ecommerce.checkout.line2")} {...form.register("line2")} />
+              <div className="grid sm:grid-cols-3 gap-3">
+                <Input placeholder={t("ecommerce.checkout.city")} {...form.register("city")} />
+                <Input placeholder={t("ecommerce.checkout.postal")} {...form.register("postal_code")} />
+                <Input placeholder="TR" maxLength={2} {...form.register("country")} />
+              </div>
+              <Input placeholder={t("ecommerce.checkout.phone")} {...form.register("phone")} />
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" {...form.register("accept_terms")} className="mt-0.5" />
+                <span>{t("ecommerce.checkout.accept-terms")}</span>
+              </label>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>{t("ecommerce.checkout.payment")}</CardTitle></CardHeader>
+          <CardContent>
+            <div id="stripe-payment-element" className="min-h-[180px]" aria-live="polite" />
+            <Button form="checkout-form" type="submit" size="lg" className="w-full mt-4" disabled={submitting || !summary}>
+              {submitting ? t("ecommerce.checkout.processing") : t("ecommerce.checkout.pay-now")}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <aside>
+        <Card>
+          <CardHeader><CardTitle>{t("ecommerce.checkout.summary")}</CardTitle></CardHeader>
+          <CardContent>
+            {summary === null ? (
+              <div className="h-48 bg-surface-muted rounded animate-pulse" />
+            ) : (
+              <div className="space-y-4">
+                <ul className="divide-y divide-surface-strong">
+                  {summary.items.map((item, i) => (
+                    <li key={i} className="py-3 flex items-center justify-between text-sm">
+                      <div>
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-xs text-ink-muted">× {item.quantity}</p>
+                      </div>
+                      <p className="tabular-nums">
+                        {formatCurrency((item.unit_price_minor * item.quantity) / 100, summary.currency)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+                <dl className="space-y-1 text-sm">
+                  <div className="flex justify-between"><dt>{t("ecommerce.checkout.subtotal")}</dt>
+                    <dd className="tabular-nums">{formatCurrency(summary.subtotal_minor / 100, summary.currency)}</dd></div>
+                  <div className="flex justify-between"><dt>{t("ecommerce.checkout.shipping-fee")}</dt>
+                    <dd className="tabular-nums">{formatCurrency(summary.shipping_minor / 100, summary.currency)}</dd></div>
+                  <div className="flex justify-between"><dt>{t("ecommerce.checkout.tax")}</dt>
+                    <dd className="tabular-nums">{formatCurrency(summary.tax_minor / 100, summary.currency)}</dd></div>
+                  <div className="flex justify-between font-semibold text-base pt-2 border-t border-surface-strong">
+                    <dt>{t("ecommerce.checkout.total")}</dt>
+                    <dd className="tabular-nums">{formatCurrency(summary.total_minor / 100, summary.currency)}</dd>
+                  </div>
+                </dl>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </aside>
+    </div>
+  );
+}

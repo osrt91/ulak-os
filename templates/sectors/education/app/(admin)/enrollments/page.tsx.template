@@ -1,0 +1,187 @@
+// {{product_name_pascal}} — admin enrollment management + CSV export
+// Sector overlay: education (SP-education)
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import {
+  ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel,
+  getPaginationRowModel, getSortedRowModel, SortingState, useReactTable,
+} from "@tanstack/react-table";
+
+import { t } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/i18n/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/shared/empty-state";
+
+interface EnrollmentRow {
+  id: string;
+  user_email: string;
+  user_full_name: string | null;
+  course_title: string;
+  status: "active" | "completed" | "paused" | "canceled";
+  progress_percent: number;
+  enrolled_at: string;
+  completed_at: string | null;
+  parental_consent_at: string | null;
+  age_verified_at: string | null;
+}
+
+function toCsv(rows: EnrollmentRow[]): string {
+  const header = [
+    "enrollment_id", "user_email", "user_full_name", "course_title",
+    "status", "progress_percent", "enrolled_at", "completed_at",
+    "parental_consent_at", "age_verified_at",
+  ].join(",");
+  const esc = (s: string | number | null) =>
+    s == null ? "" : `"${String(s).replace(/"/g, '""')}"`;
+  const body = rows.map((r) => [
+    r.id, r.user_email, r.user_full_name, r.course_title,
+    r.status, r.progress_percent, r.enrolled_at, r.completed_at,
+    r.parental_consent_at, r.age_verified_at,
+  ].map(esc).join(",")).join("\n");
+  return `${header}\n${body}`;
+}
+
+export default function AdminEnrollmentsPage() {
+  const [data, setData] = useState<EnrollmentRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "enrolled_at", desc: true }]);
+  const [filter, setFilter] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/enrollments", { cache: "no-store" });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = (await res.json()) as { enrollments: EnrollmentRow[] };
+        if (!cancelled) setData(json.enrollments);
+      } catch {
+        if (!cancelled) setLoadError(t("education.admin.enrollments.load-failed"));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const columns = useMemo<ColumnDef<EnrollmentRow>[]>(() => [
+    {
+      accessorKey: "user_email", header: t("education.admin.enrollments.col.student"),
+      cell: ({ row }) => (
+        <div>
+          <p className="font-medium">{row.original.user_email}</p>
+          {row.original.user_full_name ? (
+            <p className="text-xs text-ink-muted">{row.original.user_full_name}</p>
+          ) : null}
+        </div>
+      ),
+    },
+    { accessorKey: "course_title", header: t("education.admin.enrollments.col.course") },
+    {
+      accessorKey: "status", header: t("education.admin.enrollments.col.status"),
+      cell: ({ getValue }) => {
+        const s = getValue<EnrollmentRow["status"]>();
+        const variant = s === "active" ? "success" : s === "completed" ? "neutral" : s === "paused" ? "warning" : "warning";
+        return <Badge variant={variant}>{t(`education.enrollment.status.${s}`)}</Badge>;
+      },
+    },
+    {
+      accessorKey: "progress_percent", header: t("education.admin.enrollments.col.progress"),
+      cell: ({ getValue }) => `${getValue<number>()}%`,
+    },
+    {
+      accessorKey: "enrolled_at", header: t("education.admin.enrollments.col.enrolled"),
+      cell: ({ getValue }) => formatDateTime(getValue<string>()),
+    },
+    {
+      id: "coppa", header: t("education.admin.enrollments.col.coppa"),
+      cell: ({ row }) => {
+        if (row.original.parental_consent_at) {
+          return <Badge variant="success">{t("education.coppa.consent-ok")}</Badge>;
+        }
+        if (row.original.age_verified_at) {
+          return <Badge variant="neutral">{t("education.coppa.age-ok")}</Badge>;
+        }
+        return <span className="text-ink-muted">—</span>;
+      },
+    },
+  ], []);
+
+  const table = useReactTable({
+    data: data ?? [], columns,
+    state: { sorting, globalFilter: filter },
+    onSortingChange: setSorting, onGlobalFilterChange: setFilter,
+    getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 25 } },
+  });
+
+  const downloadCsv = () => {
+    if (!data) return;
+    const rows = table.getFilteredRowModel().rows.map((r) => r.original);
+    const blob = new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `enrollments-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (loadError) return <Alert variant="destructive" role="alert">{loadError}</Alert>;
+  if (data === null) {
+    return <div className="h-64 bg-surface-muted rounded animate-pulse" />;
+  }
+
+  return (
+    <div className="space-y-6 max-w-7xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            {t("education.admin.enrollments.title")}
+          </h1>
+          <p className="text-ink-muted">{t("education.admin.enrollments.subtitle")}</p>
+        </div>
+        <div className="flex gap-3">
+          <Input value={filter} onChange={(e) => setFilter(e.target.value)}
+            placeholder={t("education.admin.enrollments.search")} className="w-64" />
+          <Button variant="outline" onClick={downloadCsv}>
+            {t("education.admin.enrollments.export-csv")}
+          </Button>
+        </div>
+      </header>
+
+      {data.length === 0 ? (
+        <EmptyState title={t("education.admin.enrollments.empty")} body="" />
+      ) : (
+        <div className="rounded-lg border border-surface-strong bg-surface-raised overflow-hidden">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id}>
+                  {hg.headers.map((h) => (
+                    <TableHead key={h.id} onClick={h.column.getToggleSortingHandler()} className="cursor-pointer select-none">
+                      {flexRender(h.column.columnDef.header, h.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((c) => (
+                    <TableCell key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}

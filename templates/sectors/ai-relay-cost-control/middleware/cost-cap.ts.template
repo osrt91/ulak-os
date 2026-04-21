@@ -1,0 +1,134 @@
+// {{product_name_pascal}} — AI relay cost-cap middleware (GammaAI pattern)
+// Runs BEFORE the relay hits the provider. Counts prompt tokens, looks up
+// remaining budget (per tenant + per user + per feature), and rejects early
+// if the projected spend would exceed the cap.
+//
+// AP-AI-01 guard — a request that would blow the cap never leaves the gateway.
+// This file deliberately does not talk to the provider; it only accepts or rejects.
+
+import { NextResponse, type NextRequest } from "next/server";
+import { getAuthContext } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { countPromptTokens, estimateCompletionTokens, priceOfUsd } from "@/lib/ai-relay/pricing";
+
+export interface CostCapRequest {
+  model: string;
+  feature: string;     // surface/feature slug — attribution key
+  messages: Array<{ role: string; content: string }>;
+  max_tokens?: number;
+  conversation_id?: string;
+}
+
+export interface CostCapResult {
+  allowed: boolean;
+  reason?: "over_tenant_cap" | "over_user_cap" | "over_feature_cap" | "model_not_allowed";
+  projected_usd: number;
+  remaining_tenant_usd: number;
+  remaining_user_usd: number;
+  budget_window_ends_at: string;
+}
+
+const DEFAULT_COMPLETION_CAP = 1024; // fallback when client omits max_tokens
+
+export async function enforceCostCap(
+  req: NextRequest,
+  body: CostCapRequest,
+): Promise<{ response: NextResponse | null; decision: CostCapResult }> {
+  const auth = await getAuthContext(req);
+  if (!auth.user || !auth.tenant_id) {
+    return {
+      response: NextResponse.json({ error: "unauthorized" }, { status: 401 }),
+      decision: emptyDecision(0),
+    };
+  }
+
+  // Allowlist check — AP-AI-01 also guards on arbitrary model substitution
+  if (!(await isModelAllowed(auth.tenant_id, body.model))) {
+    return {
+      response: NextResponse.json({ error: "model_not_allowed", model: body.model }, { status: 403 }),
+      decision: { ...emptyDecision(0), reason: "model_not_allowed" },
+    };
+  }
+
+  const promptTokens = countPromptTokens(body.model, body.messages);
+  const completionTokens = body.max_tokens ?? estimateCompletionTokens(body.model, DEFAULT_COMPLETION_CAP);
+  const projected = priceOfUsd(body.model, promptTokens, completionTokens);
+
+  // Atomic budget lookup — one round-trip, snapshot isolation.
+  const { data, error } = await supabaseAdmin
+    .rpc("ai_relay_budget_snapshot", {
+      p_tenant_id: auth.tenant_id,
+      p_user_id: auth.user.id,
+      p_feature: body.feature,
+    });
+
+  if (error || !data) {
+    // Fail closed on any telemetry error — never silently allow.
+    return {
+      response: NextResponse.json({ error: "budget_lookup_failed" }, { status: 503 }),
+      decision: emptyDecision(projected),
+    };
+  }
+
+  const snap = data as {
+    remaining_tenant_usd: number;
+    remaining_user_usd: number;
+    remaining_feature_usd: number;
+    window_ends_at: string;
+  };
+
+  const decision: CostCapResult = {
+    allowed: true,
+    projected_usd: projected,
+    remaining_tenant_usd: snap.remaining_tenant_usd,
+    remaining_user_usd: snap.remaining_user_usd,
+    budget_window_ends_at: snap.window_ends_at,
+  };
+
+  if (snap.remaining_tenant_usd < projected) decision.reason = "over_tenant_cap";
+  else if (snap.remaining_user_usd < projected) decision.reason = "over_user_cap";
+  else if (snap.remaining_feature_usd < projected) decision.reason = "over_feature_cap";
+
+  if (decision.reason) {
+    decision.allowed = false;
+    return {
+      response: NextResponse.json(
+        {
+          error: "cost_cap_exceeded",
+          reason: decision.reason,
+          projected_usd: projected,
+          window_ends_at: snap.window_ends_at,
+        },
+        { status: 402, headers: { "retry-after": secondsUntil(snap.window_ends_at) } },
+      ),
+      decision,
+    };
+  }
+
+  return { response: null, decision };
+}
+
+async function isModelAllowed(tenantId: string, model: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("ai_model_allowlist")
+    .select("model")
+    .eq("tenant_id", tenantId)
+    .eq("model", model)
+    .maybeSingle();
+  return !!data;
+}
+
+function emptyDecision(projected: number): CostCapResult {
+  return {
+    allowed: false,
+    projected_usd: projected,
+    remaining_tenant_usd: 0,
+    remaining_user_usd: 0,
+    budget_window_ends_at: new Date().toISOString(),
+  };
+}
+
+function secondsUntil(iso: string): string {
+  const diff = Math.max(1, Math.ceil((new Date(iso).getTime() - Date.now()) / 1000));
+  return String(diff);
+}

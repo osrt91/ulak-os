@@ -1,0 +1,175 @@
+// {{product_name_pascal}} — granular consent manager (customer, health-sensitive overlay)
+//
+// Per-data-type toggle: diagnosis / prescription / imaging / lab / clinical_notes /
+// family_history. Withdraw is immediate — consent_grants.granted flipped + row
+// in consent_log. Subsequent reads on /records see consent=false → [redacted].
+
+"use client";
+
+import { useEffect, useState } from 'react'
+
+import { t } from '@/lib/i18n'
+import { formatDateTime } from '@/lib/i18n/format'
+import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert } from '@/components/ui/alert'
+import { Textarea } from '@/components/ui/textarea'
+
+const DATA_TYPES = ['diagnosis', 'prescription', 'imaging', 'lab', 'clinical_notes', 'family_history'] as const
+type DataType = typeof DATA_TYPES[number]
+
+interface ConsentState {
+  data_type: DataType
+  granted: boolean
+  effective_from: string | null
+}
+
+interface LogItem {
+  id: string
+  data_type: DataType
+  action: 'grant' | 'withdraw'
+  reason: string | null
+  created_at: string
+}
+
+export default function ConsentPage() {
+  const [state, setState] = useState<Record<DataType, ConsentState> | null>(null)
+  const [log, setLog] = useState<LogItem[] | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [pending, setPending] = useState<DataType | null>(null)
+  const [withdrawalReason, setWithdrawalReason] = useState<Record<DataType, string>>({} as Record<DataType, string>)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const [consentRes, logRes] = await Promise.all([
+          fetch('/api/consent', { cache: 'no-store' }),
+          fetch('/api/consent/log', { cache: 'no-store' }),
+        ])
+        if (!consentRes.ok || !logRes.ok) throw new Error()
+        const consent = (await consentRes.json()) as { grants: ConsentState[] }
+        const logJson = (await logRes.json()) as { log: LogItem[] }
+        if (cancelled) return
+        const initial: Record<DataType, ConsentState> = {} as Record<DataType, ConsentState>
+        for (const dt of DATA_TYPES) {
+          const row = consent.grants.find((g) => g.data_type === dt)
+          initial[dt] = row ?? { data_type: dt, granted: false, effective_from: null }
+        }
+        setState(initial)
+        setLog(logJson.log)
+      } catch {
+        if (!cancelled) setErr(t('consent.load-failed'))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  async function onToggle(dt: DataType, nextGranted: boolean) {
+    if (!state) return
+    setPending(dt)
+    try {
+      const res = await fetch('/api/consent', {
+        method: 'PUT', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          data_type: dt,
+          granted: nextGranted,
+          reason: nextGranted ? null : (withdrawalReason[dt] || null),
+        }),
+      })
+      if (res.ok) {
+        const now = new Date().toISOString()
+        setState({ ...state, [dt]: { data_type: dt, granted: nextGranted, effective_from: now } })
+        // Prepend fresh log entry
+        if (log) {
+          setLog([{
+            id: `temp-${now}`,
+            data_type: dt,
+            action: nextGranted ? 'grant' : 'withdraw',
+            reason: nextGranted ? null : (withdrawalReason[dt] || null),
+            created_at: now,
+          }, ...log])
+        }
+        if (!nextGranted) setWithdrawalReason({ ...withdrawalReason, [dt]: '' })
+      }
+    } finally {
+      setPending(null)
+    }
+  }
+
+  if (err) return <Alert variant="destructive" role="alert">{err}</Alert>
+  if (!state) return <div className="h-64 bg-surface-muted rounded animate-pulse m-6" aria-busy="true" />
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-12 space-y-8">
+      <header className="space-y-2">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">{t('consent.title')}</h1>
+        <p className="text-ink-muted">{t('consent.subtitle')}</p>
+      </header>
+
+      <Alert variant="info" role="note">
+        <p className="text-sm">{t('consent.notice')}</p>
+      </Alert>
+
+      <div className="space-y-3">
+        {DATA_TYPES.map((dt) => {
+          const s = state[dt]
+          return (
+            <Card key={dt}>
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <CardTitle>{t(`consent.type.${dt}.title`)}</CardTitle>
+                  <CardDescription>{t(`consent.type.${dt}.description`)}</CardDescription>
+                  {s.effective_from ? (
+                    <p className="text-xs text-ink-muted">
+                      {s.granted ? t('consent.granted-since', { when: formatDateTime(s.effective_from) })
+                                 : t('consent.withdrawn-since', { when: formatDateTime(s.effective_from) })}
+                    </p>
+                  ) : null}
+                </div>
+                <Switch
+                  checked={s.granted}
+                  disabled={pending === dt}
+                  onCheckedChange={(v) => onToggle(dt, v)}
+                  aria-label={t('consent.toggle-label', { type: t(`consent.type.${dt}.title`) })}
+                />
+              </CardHeader>
+              {s.granted ? (
+                <CardContent>
+                  <label className="text-xs text-ink-muted block mb-1">{t('consent.withdraw-reason-label')}</label>
+                  <Textarea
+                    rows={2}
+                    value={withdrawalReason[dt] ?? ''}
+                    onChange={(e) => setWithdrawalReason({ ...withdrawalReason, [dt]: e.target.value })}
+                    placeholder={t('consent.withdraw-reason-placeholder')}
+                  />
+                </CardContent>
+              ) : null}
+            </Card>
+          )
+        })}
+      </div>
+
+      <section className="space-y-3 pt-6 border-t border-surface-strong">
+        <h2 className="font-display text-xl font-semibold">{t('consent.log-title')}</h2>
+        {log && log.length > 0 ? (
+          <ul className="divide-y divide-surface-strong rounded-md border border-surface-strong bg-surface-raised">
+            {log.slice(0, 20).map((item) => (
+              <li key={item.id} className="p-3 text-sm flex items-center justify-between gap-3">
+                <div>
+                  <span className="font-medium">{t(`consent.log.${item.action}`)}</span>
+                  <span className="text-ink-muted ml-2">{t(`consent.type.${item.data_type}.title`)}</span>
+                  {item.reason ? <p className="text-xs text-ink-muted mt-1">"{item.reason}"</p> : null}
+                </div>
+                <time className="text-xs text-ink-muted">{formatDateTime(item.created_at)}</time>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-ink-muted">{t('consent.log-empty')}</p>
+        )}
+      </section>
+    </main>
+  )
+}

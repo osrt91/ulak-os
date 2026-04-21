@@ -1,0 +1,152 @@
+// {{product_name_pascal}} — product catalog (grid with category nav + price filter + sort)
+// Sector overlay: ecommerce
+import Link from "next/link";
+
+import { getAuthContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
+import { formatCurrency } from "@/lib/i18n/format";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/shared/empty-state";
+
+export const dynamic = "force-dynamic";
+
+interface ProductRow {
+  id: string;
+  slug: string;
+  name: string;
+  category: string | null;
+  price_minor: number;
+  currency: "USD" | "TRY" | "EUR";
+  cover_url: string | null;
+  stock_available: number;
+  rating_avg: number | null;
+  is_featured: boolean;
+}
+
+interface SearchParams {
+  category?: string;
+  min?: string;
+  max?: string;
+  sort?: "newest" | "price_asc" | "price_desc" | "rating";
+}
+
+export default async function ShopPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const authCtx = await getAuthContext({ require_role: "customer" });
+  const params = await searchParams;
+
+  const supabase = await createClient();
+  const tenantId = authCtx.session.tenantId ?? null;
+
+  // Shop is customer-facing but still tenant-scoped
+  let query = supabase
+    .from("products")
+    .select("id, slug, name, category, price_minor, currency, cover_url, stock_available, rating_avg, is_featured")
+    .eq("status", "active");
+
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  if (params.category) query = query.eq("category", params.category);
+  if (params.min) query = query.gte("price_minor", Number(params.min) * 100);
+  if (params.max) query = query.lte("price_minor", Number(params.max) * 100);
+
+  const sort = params.sort ?? "newest";
+  if (sort === "price_asc") query = query.order("price_minor", { ascending: true });
+  else if (sort === "price_desc") query = query.order("price_minor", { ascending: false });
+  else if (sort === "rating") query = query.order("rating_avg", { ascending: false, nullsFirst: false });
+  else query = query.order("created_at", { ascending: false });
+
+  const { data: rows } = await query.limit(48);
+  const products: ProductRow[] = rows ?? [];
+
+  // Category nav (tenant-scoped)
+  const { data: catRows } = await supabase
+    .from("products")
+    .select("category")
+    .eq("tenant_id", tenantId ?? "")
+    .eq("status", "active")
+    .not("category", "is", null);
+  const categories = Array.from(new Set((catRows ?? []).map((r) => r.category as string))).sort();
+
+  return (
+    <div className="space-y-8 max-w-7xl">
+      <header className="space-y-2">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">{t("ecommerce.shop.title")}</h1>
+        <p className="text-ink-muted">{t("ecommerce.shop.subtitle")}</p>
+      </header>
+
+      <div className="flex flex-wrap gap-2" role="navigation" aria-label={t("ecommerce.shop.categories")}>
+        <Link href="/shop"
+          className={`rounded-full px-3 py-1 text-sm border ${!params.category ? "bg-brand-500 text-white border-brand-500" : "bg-surface-raised border-surface-strong hover:border-brand-500"}`}>
+          {t("ecommerce.shop.all")}
+        </Link>
+        {categories.map((c) => (
+          <Link key={c} href={`/shop?category=${encodeURIComponent(c)}`}
+            className={`rounded-full px-3 py-1 text-sm border ${params.category === c ? "bg-brand-500 text-white border-brand-500" : "bg-surface-raised border-surface-strong hover:border-brand-500"}`}>
+            {c}
+          </Link>
+        ))}
+      </div>
+
+      <form className="flex flex-col sm:flex-row gap-3">
+        <input type="hidden" name="category" value={params.category ?? ""} />
+        <input name="min" defaultValue={params.min ?? ""} type="number" min={0}
+          placeholder={t("ecommerce.shop.min-price")}
+          className="rounded-md border border-surface-strong bg-surface-raised px-3 py-2 w-32" />
+        <input name="max" defaultValue={params.max ?? ""} type="number" min={0}
+          placeholder={t("ecommerce.shop.max-price")}
+          className="rounded-md border border-surface-strong bg-surface-raised px-3 py-2 w-32" />
+        <select name="sort" defaultValue={sort} className="rounded-md border border-surface-strong bg-surface-raised px-3 py-2">
+          <option value="newest">{t("ecommerce.shop.sort.newest")}</option>
+          <option value="price_asc">{t("ecommerce.shop.sort.price_asc")}</option>
+          <option value="price_desc">{t("ecommerce.shop.sort.price_desc")}</option>
+          <option value="rating">{t("ecommerce.shop.sort.rating")}</option>
+        </select>
+        <Button type="submit" variant="outline">{t("ecommerce.shop.apply")}</Button>
+      </form>
+
+      {products.length === 0 ? (
+        <EmptyState title={t("ecommerce.shop.empty-title")} body={t("ecommerce.shop.empty-body")} />
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {products.map((p) => (
+            <Card key={p.id} className="overflow-hidden group">
+              <Link href={`/product/${p.slug}`} className="block">
+                {p.cover_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.cover_url} alt={p.name} className="h-56 w-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
+                ) : (
+                  <div className="h-56 w-full bg-surface-muted" aria-hidden />
+                )}
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-medium line-clamp-2">{p.name}</h3>
+                    {p.is_featured ? <Badge>{t("ecommerce.shop.featured")}</Badge> : null}
+                  </div>
+                  <p className="font-display text-lg font-semibold tabular-nums">
+                    {formatCurrency(p.price_minor / 100, p.currency)}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-ink-muted">
+                    <span>
+                      {p.stock_available > 0
+                        ? t("ecommerce.shop.in-stock")
+                        : t("ecommerce.shop.out-of-stock")}
+                    </span>
+                    {p.rating_avg != null ? (
+                      <span>★ {p.rating_avg.toFixed(1)}</span>
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Link>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

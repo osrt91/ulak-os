@@ -1,0 +1,134 @@
+// {{product_name_pascal}} — content moderation queue
+// Quick actions: ignore / warn / restrict / ban (+ shadow-ban toggle). All decisions audit-logged.
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { t } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/i18n/format";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+
+type Decision = "ignore" | "warn" | "restrict" | "ban" | "shadow_ban_toggle";
+type ReportStatus = "open" | "reviewing" | "resolved";
+
+interface Report {
+  id: string;
+  status: ReportStatus;
+  target_kind: "post" | "comment" | "profile" | "message";
+  target_id: string;
+  target_excerpt: string;
+  reported_user_id: string;
+  reported_user_email: string;
+  reported_user_shadow_banned: boolean;
+  reporter_user_id: string;
+  reason_code: string;
+  created_at: string;
+}
+
+export default function ModerationQueuePage(): JSX.Element {
+  const [reports, setReports] = useState<Report[] | null>(null);
+  const [statusFilter, setStatusFilter] = useState<ReportStatus>("open");
+  const [pending, setPending] = useState<{ report: Report; decision: Decision } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/admin/moderation?status=${statusFilter}`, { cache: "no-store" });
+        const j = (await res.json()) as { reports: Report[] };
+        setReports(j.reports);
+      } catch { setLoadError(t("admin.moderation.load-failed")); }
+    })();
+  }, [statusFilter]);
+
+  const onConfirm = async () => {
+    if (!pending) return;
+    const { report, decision } = pending;
+    const res = await fetch(`/api/admin/moderation/${report.id}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ decision }),
+    });
+    setPending(null);
+    if (!res.ok || !reports) return;
+    setReports(reports.map((r) => {
+      if (r.id !== report.id) return r;
+      if (decision === "shadow_ban_toggle") return { ...r, reported_user_shadow_banned: !r.reported_user_shadow_banned };
+      return { ...r, status: "resolved" };
+    }));
+  };
+
+  const counts = useMemo(() => ({
+    open: reports?.filter((r) => r.status === "open").length ?? 0,
+    reviewing: reports?.filter((r) => r.status === "reviewing").length ?? 0,
+    resolved: reports?.filter((r) => r.status === "resolved").length ?? 0,
+  }), [reports]);
+
+  if (loadError) return <Alert variant="destructive" role="alert">{loadError}</Alert>;
+  if (reports === null) return <div className="h-48 bg-surface-muted rounded animate-pulse" />;
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <header>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">{t("admin.moderation.title")}</h1>
+        <p className="text-ink-muted">{t("admin.moderation.subtitle")}</p>
+      </header>
+
+      <div className="flex gap-2" role="tablist" aria-label={t("admin.moderation.filter-label")}>
+        {(["open", "reviewing", "resolved"] as ReportStatus[]).map((s) => (
+          <button key={s} role="tab" aria-selected={statusFilter === s} onClick={() => setStatusFilter(s)}
+            className={`px-3 py-1.5 rounded-md text-sm border ${statusFilter === s ? "bg-primary-500 text-white border-primary-500" : "border-surface-strong hover:bg-surface-muted"}`}>
+            {t(`admin.moderation.status.${s}`)} <span className="ml-1 tabular-nums text-xs opacity-75">{counts[s]}</span>
+          </button>
+        ))}
+      </div>
+
+      {reports.length === 0 ? (
+        <p className="text-ink-muted text-sm">{t("admin.moderation.empty")}</p>
+      ) : (
+        <ul className="space-y-3">
+          {reports.map((r) => (
+            <li key={r.id} className="rounded-lg border border-surface-strong bg-surface-raised p-4 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="neutral">{r.target_kind}</Badge>
+                    <Badge variant="warning">{r.reason_code}</Badge>
+                    <span className="text-xs text-ink-subtle">{formatDateTime(r.created_at)}</span>
+                  </div>
+                  <p className="text-sm mt-2 line-clamp-3">{r.target_excerpt}</p>
+                  <p className="text-xs text-ink-muted mt-1">
+                    {t("admin.moderation.reported-user")}: <code>{r.reported_user_email}</code>
+                    {r.reported_user_shadow_banned ? <Badge variant="danger" className="ml-2">{t("admin.moderation.shadow-banned")}</Badge> : null}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="ghost" onClick={() => setPending({ report: r, decision: "ignore" })}>{t("admin.moderation.action.ignore")}</Button>
+                <Button size="sm" variant="outline" onClick={() => setPending({ report: r, decision: "warn" })}>{t("admin.moderation.action.warn")}</Button>
+                <Button size="sm" variant="outline" onClick={() => setPending({ report: r, decision: "restrict" })}>{t("admin.moderation.action.restrict")}</Button>
+                <Button size="sm" variant="outline" onClick={() => setPending({ report: r, decision: "shadow_ban_toggle" })}>
+                  {r.reported_user_shadow_banned ? t("admin.moderation.action.unshadow") : t("admin.moderation.action.shadow")}
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => setPending({ report: r, decision: "ban" })}>{t("admin.moderation.action.ban")}</Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <ConfirmDialog
+        open={pending !== null}
+        onOpenChange={(v) => !v && setPending(null)}
+        title={t(`admin.moderation.confirm.${pending?.decision ?? "ignore"}.title`)}
+        body={t(`admin.moderation.confirm.${pending?.decision ?? "ignore"}.body`, { email: pending?.report.reported_user_email ?? "" })}
+        confirmLabel={t(`admin.moderation.confirm.${pending?.decision ?? "ignore"}.confirm`)}
+        destructive={pending?.decision === "ban" || pending?.decision === "restrict"}
+        onConfirm={onConfirm}
+      />
+    </div>
+  );
+}

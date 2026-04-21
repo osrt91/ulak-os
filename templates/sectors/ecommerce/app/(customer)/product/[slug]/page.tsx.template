@@ -1,0 +1,195 @@
+// {{product_name_pascal}} — product detail page (PDP) with variants + add-to-cart + related
+// Sector overlay: ecommerce
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { getAuthContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
+import { formatCurrency } from "@/lib/i18n/format";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
+export const dynamic = "force-dynamic";
+
+interface ProductRow {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  price_minor: number;
+  currency: "USD" | "TRY" | "EUR";
+  cover_url: string | null;
+  gallery: string[] | null;
+  status: "active" | "archived";
+}
+
+interface VariantRow {
+  id: string;
+  sku: string;
+  label: string;
+  price_delta_minor: number;
+  stock_available: number;
+}
+
+interface RelatedRow {
+  id: string;
+  slug: string;
+  name: string;
+  price_minor: number;
+  currency: ProductRow["currency"];
+  cover_url: string | null;
+}
+
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const authCtx = await getAuthContext({ require_role: "customer" });
+  const tenantId = authCtx.session.tenantId ?? null;
+
+  const supabase = await createClient();
+
+  const productQuery = supabase
+    .from("products")
+    .select("id, slug, name, description, category, price_minor, currency, cover_url, gallery, status")
+    .eq("slug", slug)
+    .eq("status", "active");
+  const { data: product } = tenantId
+    ? await productQuery.eq("tenant_id", tenantId).maybeSingle<ProductRow>()
+    : await productQuery.maybeSingle<ProductRow>();
+
+  if (!product) notFound();
+
+  const [{ data: variantRows }, { data: relatedRows }] = await Promise.all([
+    supabase
+      .from("product_variants")
+      .select("id, sku, label, price_delta_minor, stock_available")
+      .eq("product_id", product.id)
+      .order("label", { ascending: true }),
+    supabase
+      .from("products")
+      .select("id, slug, name, price_minor, currency, cover_url")
+      .eq("category", product.category ?? "")
+      .eq("status", "active")
+      .neq("id", product.id)
+      .limit(4),
+  ]);
+
+  const variants: VariantRow[] = variantRows ?? [];
+  const related: RelatedRow[] = relatedRows ?? [];
+  const gallery = [product.cover_url, ...(product.gallery ?? [])].filter(Boolean) as string[];
+  const totalStock = variants.length > 0
+    ? variants.reduce((acc, v) => acc + v.stock_available, 0)
+    : 0;
+  const outOfStock = variants.length > 0 && totalStock === 0;
+
+  return (
+    <div className="space-y-10 max-w-6xl">
+      <nav className="text-sm text-ink-muted">
+        <Link href="/shop" className="hover:underline">{t("ecommerce.shop.back")}</Link>
+        {product.category ? (
+          <>
+            <span className="mx-2">/</span>
+            <Link href={`/shop?category=${encodeURIComponent(product.category)}`} className="hover:underline">
+              {product.category}
+            </Link>
+          </>
+        ) : null}
+      </nav>
+
+      <div className="grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <div className="space-y-3">
+          {gallery.length > 0 ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={gallery[0]} alt={product.name} className="rounded-lg w-full object-cover aspect-square" />
+          ) : (
+            <div className="rounded-lg w-full bg-surface-muted aspect-square" aria-hidden />
+          )}
+          {gallery.length > 1 ? (
+            <div className="grid grid-cols-4 gap-2">
+              {gallery.slice(1, 5).map((src, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={src} alt="" className="rounded-md aspect-square object-cover" loading="lazy" />
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="space-y-5">
+          <div className="space-y-1">
+            {product.category ? <Badge variant="neutral">{product.category}</Badge> : null}
+            <h1 className="font-display text-3xl font-semibold tracking-tight">{product.name}</h1>
+            <p className="font-display text-2xl font-semibold tabular-nums">
+              {formatCurrency(product.price_minor / 100, product.currency)}
+            </p>
+          </div>
+
+          {product.description ? (
+            <p className="text-ink whitespace-pre-line">{product.description}</p>
+          ) : null}
+
+          <form action="/api/cart/add" method="post" className="space-y-4">
+            <input type="hidden" name="product_id" value={product.id} />
+            {variants.length > 0 ? (
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">{t("ecommerce.product.variant")}</legend>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {variants.map((v) => (
+                    <label key={v.id} className={`flex items-center justify-between rounded-md border px-3 py-2 cursor-pointer ${v.stock_available === 0 ? "opacity-50" : "border-surface-strong hover:border-brand-500"}`}>
+                      <span className="flex items-center gap-2">
+                        <input type="radio" name="variant_id" value={v.id} required disabled={v.stock_available === 0} />
+                        <span className="text-sm">{v.label}</span>
+                      </span>
+                      <span className="text-xs text-ink-muted">
+                        {v.stock_available > 0 ? `${v.stock_available} ${t("ecommerce.product.left")}` : t("ecommerce.shop.out-of-stock")}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            ) : null}
+
+            <label className="block text-sm">
+              {t("ecommerce.product.quantity")}
+              <input type="number" name="quantity" min={1} defaultValue={1}
+                className="mt-1 block w-24 rounded-md border border-surface-strong bg-surface-raised px-3 py-2" />
+            </label>
+
+            <Button type="submit" size="lg" className="w-full" disabled={outOfStock}>
+              {outOfStock ? t("ecommerce.shop.out-of-stock") : t("ecommerce.product.add-to-cart")}
+            </Button>
+          </form>
+        </div>
+      </div>
+
+      {related.length > 0 ? (
+        <section className="space-y-4">
+          <h2 className="font-display text-xl font-semibold">{t("ecommerce.product.related")}</h2>
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+            {related.map((r) => (
+              <Card key={r.id} className="overflow-hidden">
+                <Link href={`/product/${r.slug}`} className="block">
+                  {r.cover_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.cover_url} alt={r.name} className="h-40 w-full object-cover" loading="lazy" />
+                  ) : <div className="h-40 w-full bg-surface-muted" aria-hidden />}
+                  <CardContent className="p-3 space-y-1">
+                    <p className="text-sm line-clamp-2">{r.name}</p>
+                    <p className="text-sm font-semibold tabular-nums">
+                      {formatCurrency(r.price_minor / 100, r.currency)}
+                    </p>
+                  </CardContent>
+                </Link>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}

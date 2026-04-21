@@ -1,0 +1,218 @@
+// {{product_name_pascal}} — KYC provider abstraction (Sumsub / Onfido)
+// Sector overlay: fintech
+//
+// Provider adapter pattern: the app never calls Sumsub or Onfido directly;
+// all KYC traffic goes through this module. Switching providers means
+// swapping KYC_PROVIDER env var + implementing the KycProvider interface.
+//
+// Anti-patterns prevented:
+//   - Vendor lock: never pass provider-shaped objects beyond this module
+//   - Trusting client-reported verification status: server always fetches
+//     canonical status from provider API, never from the form payload
+import 'server-only';
+
+export type KycStatus = 'none' | 'pending' | 'approved' | 'rejected' | 'expired';
+export type KycLevel = 'basic' | 'enhanced' | 'corporate';
+
+export interface KycApplicantInput {
+  tenant_id: string;
+  user_id: string;
+  external_user_id: string;         // stable id we control; never the auth.users.id directly
+  first_name: string;
+  last_name: string;
+  date_of_birth: string;             // ISO yyyy-mm-dd
+  document_type: 'passport' | 'national_id' | 'drivers_license';
+  document_country: string;          // ISO-3166-1 alpha-2
+  document_number: string;
+}
+
+export interface KycApplicantCreated {
+  provider: string;
+  provider_applicant_id: string;
+  status: KycStatus;
+  level: KycLevel;
+}
+
+export interface KycUploadTicket {
+  upload_url: string;
+  fields?: Record<string, string>;
+  expires_at: string;
+}
+
+export interface KycProvider {
+  readonly name: 'sumsub' | 'onfido';
+
+  createApplicant(input: KycApplicantInput): Promise<KycApplicantCreated>;
+
+  getStatus(providerApplicantId: string): Promise<{
+    status: KycStatus;
+    level: KycLevel;
+    rejection_reason?: string;
+    reviewed_at?: string;
+  }>;
+
+  requestUpload(providerApplicantId: string, kind: 'identity' | 'selfie' | 'address_proof'): Promise<KycUploadTicket>;
+
+  verifyWebhookSignature(rawBody: string, signature: string): boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Sumsub implementation (stub — wire real SDK call paths before production)
+// ---------------------------------------------------------------------------
+class SumsubProvider implements KycProvider {
+  readonly name = 'sumsub' as const;
+
+  constructor(
+    private readonly appToken: string,
+    private readonly secretKey: string,
+    private readonly baseUrl: string = 'https://api.sumsub.com',
+  ) {}
+
+  async createApplicant(input: KycApplicantInput): Promise<KycApplicantCreated> {
+    const res = await fetch(`${this.baseUrl}/resources/applicants`, {
+      method: 'POST',
+      headers: this.signedHeaders('POST', '/resources/applicants'),
+      body: JSON.stringify({
+        externalUserId: input.external_user_id,
+        info: {
+          firstName: input.first_name,
+          lastName: input.last_name,
+          dob: input.date_of_birth,
+          idDocs: [{
+            idDocType: input.document_type.toUpperCase(),
+            country: input.document_country,
+            number: input.document_number,
+          }],
+        },
+      }),
+    });
+    if (!res.ok) throw new Error(`Sumsub createApplicant failed: ${res.status}`);
+    const json = (await res.json()) as { id: string; reviewStatus: string };
+    return {
+      provider: 'sumsub',
+      provider_applicant_id: json.id,
+      status: mapSumsubStatus(json.reviewStatus),
+      level: 'basic',
+    };
+  }
+
+  async getStatus(id: string) {
+    const res = await fetch(`${this.baseUrl}/resources/applicants/${id}/status`, {
+      headers: this.signedHeaders('GET', `/resources/applicants/${id}/status`),
+    });
+    if (!res.ok) throw new Error(`Sumsub getStatus failed: ${res.status}`);
+    const json = (await res.json()) as { reviewStatus: string; reviewResult?: { moderationComment?: string } };
+    return {
+      status: mapSumsubStatus(json.reviewStatus),
+      level: 'basic' as KycLevel,
+      rejection_reason: json.reviewResult?.moderationComment,
+    };
+  }
+
+  async requestUpload(id: string, kind: 'identity' | 'selfie' | 'address_proof'): Promise<KycUploadTicket> {
+    // In real Sumsub flow, client uses SDK + webSdkToken — here we return a
+    // scoped URL for the internal upload broker to use.
+    return {
+      upload_url: `${this.baseUrl}/resources/applicants/${id}/upload?kind=${kind}`,
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    };
+  }
+
+  verifyWebhookSignature(rawBody: string, signature: string): boolean {
+    // HMAC-SHA256(appSecret, rawBody) — real impl uses crypto.subtle
+    return typeof signature === 'string' && signature.length > 0 && rawBody.length > 0;
+  }
+
+  private signedHeaders(method: string, path: string): Record<string, string> {
+    const ts = Math.floor(Date.now() / 1000).toString();
+    return {
+      'X-App-Token': this.appToken,
+      'X-App-Access-Ts': ts,
+      'X-App-Access-Sig': this.secretKey.slice(0, 8),   // placeholder
+      'content-type': 'application/json',
+    };
+    // NB: real signature = HMAC-SHA256(secretKey, ts + method + path + body)
+  }
+}
+
+function mapSumsubStatus(s: string): KycStatus {
+  switch (s) {
+    case 'init': return 'pending';
+    case 'pending': return 'pending';
+    case 'approved': return 'approved';
+    case 'queued': return 'pending';
+    case 'onHold': return 'pending';
+    case 'rejected': return 'rejected';
+    default: return 'pending';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Onfido implementation (stub)
+// ---------------------------------------------------------------------------
+class OnfidoProvider implements KycProvider {
+  readonly name = 'onfido' as const;
+
+  constructor(private readonly apiToken: string, private readonly baseUrl: string = 'https://api.onfido.com/v3') {}
+
+  async createApplicant(input: KycApplicantInput): Promise<KycApplicantCreated> {
+    const res = await fetch(`${this.baseUrl}/applicants`, {
+      method: 'POST',
+      headers: { 'Authorization': `Token token=${this.apiToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        first_name: input.first_name,
+        last_name: input.last_name,
+        dob: input.date_of_birth,
+      }),
+    });
+    if (!res.ok) throw new Error(`Onfido createApplicant failed: ${res.status}`);
+    const json = (await res.json()) as { id: string };
+    return { provider: 'onfido', provider_applicant_id: json.id, status: 'pending', level: 'basic' };
+  }
+
+  async getStatus(id: string) {
+    const res = await fetch(`${this.baseUrl}/applicants/${id}/checks`, {
+      headers: { 'Authorization': `Token token=${this.apiToken}` },
+    });
+    if (!res.ok) throw new Error(`Onfido getStatus failed: ${res.status}`);
+    const json = (await res.json()) as { checks?: Array<{ result?: string }> };
+    const latest = json.checks?.[0]?.result;
+    const status: KycStatus = latest === 'clear' ? 'approved' : latest === 'consider' ? 'rejected' : 'pending';
+    return { status, level: 'basic' as KycLevel };
+  }
+
+  async requestUpload(id: string, kind: 'identity' | 'selfie' | 'address_proof'): Promise<KycUploadTicket> {
+    return {
+      upload_url: `${this.baseUrl}/documents?applicant_id=${id}&type=${kind}`,
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    };
+  }
+
+  verifyWebhookSignature(rawBody: string, signature: string): boolean {
+    return typeof signature === 'string' && signature.length > 0 && rawBody.length > 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Factory
+// ---------------------------------------------------------------------------
+export function getKycProvider(): KycProvider {
+  const provider = process.env.KYC_PROVIDER ?? 'sumsub';
+  switch (provider) {
+    case 'sumsub':
+      return new SumsubProvider(
+        must('SUMSUB_APP_TOKEN'),
+        must('SUMSUB_SECRET_KEY'),
+      );
+    case 'onfido':
+      return new OnfidoProvider(must('ONFIDO_API_TOKEN'));
+    default:
+      throw new Error(`Unknown KYC_PROVIDER: ${provider}`);
+  }
+}
+
+function must(key: string): string {
+  const v = process.env[key];
+  if (!v) throw new Error(`${key} is required but unset`);
+  return v;
+}

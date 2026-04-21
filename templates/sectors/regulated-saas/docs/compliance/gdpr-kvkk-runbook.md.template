@@ -1,0 +1,107 @@
+# BetaRegulated — GDPR + KVKK operations runbook
+
+Covers the overlap between EU General Data Protection Regulation (GDPR) and Turkish Kişisel Verilerin Korunması Kanunu (KVKK, Law No. 6698). Both frameworks are treated as one operational surface; differences are flagged inline as **[GDPR]** or **[KVKK]**.
+
+## 1. Roles
+
+| Role | Name / contact | Responsibility |
+|---|---|---|
+| Data Controller | BetaRegulated Yazılım A.Ş. | Determines purposes + means of processing |
+| **[GDPR]** EU Representative (Art. 27) | `<name>, <address>, eu-rep@betaregulated.example.com` | Required if no EU establishment |
+| **[KVKK]** VERBİS temsilcisi | `<ad-soyad>, verbis@betaregulated.example.com` | VERBİS kaydı + Kurul yazışmaları |
+| DPO (Data Protection Officer) | `<name>, dpo@betaregulated.example.com, +90 xxx xxx xxxx` | Oversees compliance, single point of contact for authorities |
+| Incident Commander | On-call rotation (see PagerDuty) | Leads breach response |
+
+## 2. DSAR (Data Subject Access Request) flow
+
+**[GDPR Art. 12 / KVKK Madde 11-13]** timeframe: respond within **30 calendar days** (extendable by 60 days with justification notice).
+
+```mermaid
+flowchart LR
+  A[User submits request via /account/privacy or dpo@] --> B[Intake form validates identity]
+  B -->|Verified| C[Create dsar_requests row]
+  B -->|Not verified| D[Request additional ID proof — do NOT proceed]
+  C --> E[Export job queries tenant_id + subject_user_id across all tables]
+  E --> F[Review for third-party data + legal holds]
+  F --> G[Sign PDF + deliver via encrypted channel]
+  G --> H[Update dsar_requests.status = 'fulfilled' + completed_at]
+```
+
+### 2.1 Request types
+
+| Type | Action |
+|---|---|
+| Access (Art. 15 / Mad. 11/1-b) | Export all personal data linked to the subject |
+| Rectification (Art. 16) | Update fields + log via `compliance_audit_log` |
+| Erasure / "right to be forgotten" (Art. 17) | Soft-delete + scheduled hard purge; preserve immutable audit log per legal basis |
+| Portability (Art. 20) | Machine-readable JSON or CSV export |
+| Restriction (Art. 18) | Flag rows as read-only via `data_residency_config.restricted=true` |
+| Objection (Art. 21) | Stop marketing processing; keep contractual processing |
+
+### 2.2 Identity verification
+
+- Minimum two factors: authenticated session + secondary confirmation (email OTP or government-ID upload).
+- Failed verification → log attempt, do not proceed, respond with the refusal reason.
+
+## 3. Breach notification
+
+**Authorities:**
+- **[GDPR Art. 33]** Supervisory authority — within **72 hours** of awareness.
+- **[KVKK Madde 12/5]** Kişisel Verileri Koruma Kurulu — "en kısa sürede ve 72 saat içinde".
+- **Data subjects** **[GDPR Art. 34]** — without undue delay if high risk.
+
+### 3.1 Timeline
+
+| T+ | Action |
+|---|---|
+| 0 h | Incident detected (alert, report) — incident-commander paged |
+| < 1 h | Triage: scope, systems, affected subjects, data categories |
+| < 4 h | Containment: isolate affected systems, rotate compromised credentials |
+| < 24 h | Draft notification text, engage DPO + legal counsel |
+| < 72 h | **Submit to supervisory authority and KVKK** |
+| < 72 h | Row inserted into `breach_notifications` (see migration) |
+| ≤ 5 days | If high risk, notify data subjects directly |
+| +7 days | Post-mortem + remediation plan |
+| +30 days | Follow-up report to authority |
+
+### 3.2 Required content
+
+Must cover: nature of breach, categories + approximate number of subjects, DPO contact, likely consequences, measures taken/proposed.
+
+## 4. Processing Activities Register (ROPA)
+
+**[GDPR Art. 30]** mandatory if ≥250 employees or systematic processing. **[KVKK]** VERBİS registration mandatory regardless of size for most entities.
+
+Stored in the `processing_activities` table. Fields: `purpose`, `legal_basis`, `data_categories`, `data_subjects`, `recipients`, `retention_period`, `cross_border_transfers`, `safeguards`.
+
+Export script:
+```bash
+pnpm run compliance:ropa-export > reports/current/ropa-$(date +%Y%m%d).json
+```
+
+## 5. Sub-processor management
+
+- Vendor list lives in `docs/governance/vendor-register.md`.
+- Each sub-processor requires:
+  - Signed **[GDPR]** Art. 28 DPA and **[KVKK]** veri işleyen sözleşmesi.
+  - **[GDPR]** SCC (Standard Contractual Clauses, 2021/914/EU) if US/international.
+  - **[KVKK]** Kurul yazılı izni + açık rıza if transfer target not in the adequate-country list.
+- Customer-facing sub-processor list published on `/legal/subprocessors` with 30-day change notice.
+
+## 6. Retention & disposal
+
+| Data class | Retention | Legal basis |
+|---|---|---|
+| Account records | Life of contract + 10 years (Turkish Commercial Code) | Legal obligation |
+| Billing / invoice | 10 years | Tax / commercial law |
+| Compliance audit log | 7 years | SOC 2 + KVKK yükümlülükleri |
+| Marketing consent records | Until withdrawal | Consent |
+| Support tickets with PII | 24 months after resolution | Legitimate interest |
+
+Automated purge: `supabase functions invoke retention-purge` scheduled nightly.
+
+## 7. Cross-references
+
+- `docs/compliance/data-residency.md` — where this data physically lives
+- `supabase/migrations/00005_regulated_schema.sql` — tables that back this runbook
+- `docs/compliance/auto-reports.md` — scheduled reporting

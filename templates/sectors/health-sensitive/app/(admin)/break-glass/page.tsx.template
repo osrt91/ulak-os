@@ -1,0 +1,207 @@
+// {{product_name_pascal}} — break-glass emergency PHI access (admin, health-sensitive overlay)
+//
+// Protocol:
+//   1. Admin requests session: POST with reason + patient_user_id
+//   2. SECOND admin must approve (break_glass_distinct_approver trigger enforces)
+//   3. On approval, /api/admin/break-glass/:id sends alert to compliance officer
+//      (email or pager via infra.notifications) and records alerted_compliance_at
+//   4. Session expires after 4 hours; every PHI read during window writes
+//      phi_access_log w/ access_reason='break_glass' + break_glass_session_id
+
+"use client";
+
+import { useEffect, useState } from 'react'
+
+import { t } from '@/lib/i18n'
+import { formatDateTime } from '@/lib/i18n/format'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Alert } from '@/components/ui/alert'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmptyState } from '@/components/shared/empty-state'
+
+type SessionStatus = 'pending' | 'approved' | 'denied' | 'expired' | 'revoked'
+
+interface SessionRow {
+  id: string
+  requested_by: string
+  requested_by_email: string
+  patient_user_id: string
+  patient_email: string
+  reason: string
+  status: SessionStatus
+  expires_at: string
+  approved_at: string | null
+  alerted_compliance_at: string | null
+  created_at: string
+  approvals: { approver_email: string; decision: 'approve' | 'deny'; note: string | null; created_at: string }[]
+}
+
+function statusVariant(s: SessionStatus): 'warning' | 'success' | 'danger' | 'neutral' {
+  if (s === 'pending') return 'warning'
+  if (s === 'approved') return 'success'
+  if (s === 'denied' || s === 'revoked') return 'danger'
+  return 'neutral'
+}
+
+function minutesRemaining(expiresAt: string): number {
+  return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 60000))
+}
+
+export default function BreakGlassPage() {
+  const [sessions, setSessions] = useState<SessionRow[] | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [form, setForm] = useState({ patient_email: '', reason: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [actingId, setActingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/admin/break-glass', { cache: 'no-store' })
+        if (!res.ok) throw new Error()
+        const json = (await res.json()) as { sessions: SessionRow[] }
+        if (!cancelled) setSessions(json.sessions)
+      } catch {
+        if (!cancelled) setErr(t('admin.break-glass.load-failed'))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  async function onRequest(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.reason.trim() || !form.patient_email.trim()) return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/admin/break-glass', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (res.ok) {
+        const { session } = (await res.json()) as { session: SessionRow }
+        setSessions((sessions ?? []).concat([session]))
+        setForm({ patient_email: '', reason: '' })
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function onApprove(session: SessionRow, decision: 'approve' | 'deny', note?: string) {
+    setActingId(session.id)
+    try {
+      const res = await fetch(`/api/admin/break-glass/${session.id}/approve`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ decision, note }),
+      })
+      if (res.ok) {
+        const { session: updated } = (await res.json()) as { session: SessionRow }
+        setSessions((sessions ?? []).map((s) => s.id === session.id ? updated : s))
+      }
+    } finally {
+      setActingId(null)
+    }
+  }
+
+  return (
+    <div className="space-y-8 max-w-4xl">
+      <header className="space-y-2">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">{t('admin.break-glass.title')}</h1>
+        <p className="text-ink-muted">{t('admin.break-glass.subtitle')}</p>
+      </header>
+
+      <Alert variant="warning" role="note">
+        <strong>{t('admin.break-glass.policy-title')}</strong>
+        <ul className="mt-2 text-sm list-disc pl-5 space-y-1">
+          <li>{t('admin.break-glass.policy.second-admin')}</li>
+          <li>{t('admin.break-glass.policy.four-hours')}</li>
+          <li>{t('admin.break-glass.policy.compliance-alert')}</li>
+          <li>{t('admin.break-glass.policy.all-access-logged')}</li>
+        </ul>
+      </Alert>
+
+      <section className="space-y-3">
+        <h2 className="font-display text-xl font-semibold">{t('admin.break-glass.request-title')}</h2>
+        <form onSubmit={onRequest} className="space-y-3 rounded-lg border border-surface-strong bg-surface-raised p-4">
+          <div>
+            <label htmlFor="patient-email" className="text-sm font-medium">{t('admin.break-glass.patient-email')}</label>
+            <Input
+              id="patient-email" type="email" required
+              value={form.patient_email}
+              onChange={(e) => setForm({ ...form, patient_email: e.target.value })}
+            />
+          </div>
+          <div>
+            <label htmlFor="reason" className="text-sm font-medium">{t('admin.break-glass.reason')}</label>
+            <Textarea
+              id="reason" required rows={3}
+              value={form.reason}
+              onChange={(e) => setForm({ ...form, reason: e.target.value })}
+              placeholder={t('admin.break-glass.reason-placeholder')}
+            />
+          </div>
+          <Button type="submit" disabled={submitting}>{t('admin.break-glass.request-submit')}</Button>
+        </form>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-display text-xl font-semibold">{t('admin.break-glass.open-sessions')}</h2>
+        {err ? <Alert variant="destructive" role="alert">{err}</Alert> : null}
+        {sessions === null ? (
+          <div className="h-32 bg-surface-muted rounded animate-pulse" aria-busy="true" />
+        ) : sessions.length === 0 ? (
+          <EmptyState title={t('admin.break-glass.empty-title')} body={t('admin.break-glass.empty-body')} />
+        ) : (
+          <div className="space-y-3">
+            {sessions.map((s) => {
+              const minsLeft = s.status === 'approved' ? minutesRemaining(s.expires_at) : null
+              return (
+                <Card key={s.id}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between gap-3">
+                      <span className="text-base">{s.patient_email}</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={statusVariant(s.status)}>{t(`admin.break-glass.status.${s.status}`)}</Badge>
+                        {minsLeft !== null ? <Badge variant="outline">{t('admin.break-glass.mins-left', { n: minsLeft })}</Badge> : null}
+                        {s.alerted_compliance_at ? <Badge variant="info">{t('admin.break-glass.compliance-alerted')}</Badge> : null}
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <p><span className="text-ink-muted">{t('admin.break-glass.requested-by')}:</span> {s.requested_by_email}</p>
+                    <p><span className="text-ink-muted">{t('admin.break-glass.when')}:</span> {formatDateTime(s.created_at)}</p>
+                    <p className="pt-2 border-t border-surface-strong"><strong>{t('admin.break-glass.reason-label')}:</strong> {s.reason}</p>
+                    {s.approvals.length > 0 ? (
+                      <ul className="pt-2 border-t border-surface-strong text-xs">
+                        {s.approvals.map((a, i) => (
+                          <li key={i}>
+                            {t(`admin.break-glass.decision.${a.decision}`)} — {a.approver_email} — {formatDateTime(a.created_at)}
+                            {a.note ? <span className="italic text-ink-muted ml-2">"{a.note}"</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {s.status === 'pending' ? (
+                      <div className="flex gap-2 pt-3 border-t border-surface-strong">
+                        <Button size="sm" disabled={actingId === s.id} onClick={() => onApprove(s, 'approve')}>
+                          {t('admin.break-glass.approve')}
+                        </Button>
+                        <Button size="sm" variant="destructive-outline" disabled={actingId === s.id} onClick={() => onApprove(s, 'deny')}>
+                          {t('admin.break-glass.deny')}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}

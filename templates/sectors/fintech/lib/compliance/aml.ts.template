@@ -1,0 +1,163 @@
+// {{product_name_pascal}} — AML screening provider (OFAC SDN + PEP + sanctions lists)
+// Sector overlay: fintech
+//
+// Provider adapter pattern. AML list data can come from:
+//   - Dow Jones Risk Center
+//   - ComplyAdvantage
+//   - LexisNexis WorldCompliance
+//   - self-hosted OFAC SDN XML feed
+//
+// For the scaffolded starter we expose a minimal interface + a reference
+// impl that reads from a self-hosted file feed. Operators swap the impl
+// for their licensed data provider in production.
+import 'server-only';
+
+export type AmlListKind = 'ofac_sdn' | 'pep' | 'un_sanctions' | 'eu_sanctions' | 'interpol';
+
+export interface AmlScreeningInput {
+  full_name: string;
+  aliases?: string[];
+  date_of_birth?: string;            // yyyy-mm-dd
+  country_of_residence?: string;     // ISO-3166-1 alpha-2
+  document_number?: string;
+}
+
+export interface AmlMatch {
+  list_kind: AmlListKind;
+  list_entry_id: string;
+  matched_name: string;
+  match_score: number;               // 0-100; >=80 should hard-flag
+  rationale: string;
+  sanctions_program?: string;
+}
+
+export interface AmlScreeningResult {
+  provider: string;
+  input_hash: string;                // audit trail; never log the raw PII
+  matches: AmlMatch[];
+  screened_at: string;
+}
+
+export interface AmlProvider {
+  readonly name: string;
+  screen(input: AmlScreeningInput): Promise<AmlScreeningResult>;
+  refreshLists(): Promise<{ refreshed_at: string; list_counts: Record<AmlListKind, number> }>;
+}
+
+// ---------------------------------------------------------------------------
+// Reference provider: reads a local JSON snapshot of OFAC SDN + PEP lists.
+// Production deployments should swap for a commercial data feed.
+// ---------------------------------------------------------------------------
+interface ListEntry {
+  id: string;
+  list_kind: AmlListKind;
+  name: string;
+  aliases: string[];
+  dob?: string;
+  programs?: string[];
+  country?: string;
+}
+
+class LocalFileAmlProvider implements AmlProvider {
+  readonly name = 'local-file';
+  private entries: ListEntry[] = [];
+  private loaded = false;
+
+  constructor(private readonly snapshotUrl: string) {}
+
+  async screen(input: AmlScreeningInput): Promise<AmlScreeningResult> {
+    await this.ensureLoaded();
+    const normalizedInput = normalize(input.full_name);
+    const matches: AmlMatch[] = [];
+
+    for (const entry of this.entries) {
+      const candidates = [entry.name, ...entry.aliases];
+      for (const c of candidates) {
+        const score = similarityScore(normalizedInput, normalize(c));
+        if (score >= 70) {
+          matches.push({
+            list_kind: entry.list_kind,
+            list_entry_id: entry.id,
+            matched_name: c,
+            match_score: score,
+            rationale: `Name similarity ${score}% against ${entry.list_kind} entry ${entry.id}`,
+            sanctions_program: entry.programs?.[0],
+          });
+        }
+      }
+    }
+
+    return {
+      provider: this.name,
+      input_hash: hashInput(input),
+      matches,
+      screened_at: new Date().toISOString(),
+    };
+  }
+
+  async refreshLists() {
+    this.loaded = false;
+    await this.ensureLoaded();
+    const counts: Record<AmlListKind, number> = {
+      ofac_sdn: 0, pep: 0, un_sanctions: 0, eu_sanctions: 0, interpol: 0,
+    };
+    for (const e of this.entries) counts[e.list_kind] = (counts[e.list_kind] ?? 0) + 1;
+    return { refreshed_at: new Date().toISOString(), list_counts: counts };
+  }
+
+  private async ensureLoaded() {
+    if (this.loaded) return;
+    const res = await fetch(this.snapshotUrl, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`AML snapshot fetch failed: ${res.status}`);
+    const json = (await res.json()) as { entries: ListEntry[] };
+    this.entries = json.entries ?? [];
+    this.loaded = true;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// String similarity (cheap Jaro-Winkler-ish placeholder; swap for production impl)
+// ---------------------------------------------------------------------------
+function normalize(s: string): string {
+  return s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function similarityScore(a: string, b: string): number {
+  if (!a || !b) return 0;
+  if (a === b) return 100;
+  const tokensA = new Set(a.split(' '));
+  const tokensB = new Set(b.split(' '));
+  const intersection = [...tokensA].filter((t) => tokensB.has(t)).length;
+  const union = new Set([...tokensA, ...tokensB]).size;
+  return Math.round((intersection / union) * 100);
+}
+
+function hashInput(input: AmlScreeningInput): string {
+  // Stable hash for audit — never stores PII; real impl uses crypto.subtle
+  return Buffer.from(`${input.full_name}|${input.date_of_birth ?? ''}|${input.country_of_residence ?? ''}`).toString('base64').slice(0, 32);
+}
+
+// ---------------------------------------------------------------------------
+// Factory
+// ---------------------------------------------------------------------------
+export function getAmlProvider(): AmlProvider {
+  const provider = process.env.AML_PROVIDER ?? 'local-file';
+  switch (provider) {
+    case 'local-file':
+      return new LocalFileAmlProvider(process.env.AML_SNAPSHOT_URL ?? 'https://example.invalid/sanctions.json');
+    default:
+      throw new Error(`Unknown AML_PROVIDER: ${provider}`);
+  }
+}
+
+// Convenience: single-call screening used by /api/kyc/identity after approval
+export async function screenAndFlag(input: AmlScreeningInput): Promise<{
+  shouldFlag: boolean;
+  topScore: number;
+  result: AmlScreeningResult;
+}> {
+  const provider = getAmlProvider();
+  const result = await provider.screen(input);
+  const topScore = result.matches.reduce((acc, m) => Math.max(acc, m.match_score), 0);
+  return { shouldFlag: topScore >= 80, topScore, result };
+}

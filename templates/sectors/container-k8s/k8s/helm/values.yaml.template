@@ -1,0 +1,103 @@
+# DeltaK8s umbrella chart values
+# Override per environment via values-<env>.yaml. Never commit real secrets;
+# use sealed-secrets or external-secrets + a vault of record.
+
+global:
+  tenantSlug: "{{TENANT_SLUG}}"
+  environment: "{{ENVIRONMENT}}"          # dev | staging | prod
+  dataRegion: "{{DATA_REGION}}"           # eu-central | tr-central | us-east
+  complianceTier: "standard"              # or "regulated" (pair with regulated-saas overlay)
+  imageRegistry: "ghcr.io/deltak8s"
+  imagePullSecrets: []
+
+# ------------------------
+# Web (frontend)
+# ------------------------
+web:
+  enabled: true
+  image:
+    repository: delta-web
+    tag: "{{WEB_IMAGE_TAG}}"
+    pullPolicy: IfNotPresent
+  replicas: 3
+  maxReplicas: 10
+  minAvailable: "50%"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  config:
+    LOG_LEVEL: info
+    NEXT_PUBLIC_SITE_URL: "https://app.deltak8s.example.com"
+  ingress:
+    enabled: true
+    host: "app.deltak8s.example.com"
+    tlsSecret: "delta-web-tls"
+
+# ------------------------
+# API (backend)
+# ------------------------
+api:
+  enabled: true
+  image:
+    repository: delta-api
+    tag: "{{API_IMAGE_TAG}}"
+    pullPolicy: IfNotPresent
+  replicas: 2
+  minAvailable: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  pvc:
+    storageClass: "gp3"
+    size: 5Gi
+  config:
+    LOG_LEVEL: info
+    UVICORN_WORKERS: "2"
+
+# ------------------------
+# Namespace / quotas
+# ------------------------
+namespace:
+  ownerTeam: "platform-team"
+  costCenter: "cc-1001"
+  quota:
+    cpuRequest: "4"
+    cpuLimit: "8"
+    memRequest: "8Gi"
+    memLimit: "16Gi"
+    storage: "100Gi"
+    pvcCount: "10"
+    podCount: "50"
+
+# ------------------------
+# Subchart toggles
+# ------------------------
+ingressNginx:
+  enabled: false       # usually cluster-scoped — set true only on a fresh cluster
+certManager:
+  enabled: false
+observability:
+  enabled: true
+  kube-prometheus-stack:
+    grafana:
+      adminPassword: "change-me-inject-via-external-secrets"
+
+# ------------------------
+# Per-environment overrides — reference
+# ------------------------
+# values-dev.yaml example:
+#   web: { replicas: 1, maxReplicas: 2 }
+#   api: { replicas: 1 }
+#
+# values-prod.yaml example:
+#   web: { replicas: 5, maxReplicas: 20, minAvailable: "75%" }
+#   api: { replicas: 3, minAvailable: 2 }
+#   global: { complianceTier: "regulated" }

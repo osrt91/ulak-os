@@ -1,0 +1,68 @@
+# BetaRegulated — SOC 2 Type II readiness checklist
+
+Derived from the AICPA Trust Services Criteria (TSC 2017, updated 2022). This checklist is used both as a gap assessment and as the evidence index for auditors.
+
+> Audit frequency hint: aim for a 12-month observation window; interim sampling each quarter.
+
+## 1. Security (Common Criteria, mandatory)
+
+| # | Control | Evidence artefact | Owner | Frequency |
+|---|---|---|---|---|
+| CC1.1 | Formal org chart + code of conduct | `docs/governance/code-of-conduct.md` + HRIS export | People Ops | Annual |
+| CC2.1 | Information & communication policy | `docs/governance/information-policy.md` | Compliance | Annual |
+| CC3.1 | Risk assessment (threat model) | `reports/current/threat-model.md` | Security | Quarterly |
+| CC4.1 | Monitoring of controls | SIEM dashboards + alert history export | Security | Monthly |
+| CC5.1 | Access control policy | `docs/governance/access-control.md` + IAM export | Security | Quarterly |
+| CC5.2 | Logical access provisioning + deprovisioning SLA | HRIS leaver report cross-referenced with IAM audit | People Ops + Security | Each leaver |
+| CC6.1 | Logical access authentication | SSO IdP config + MFA enforcement screenshot | Security | Quarterly |
+| CC6.6 | Vulnerability management | Dependabot / Snyk report + remediation SLA stats | Engineering | Monthly |
+| CC6.7 | Data-in-transit encryption | TLS config scan (Qualys SSL Labs ≥ A) | Infra | Quarterly |
+| CC6.8 | Data-at-rest encryption | Disk-encryption attestation + KMS key rotation log | Infra | Quarterly |
+| CC7.1 | Change management | PR review evidence + merge logs | Engineering | Continuous |
+| CC7.2 | Incident response plan | `docs/runbooks/incident-response.md` + tabletop exercise log | Security | Biannual |
+| CC8.1 | Change authorisation | Merge-to-main protection + required reviewer count | Engineering | Continuous |
+| CC9.1 | Risk mitigation — vendor assessment | `docs/governance/vendor-register.md` | Compliance | Annual per vendor |
+| CC9.2 | Vendor risk monitoring | Sub-processor sub-breach notifications + SOC 2 reports on file | Compliance | Continuous |
+
+## 2. Availability (optional TSC, recommended for SaaS)
+
+| # | Control | Evidence |
+|---|---|---|
+| A1.1 | Capacity planning | Quarterly capacity review slides + autoscaling config |
+| A1.2 | Backup + restore testing | `selfhost-backup-restore.md` drill evidence |
+| A1.3 | DR / BCP plan | `docs/runbooks/dr-plan.md` + last tabletop record |
+
+## 3. Processing Integrity (optional, include if the platform processes transactions)
+
+| # | Control | Evidence |
+|---|---|---|
+| PI1.1 | Input validation | Schema-validation tests (Zod/Pydantic) in CI + mutation test coverage |
+| PI1.4 | Output accuracy | Reconciliation reports between upstream + downstream data stores |
+| PI1.5 | Error handling | Structured-error format + error-rate dashboards |
+
+## 4. Confidentiality (include if the platform handles customer-confidential data)
+
+| # | Control | Evidence |
+|---|---|---|
+| C1.1 | Classification of confidential info | Data-classification register |
+| C1.2 | Destruction of confidential info at end of retention | Deletion evidence (DSAR + scheduled purge jobs) |
+
+## 5. Privacy (include if subject to CCPA/GDPR/KVKK)
+
+| # | Control | Evidence |
+|---|---|---|
+| P1.1 | Privacy notice | Public privacy policy + CMP screenshots |
+| P3.1 | Data-subject access + correction | DSAR log from `dsar_requests` table |
+| P4.1 | Retention + disposal | Retention schedule + automated purge job logs |
+| P6.1 | Breach notification | `breach_notifications` register + regulator submission proofs |
+
+## 6. Evidence collection workflow
+
+1. Every control maps to an artefact path in this repo or a URL in the evidence vault.
+2. The evidence-collection job runs monthly via CI (see `docs/governance/auto-reports.md`).
+3. Artefacts are sealed (hash-chained) and stored in an immutable bucket.
+4. Gap findings create issues with the `compliance:soc2` label and a due date tied to audit window.
+
+## 7. Readiness score (self-assessment)
+
+Mark each control `✅ ready`, `🟡 partial`, `❌ gap`. A run is considered Type II-ready only when ≥95% of mandatory (CC*) controls are green and the observation window has ≥6 months of evidence.

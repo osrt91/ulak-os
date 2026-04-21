@@ -1,0 +1,178 @@
+-- BetaRegulated — compliance schema
+-- Adds: compliance_audit_log (append-only, 7-year), data_residency_config,
+-- processing_activities, dsar_requests, breach_notifications.
+-- AP-REG-01: PHI/PII must NEVER land in standard audit_log. Triggers below enforce.
+-- Depends on earlier migrations providing tenants, profiles, auth.users.
+
+------------------------------------------------------------------
+-- 1. data_residency_config — per-tenant region binding
+------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.data_residency_config (
+  tenant_id          uuid PRIMARY KEY REFERENCES public.tenants(id) ON DELETE CASCADE,
+  data_region        text NOT NULL CHECK (data_region IN ('eu-central','tr-central','us-east')),
+  restricted         boolean NOT NULL DEFAULT false,  -- set true when subject restriction under GDPR Art. 18
+  lawful_basis       text NOT NULL,                    -- 'contract' | 'consent' | 'legitimate_interest' | ...
+  notes              text,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.data_residency_config ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY residency_config_tenant_isolation
+  ON public.data_residency_config
+  USING (tenant_id = (auth.jwt() ->> 'tenant_id')::uuid);
+
+------------------------------------------------------------------
+-- 2. processing_activities — Art. 30 ROPA + KVKK VERBİS
+------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.processing_activities (
+  id                         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id                  uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  activity_name              text NOT NULL,
+  purpose                    text NOT NULL,
+  legal_basis                text NOT NULL,
+  data_categories            text[] NOT NULL,
+  data_subject_categories    text[] NOT NULL,
+  recipients                 text[] NOT NULL DEFAULT '{}',
+  retention_period           interval NOT NULL,
+  cross_border_transfers     jsonb NOT NULL DEFAULT '[]'::jsonb,
+  safeguards                 text,
+  created_at                 timestamptz NOT NULL DEFAULT now(),
+  updated_at                 timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_processing_activities_tenant ON public.processing_activities(tenant_id);
+
+ALTER TABLE public.processing_activities ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY processing_activities_tenant_isolation
+  ON public.processing_activities
+  USING (tenant_id = (auth.jwt() ->> 'tenant_id')::uuid);
+
+------------------------------------------------------------------
+-- 3. dsar_requests — data subject access request lifecycle
+------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.dsar_requests (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id          uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  subject_user_id    uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  subject_email      text NOT NULL,
+  request_type       text NOT NULL CHECK (request_type IN ('access','rectification','erasure','portability','restriction','objection')),
+  status             text NOT NULL DEFAULT 'received'
+                        CHECK (status IN ('received','identity_verification','in_progress','fulfilled','refused','withdrawn')),
+  verification_evidence jsonb,
+  fulfillment_notes  text,
+  received_at        timestamptz NOT NULL DEFAULT now(),
+  due_at             timestamptz NOT NULL DEFAULT (now() + interval '30 days'),
+  completed_at       timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS idx_dsar_requests_tenant ON public.dsar_requests(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_dsar_requests_status ON public.dsar_requests(status) WHERE status NOT IN ('fulfilled','refused','withdrawn');
+
+ALTER TABLE public.dsar_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY dsar_requests_tenant_isolation
+  ON public.dsar_requests
+  USING (tenant_id = (auth.jwt() ->> 'tenant_id')::uuid);
+
+------------------------------------------------------------------
+-- 4. breach_notifications — incident register
+------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.breach_notifications (
+  id                        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id                 uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  detected_at               timestamptz NOT NULL,
+  contained_at              timestamptz,
+  nature                    text NOT NULL,
+  affected_subject_count    integer,
+  data_categories           text[] NOT NULL,
+  likely_consequences       text NOT NULL,
+  measures_taken            text NOT NULL,
+  authority_notified_at     timestamptz,
+  subjects_notified_at      timestamptz,
+  authority_submission_ref  text,
+  created_at                timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_breach_notifications_tenant ON public.breach_notifications(tenant_id);
+
+ALTER TABLE public.breach_notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY breach_notifications_tenant_isolation
+  ON public.breach_notifications
+  USING (tenant_id = (auth.jwt() ->> 'tenant_id')::uuid);
+
+------------------------------------------------------------------
+-- 5. compliance_audit_log — append-only, 7-year retention, PHI-aware
+------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.compliance_audit_log (
+  id              bigserial PRIMARY KEY,
+  tenant_id       uuid REFERENCES public.tenants(id) ON DELETE SET NULL,
+  actor_user_id   uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  action          text NOT NULL,
+  target_table    text NOT NULL,
+  target_row_id   text,
+  channel         text NOT NULL DEFAULT 'standard'
+                     CHECK (channel IN ('standard','phi','pii-sensitive')),
+  payload_hash    text NOT NULL,  -- never store raw PHI; hash only
+  prev_hash       text,           -- tamper-evident chain
+  occurred_at     timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_compliance_audit_log_tenant_time
+  ON public.compliance_audit_log(tenant_id, occurred_at DESC);
+
+-- Append-only enforcement
+REVOKE UPDATE, DELETE ON public.compliance_audit_log FROM PUBLIC, authenticated, anon;
+REVOKE UPDATE, DELETE ON public.compliance_audit_log FROM service_role;
+
+CREATE OR REPLACE FUNCTION public.prevent_compliance_log_mutation()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'compliance_audit_log is append-only (AP-REG-01)';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_compliance_log_no_update ON public.compliance_audit_log;
+CREATE TRIGGER trg_compliance_log_no_update
+  BEFORE UPDATE OR DELETE ON public.compliance_audit_log
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_compliance_log_mutation();
+
+------------------------------------------------------------------
+-- 6. PHI-aware routing: forbid PHI/PII in standard audit_log
+------------------------------------------------------------------
+-- Assumes a `public.audit_log` table exists with column `metadata jsonb`.
+-- This trigger blocks rows where metadata contains any key the compliance team
+-- has classified as PHI/PII. Those rows must be written to compliance_audit_log
+-- with channel='phi' via the application layer (payload hashed, not raw).
+
+CREATE OR REPLACE FUNCTION public.reject_phi_in_standard_audit()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  forbidden_keys text[] := ARRAY['ssn','tckn','dob','medical_record','patient_id','iban','card_pan'];
+  k text;
+BEGIN
+  IF NEW.metadata IS NULL THEN
+    RETURN NEW;
+  END IF;
+  FOREACH k IN ARRAY forbidden_keys LOOP
+    IF NEW.metadata ? k THEN
+      RAISE EXCEPTION 'AP-REG-01: PHI/PII key "%" cannot be written to standard audit_log. Use compliance_audit_log channel=phi.', k;
+    END IF;
+  END LOOP;
+  RETURN NEW;
+END;
+$$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'audit_log' AND relnamespace = 'public'::regnamespace) THEN
+    DROP TRIGGER IF EXISTS trg_reject_phi_audit ON public.audit_log;
+    CREATE TRIGGER trg_reject_phi_audit
+      BEFORE INSERT OR UPDATE ON public.audit_log
+      FOR EACH ROW EXECUTE FUNCTION public.reject_phi_in_standard_audit();
+  END IF;
+END
+$$;

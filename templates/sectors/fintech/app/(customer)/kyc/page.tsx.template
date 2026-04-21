@@ -1,0 +1,211 @@
+// {{product_name_pascal}} — KYC onboarding (3-step: identity doc + selfie + address proof)
+// Sector overlay: fintech
+//
+// SECURITY: uploads go through presigned URLs; the server never accepts
+// base64-encoded documents from the client. Verification status is fetched
+// from DB (populated by provider webhook) — never set client-side.
+"use client";
+
+import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+import { t } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+
+const identitySchema = z.object({
+  document_type: z.enum(["passport", "national_id", "drivers_license"]),
+  document_number: z.string().min(3).max(64),
+  document_country: z.string().length(2),
+  first_name: z.string().min(1).max(100),
+  last_name: z.string().min(1).max(100),
+  date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+type IdentityValues = z.infer<typeof identitySchema>;
+
+const addressSchema = z.object({
+  line1: z.string().min(1).max(200),
+  line2: z.string().max(200).optional(),
+  city: z.string().min(1).max(100),
+  postal_code: z.string().min(1).max(20),
+  country: z.string().length(2),
+});
+type AddressValues = z.infer<typeof addressSchema>;
+
+type Step = "identity" | "selfie" | "address" | "complete";
+
+export default function KycOnboardingPage() {
+  const [step, setStep] = useState<Step>("identity");
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const identityForm = useForm<IdentityValues>({ resolver: zodResolver(identitySchema) });
+  const addressForm = useForm<AddressValues>({ resolver: zodResolver(addressSchema) });
+
+  const progress = useMemo(() => {
+    switch (step) {
+      case "identity": return 25;
+      case "selfie": return 50;
+      case "address": return 75;
+      case "complete": return 100;
+    }
+  }, [step]);
+
+  const submitIdentity = async (values: IdentityValues) => {
+    setServerError(null);
+    const res = await fetch("/api/kyc/identity", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify(values),
+    });
+    if (!res.ok) {
+      setServerError(t("fintech.kyc.identity.error"));
+      return;
+    }
+    setStep("selfie");
+  };
+
+  const submitSelfie = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setServerError(null);
+    setUploading(true);
+    const formData = new FormData(e.currentTarget);
+    // Server returns a presigned URL; client uploads directly to blob store
+    const initRes = await fetch("/api/kyc/selfie/init", { method: "POST" });
+    if (!initRes.ok) {
+      setServerError(t("fintech.kyc.selfie.error"));
+      setUploading(false);
+      return;
+    }
+    const { upload_url } = (await initRes.json()) as { upload_url: string };
+    const file = formData.get("selfie") as File;
+    const putRes = await fetch(upload_url, { method: "PUT", body: file });
+    setUploading(false);
+    if (!putRes.ok) {
+      setServerError(t("fintech.kyc.selfie.error"));
+      return;
+    }
+    setStep("address");
+  };
+
+  const submitAddress = async (values: AddressValues) => {
+    setServerError(null);
+    const res = await fetch("/api/kyc/address", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify(values),
+    });
+    if (!res.ok) {
+      setServerError(t("fintech.kyc.address.error"));
+      return;
+    }
+    setStep("complete");
+  };
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <header className="space-y-2">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          {t("fintech.kyc.title")}
+        </h1>
+        <p className="text-ink-muted">{t("fintech.kyc.subtitle")}</p>
+      </header>
+
+      <div className="h-2 rounded bg-surface-muted overflow-hidden" aria-hidden>
+        <div className="h-full bg-brand-500 transition-all" style={{ width: `${progress}%` }} />
+      </div>
+
+      {serverError ? <Alert variant="destructive" role="alert">{serverError}</Alert> : null}
+
+      {step === "identity" ? (
+        <Card>
+          <CardHeader><CardTitle>{t("fintech.kyc.identity.title")}</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={identityForm.handleSubmit(submitIdentity)} className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-3">
+                <label className="text-sm">
+                  {t("fintech.kyc.identity.first-name")}
+                  <Input {...identityForm.register("first_name")} />
+                </label>
+                <label className="text-sm">
+                  {t("fintech.kyc.identity.last-name")}
+                  <Input {...identityForm.register("last_name")} />
+                </label>
+              </div>
+              <label className="text-sm block">
+                {t("fintech.kyc.identity.dob")}
+                <Input type="date" {...identityForm.register("date_of_birth")} />
+              </label>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <label className="text-sm">
+                  {t("fintech.kyc.identity.doc-type")}
+                  <select {...identityForm.register("document_type")} className="w-full rounded-md border border-surface-strong bg-surface-raised px-3 py-2">
+                    <option value="passport">{t("fintech.kyc.doc.passport")}</option>
+                    <option value="national_id">{t("fintech.kyc.doc.national_id")}</option>
+                    <option value="drivers_license">{t("fintech.kyc.doc.drivers_license")}</option>
+                  </select>
+                </label>
+                <label className="text-sm">
+                  {t("fintech.kyc.identity.doc-country")}
+                  <Input maxLength={2} placeholder="TR" {...identityForm.register("document_country")} />
+                </label>
+                <label className="text-sm">
+                  {t("fintech.kyc.identity.doc-number")}
+                  <Input {...identityForm.register("document_number")} />
+                </label>
+              </div>
+              <Button type="submit">{t("fintech.kyc.next")}</Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {step === "selfie" ? (
+        <Card>
+          <CardHeader><CardTitle>{t("fintech.kyc.selfie.title")}</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={submitSelfie} className="space-y-4">
+              <p className="text-sm text-ink-muted">{t("fintech.kyc.selfie.instructions")}</p>
+              <input type="file" name="selfie" accept="image/jpeg,image/png" required
+                className="block w-full text-sm" />
+              <Button type="submit" disabled={uploading}>
+                {uploading ? t("fintech.kyc.uploading") : t("fintech.kyc.next")}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {step === "address" ? (
+        <Card>
+          <CardHeader><CardTitle>{t("fintech.kyc.address.title")}</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={addressForm.handleSubmit(submitAddress)} className="space-y-3">
+              <Input placeholder={t("fintech.kyc.address.line1")} {...addressForm.register("line1")} />
+              <Input placeholder={t("fintech.kyc.address.line2")} {...addressForm.register("line2")} />
+              <div className="grid sm:grid-cols-3 gap-3">
+                <Input placeholder={t("fintech.kyc.address.city")} {...addressForm.register("city")} />
+                <Input placeholder={t("fintech.kyc.address.postal")} {...addressForm.register("postal_code")} />
+                <Input placeholder="TR" maxLength={2} {...addressForm.register("country")} />
+              </div>
+              <Button type="submit">{t("fintech.kyc.submit")}</Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {step === "complete" ? (
+        <Card>
+          <CardContent className="py-10 text-center space-y-3">
+            <Badge variant="success">{t("fintech.kyc.status.pending")}</Badge>
+            <h2 className="font-display text-xl font-semibold">{t("fintech.kyc.complete.title")}</h2>
+            <p className="text-sm text-ink-muted">{t("fintech.kyc.complete.body")}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  );
+}

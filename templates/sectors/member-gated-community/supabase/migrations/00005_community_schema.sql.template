@@ -1,0 +1,242 @@
+-- {{product_name_pascal}} — member-gated community schema
+-- Migration: 00005_community_schema
+-- Date: {{migration_date}}
+-- Depends on: 00001_initial_schema (tenants + users), 00002_rls_policies
+--
+-- AP-COM-01 guard materialized:
+--   gated_content.is_indexable = false WHEN required_tier <> 'free'
+--   (check constraint ensures sitemap generator never includes premium rows)
+
+-- =============================================================================
+-- TABLE: membership_tiers
+-- One row per tier per tenant (free, basic, pro, founder are seeded).
+-- =============================================================================
+create table if not exists public.membership_tiers (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references public.tenants(id) on delete cascade,
+  slug text not null check (slug in ('free', 'basic', 'pro', 'founder')),
+  rank int not null,                -- ordered 0..3; higher = more access
+  name text not null,
+  monthly_price_usd numeric(10,2) not null default 0,
+  created_at timestamptz not null default now()
+);
+create unique index if not exists membership_tiers_tenant_slug_idx
+  on public.membership_tiers (tenant_id, slug);
+
+-- =============================================================================
+-- TABLE: member_profiles
+-- Per-user profile for the tenant. Privacy flags control which fields appear
+-- in the public directory; server-side filter honors these (defense in depth).
+-- =============================================================================
+create table if not exists public.member_profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  tenant_id uuid not null references public.tenants(id) on delete cascade,
+  handle text not null,
+  display_name text not null,
+  bio text,
+  avatar_url text,
+  location text,
+  expertise text[] not null default '{}',
+  tier_slug text not null default 'free' references public.membership_tiers(slug),
+  show_location boolean not null default false,
+  show_expertise boolean not null default true,
+  show_bio boolean not null default true,
+  show_joined_at boolean not null default true,
+  joined_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists member_profiles_tenant_handle_idx
+  on public.member_profiles (tenant_id, lower(handle));
+create index if not exists member_profiles_tier_idx on public.member_profiles (tenant_id, tier_slug);
+
+drop trigger if exists member_profiles_touch on public.member_profiles;
+create trigger member_profiles_touch before update on public.member_profiles
+  for each row execute function public.touch_updated_at();
+
+-- =============================================================================
+-- TABLE: gated_content
+-- Library rows. Gated via required_tier rank >= user tier rank (check at read).
+-- =============================================================================
+create table if not exists public.gated_content (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references public.tenants(id) on delete cascade,
+  slug text not null,
+  title text not null,
+  summary text not null default '',
+  body_markdown text not null default '',
+  preview_excerpt text,
+  kind text not null check (kind in ('article', 'video', 'template', 'course')),
+  required_tier text not null default 'free' references public.membership_tiers(slug),
+  duration_minutes int,
+  is_indexable boolean not null default true,
+  published_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  -- AP-COM-01: premium content is never indexable for robots/sitemap
+  constraint gated_content_no_premium_index
+    check (required_tier = 'free' or is_indexable = false)
+);
+create unique index if not exists gated_content_tenant_slug_idx on public.gated_content (tenant_id, slug);
+create index if not exists gated_content_tier_idx on public.gated_content (tenant_id, required_tier, published_at desc);
+
+drop trigger if exists gated_content_touch on public.gated_content;
+create trigger gated_content_touch before update on public.gated_content
+  for each row execute function public.touch_updated_at();
+
+-- =============================================================================
+-- TABLE: thread_categories + threads + posts + reactions
+-- =============================================================================
+create table if not exists public.thread_categories (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references public.tenants(id) on delete cascade,
+  slug text not null,
+  name text not null,
+  description text,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+create unique index if not exists thread_categories_tenant_slug_idx on public.thread_categories (tenant_id, slug);
+
+create table if not exists public.threads (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references public.tenants(id) on delete cascade,
+  category_id uuid not null references public.thread_categories(id) on delete restrict,
+  slug text not null,
+  title text not null check (char_length(title) between 3 and 200),
+  author_id uuid not null references auth.users(id),
+  required_tier text not null default 'free' references public.membership_tiers(slug),
+  is_solved boolean not null default false,
+  solution_post_id uuid,
+  reply_count int not null default 0,
+  last_reply_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists threads_tenant_slug_idx on public.threads (tenant_id, slug);
+create index if not exists threads_last_reply_idx on public.threads (tenant_id, last_reply_at desc);
+create index if not exists threads_category_idx on public.threads (category_id, last_reply_at desc);
+
+drop trigger if exists threads_touch on public.threads;
+create trigger threads_touch before update on public.threads
+  for each row execute function public.touch_updated_at();
+
+create table if not exists public.posts (
+  id uuid primary key default gen_random_uuid(),
+  thread_id uuid not null references public.threads(id) on delete cascade,
+  parent_id uuid references public.posts(id) on delete cascade,   -- nested replies
+  author_id uuid not null references auth.users(id),
+  body text not null check (char_length(body) between 1 and 20000),
+  is_solution boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists posts_thread_idx on public.posts (thread_id, created_at);
+create index if not exists posts_parent_idx on public.posts (parent_id);
+
+drop trigger if exists posts_touch on public.posts;
+create trigger posts_touch before update on public.posts
+  for each row execute function public.touch_updated_at();
+
+-- Only one solution per thread
+create unique index if not exists posts_one_solution_per_thread
+  on public.posts (thread_id) where is_solution = true;
+
+-- Wire threads.solution_post_id after posts exists
+alter table public.threads
+  drop constraint if exists threads_solution_fk,
+  add constraint threads_solution_fk
+  foreign key (solution_post_id) references public.posts(id) on delete set null;
+
+create table if not exists public.reactions (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.posts(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  emoji text not null check (emoji in ('+1', 'heart', 'tada', 'eyes', 'thinking')),
+  created_at timestamptz not null default now()
+);
+create unique index if not exists reactions_uniq on public.reactions (post_id, user_id, emoji);
+create index if not exists reactions_post_idx on public.reactions (post_id);
+
+-- =============================================================================
+-- Helper: compare tier ranks for gating checks
+-- =============================================================================
+create or replace function public.tier_rank(p_tenant_id uuid, p_slug text)
+returns int language sql stable as $$
+  select rank from public.membership_tiers
+  where tenant_id = p_tenant_id and slug = p_slug
+  limit 1;
+$$;
+
+-- =============================================================================
+-- RLS: tenant isolation + tier-based gating
+-- =============================================================================
+alter table public.membership_tiers enable row level security;
+alter table public.member_profiles enable row level security;
+alter table public.gated_content enable row level security;
+alter table public.thread_categories enable row level security;
+alter table public.threads enable row level security;
+alter table public.posts enable row level security;
+alter table public.reactions enable row level security;
+
+drop policy if exists tiers_read on public.membership_tiers;
+create policy tiers_read on public.membership_tiers
+  for select using (tenant_id = public.current_tenant_id());
+
+drop policy if exists member_profiles_read on public.member_profiles;
+create policy member_profiles_read on public.member_profiles
+  for select using (tenant_id = public.current_tenant_id());
+drop policy if exists member_profiles_self_write on public.member_profiles;
+create policy member_profiles_self_write on public.member_profiles
+  for update using (user_id = auth.uid()) with check (user_id = auth.uid() and tenant_id = public.current_tenant_id());
+
+drop policy if exists gated_content_tier_gate on public.gated_content;
+create policy gated_content_tier_gate on public.gated_content
+  for select using (
+    tenant_id = public.current_tenant_id()
+    and public.tier_rank(tenant_id, required_tier)
+        <= coalesce(
+          public.tier_rank(tenant_id, (select tier_slug from public.member_profiles where user_id = auth.uid() and tenant_id = public.current_tenant_id())),
+          0
+        )
+  );
+
+drop policy if exists categories_read on public.thread_categories;
+create policy categories_read on public.thread_categories
+  for select using (tenant_id = public.current_tenant_id());
+
+drop policy if exists threads_tier_gate on public.threads;
+create policy threads_tier_gate on public.threads
+  for select using (
+    tenant_id = public.current_tenant_id()
+    and public.tier_rank(tenant_id, required_tier)
+        <= coalesce(
+          public.tier_rank(tenant_id, (select tier_slug from public.member_profiles where user_id = auth.uid() and tenant_id = public.current_tenant_id())),
+          0
+        )
+  );
+
+drop policy if exists threads_author_write on public.threads;
+create policy threads_author_write on public.threads
+  for insert with check (
+    tenant_id = public.current_tenant_id() and author_id = auth.uid()
+  );
+drop policy if exists threads_author_update on public.threads;
+create policy threads_author_update on public.threads
+  for update using (tenant_id = public.current_tenant_id() and author_id = auth.uid())
+  with check (tenant_id = public.current_tenant_id() and author_id = auth.uid());
+
+drop policy if exists posts_read_via_thread on public.posts;
+create policy posts_read_via_thread on public.posts
+  for select using (
+    exists (select 1 from public.threads th where th.id = thread_id and th.tenant_id = public.current_tenant_id())
+  );
+drop policy if exists posts_author_insert on public.posts;
+create policy posts_author_insert on public.posts
+  for insert with check (
+    author_id = auth.uid()
+    and exists (select 1 from public.threads th where th.id = thread_id and th.tenant_id = public.current_tenant_id())
+  );
+
+drop policy if exists reactions_self on public.reactions;
+create policy reactions_self on public.reactions
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());

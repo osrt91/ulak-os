@@ -1,0 +1,111 @@
+// {{product_name_pascal}} — gated content library (free users see paywall preview)
+// AP-COM-01 guard: premium rows have `is_indexable: false` → excluded from sitemap/robots.
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { t } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+
+type Tier = "free" | "basic" | "pro" | "founder";
+const TIER_ORDER: Tier[] = ["free", "basic", "pro", "founder"];
+
+interface LibraryItem {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  kind: "article" | "video" | "template" | "course";
+  required_tier: Tier;
+  unlocked_for_me: boolean;
+  preview_excerpt: string | null;
+  duration_minutes: number | null;
+}
+
+interface LibraryResponse { items: LibraryItem[]; my_tier: Tier; }
+
+export default function LibraryPage(): JSX.Element {
+  const [data, setData] = useState<LibraryResponse | null>(null);
+  const [query, setQuery] = useState("");
+  const [showPaywall, setShowPaywall] = useState<LibraryItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/customer/library", { cache: "no-store" });
+        setData((await res.json()) as LibraryResponse);
+      } catch { setError(t("library.load-failed")); }
+    })();
+  }, []);
+
+  if (error) return <Alert variant="destructive" role="alert">{error}</Alert>;
+  if (!data) return <div className="h-64 bg-surface-muted rounded animate-pulse" />;
+
+  const filtered = data.items.filter((it) => query === "" || it.title.toLowerCase().includes(query.toLowerCase()));
+  const isHigherTier = (required: Tier): boolean =>
+    TIER_ORDER.indexOf(required) > TIER_ORDER.indexOf(data.my_tier);
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{t("library.title")}</h1>
+          <p className="text-ink-muted">{t("library.subtitle")}</p>
+        </div>
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} className="sm:max-w-sm" placeholder={t("library.search-ph")} aria-label={t("library.search-label")} />
+      </header>
+
+      <Alert variant="info">
+        {t("library.your-tier", { tier: t(`tier.${data.my_tier}`) })}
+        {data.my_tier !== "founder" ? (
+          <Link href="/pricing" className="ml-2 underline">{t("library.upgrade-link")}</Link>
+        ) : null}
+      </Alert>
+
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {filtered.map((it) => {
+          const gated = isHigherTier(it.required_tier) && !it.unlocked_for_me;
+          return (
+            <li key={it.id} className="rounded-lg border border-surface-strong bg-surface-raised overflow-hidden flex flex-col">
+              <div className="p-4 flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="neutral">{t(`library.kind.${it.kind}`)}</Badge>
+                  {gated ? <Badge variant="warning">{t(`tier.${it.required_tier}`)}</Badge> : <Badge variant="success">{t("library.unlocked")}</Badge>}
+                </div>
+                <h2 className="font-semibold mb-1">{it.title}</h2>
+                <p className="text-sm text-ink-muted">{gated ? (it.preview_excerpt ?? it.summary) : it.summary}</p>
+                {it.duration_minutes ? (
+                  <p className="text-xs text-ink-subtle mt-2">{t("library.duration", { n: it.duration_minutes })}</p>
+                ) : null}
+              </div>
+              <div className="p-4 border-t border-surface-strong">
+                {gated ? (
+                  <Button variant="outline" className="w-full" onClick={() => setShowPaywall(it)}>{t("library.unlock")}</Button>
+                ) : (
+                  <Button asChild className="w-full"><Link href={`/library/${it.slug}`}>{t("library.open")}</Link></Button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {showPaywall ? (
+        <div role="dialog" aria-labelledby="paywall-title" className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="max-w-md w-full rounded-lg bg-surface-raised border border-surface-strong p-6 space-y-4">
+            <h2 id="paywall-title" className="font-display text-xl font-semibold">{t("library.paywall.title")}</h2>
+            <p className="text-sm text-ink-muted">{t("library.paywall.body", { tier: t(`tier.${showPaywall.required_tier}`) })}</p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={() => setShowPaywall(null)}>{t("library.paywall.later")}</Button>
+              <Button asChild><Link href={`/pricing?highlight=${showPaywall.required_tier}`}>{t("library.paywall.upgrade")}</Link></Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

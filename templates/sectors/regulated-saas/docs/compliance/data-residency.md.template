@@ -1,0 +1,92 @@
+# BetaRegulated — data residency policy
+
+This document pins where customer data physically lives and how cross-border transfers are governed. It is the source of truth for the `data_residency_config` table and the `tenant.data_region` column.
+
+## 1. Regions
+
+| Region code | Primary datacenter | Secondary / DR | Applicable law |
+|---|---|---|---|
+| `eu-central` | Frankfurt (Deutschland) | Dublin (Ireland) | GDPR + BDSG |
+| `tr-central` | İstanbul (TR) | Ankara (TR) | KVKK |
+| `us-east` | Northern Virginia | Oregon | CCPA + state privacy laws |
+
+Each tenant is assigned exactly one `data_region` at signup. Region is **immutable without a migration ticket**; the runbook below describes the supervised process.
+
+## 2. Residency-bound assets (stay in region)
+
+| Surface | Table / asset | Binding |
+|---|---|---|
+| Primary database | `profiles`, `customers`, `orders`, `invoices`, `messages`, `attachments` | Pinned to region's RDS/postgres cluster |
+| Object storage | user uploads, generated documents | Bucket in region |
+| Search index | OpenSearch per region | No cross-region replicas |
+| Audit log | `compliance_audit_log` | Region-local; no replication |
+| Backups | pg_dump, wal archive | Region-local bucket with object lock |
+
+## 3. Residency-exempt assets (global or centralised)
+
+| Asset | Location | Justification |
+|---|---|---|
+| Marketing site content | Global CDN | No personal data |
+| Billing summary (aggregate) | US stripe / EU stripe mapped | Handled via region-pinned Stripe account |
+| Product telemetry (anonymised) | `us-east` warehouse | PII scrubbed before egress |
+| Sub-processor metadata | global (SaaS tool) | No customer data |
+
+Anything not in this table is **residency-bound by default**.
+
+## 4. Enforcement
+
+### 4.1 Database layer
+
+Every table that can carry PII has a `tenant_id` column **and** is joined to `tenants.data_region`. A Postgres check-constraint + RLS ensures inserts can only happen when the acting connection's `app.current_region` GUC matches the tenant's region.
+
+```sql
+-- From 00005_regulated_schema.sql (see migrations)
+ALTER TABLE profiles ADD CONSTRAINT profiles_residency_match
+  CHECK (current_setting('app.current_region', true) IS NOT DISTINCT FROM
+         (SELECT data_region FROM tenants WHERE tenants.id = tenant_id));
+```
+
+### 4.2 Application layer
+
+- Edge/worker middleware reads the `cf-ipcountry` or `x-forwarded-for` header + the authenticated user's tenant, and rejects cross-region routing with HTTP 451 ("Unavailable for Legal Reasons").
+- Object-storage presigned URLs are always region-scoped.
+
+### 4.3 Build + deploy
+
+- Region-specific builds are produced per deploy; no shared image can reach a different region.
+- ArgoCD (see `container-k8s` overlay) pins each application to a region cluster.
+
+## 5. Cross-border transfers
+
+When unavoidable (e.g. global sub-processor), transfers are governed by:
+
+### 5.1 EU → third country (GDPR)
+
+- **Standard Contractual Clauses** (EU Commission Decision 2021/914) — template stored at `docs/legal/scc-template.pdf`.
+- Transfer Impact Assessment (TIA) recorded per transfer in `processing_activities.cross_border_transfers`.
+- Supplementary measures: encryption in transit + at rest, key-separation, access logging.
+
+### 5.2 TR → yurtdışı (KVKK)
+
+- **Madde 9** uyarınca: yeterli korumaya sahip ülke ise açık rıza aranmayabilir; aksi halde Kurul izni gerekir.
+- Yurtdışı aktarım taahhütnamesi / Bağlayıcı Şirket Kuralları (BŞK) imza süreci.
+- VERBİS bildiriminde transfer yer alır.
+
+### 5.3 Sub-processor list (public, versioned)
+
+Maintained in `docs/governance/vendor-register.md` and mirrored at `/legal/subprocessors`. Customers are notified 30 days before a new sub-processor is onboarded.
+
+## 6. Region migration (rare)
+
+1. Customer requests region change via support (signed request).
+2. Compliance reviews for legal blockers.
+3. Engineering schedules a maintenance window.
+4. Migration job copies tenant data to target region, verifies checksums.
+5. Old tenant row's `data_region` updated after verification; source data hard-purged after 30-day hold.
+6. Event logged to `compliance_audit_log`.
+
+## 7. Cross-references
+
+- `gdpr-kvkk-runbook.md` — legal framework for transfers
+- `supabase/migrations/00005_regulated_schema.sql` — tables + constraints
+- `docs/governance/vendor-register.md` — sub-processor SCCs

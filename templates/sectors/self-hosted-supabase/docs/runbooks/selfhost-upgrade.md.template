@@ -1,0 +1,139 @@
+# Runbook — AcmeHosted self-hosted Supabase upgrade playbook
+
+Every upgrade is **ordered** and **staged**. Never bump the whole stack at once, even when Supabase releases coordinated tags. The order below is chosen so schema-owning services move first.
+
+## 1. Upgrade order (authoritative)
+
+| # | Service | Downtime? | Notes |
+|---|---|---|---|
+| 1 | postgres | YES (~5-15 min) | Requires dump + restore on a new major; minor upgrades are in-place |
+| 2 | postgres-meta | NO | Restart only |
+| 3 | gotrue (auth) | 30 sec | Ships its own auth schema migrations |
+| 4 | postgrest (rest) | 30 sec | Stateless; watch for breaking schema-cache changes |
+| 5 | realtime | 30 sec | Run replication migrations first |
+| 6 | storage-api | 1-2 min | Migrations touch `storage.objects` |
+| 7 | kong | 15 sec | Declarative reload |
+| 8 | studio | 15 sec | UI only |
+
+**Rule**: if a single step fails, roll back that service to the pinned previous tag before proceeding.
+
+## 2. Pre-flight checklist
+
+- [ ] A successful backup from the **last 24 hours** exists in cold storage (see `selfhost-backup-restore.md`).
+- [ ] A restore drill has been passed within the last 30 days. Without it, this upgrade is blocked.
+- [ ] Image tags for the new versions are pinned in `docker-compose.yml` — no `:latest`.
+- [ ] Release notes for each component have been read; breaking changes summarised in the change ticket.
+- [ ] Maintenance window announced to customers (email + status page), minimum 48h in advance.
+
+## 3. Downtime window estimate
+
+| Scenario | Window |
+|---|---|
+| Minor/patch only (all services) | 5 min total, rolling |
+| Postgres minor (in-place) | 10 min |
+| Postgres major (dump + restore) | 45 min - 2 h depending on dataset |
+| GoTrue major (schema migration) | 5 min |
+| Storage major (large object table migration) | 5-15 min |
+
+Always reserve 2x the estimate.
+
+## 4. Step-by-step
+
+### 4.1 Snapshot
+
+```bash
+# Take an ad-hoc full backup right now.
+/opt/acmehosted/bin/nightly-backup.sh
+
+# Verify the dump uploaded.
+aws s3 ls s3://acmehosted-backups/db/ | tail -1
+```
+
+### 4.2 Postgres minor bump (same major)
+
+```bash
+# Edit docker-compose.yml, change only postgres image tag.
+docker compose pull postgres
+docker compose up -d postgres
+docker compose ps postgres          # wait for healthy
+docker exec acmehosted-postgres psql -U postgres -c "SELECT version();"
+```
+
+### 4.3 Postgres major bump (requires dump + restore)
+
+Major upgrades cannot re-use the data directory.
+
+1. Stop dependent services: `docker compose stop studio kong storage realtime rest auth meta pgbouncer`.
+2. Dump: `docker exec acmehosted-postgres pg_dumpall -U postgres -f /tmp/pre-upgrade.sql`.
+3. Copy the dump off the container to the host.
+4. Stop postgres: `docker compose stop postgres`.
+5. Rename the volume in `docker-compose.yml` (e.g. `pg-data` → `pg-data-pg16`) so the new major starts on a fresh dir.
+6. Pull the new image + start: `docker compose up -d postgres`.
+7. Wait for healthy, then restore:
+   ```bash
+   docker cp ./pre-upgrade.sql acmehosted-postgres:/tmp/
+   docker exec -t acmehosted-postgres psql -U postgres -f /tmp/pre-upgrade.sql
+   ```
+8. Bring the rest of the stack back up: `docker compose up -d`.
+
+### 4.4 GoTrue / PostgREST / Realtime / Storage
+
+Each follows the same rolling pattern:
+
+```bash
+docker compose pull <service>
+docker compose up -d <service>
+docker compose logs -f <service>    # watch for "migration complete"
+```
+
+Wait for the migration log lines before moving to the next service.
+
+### 4.5 Kong
+
+```bash
+docker compose up -d kong
+curl -fsS http://localhost:8000/auth/v1/health
+```
+
+### 4.6 Studio
+
+```bash
+docker compose up -d studio
+```
+
+Open `http://localhost:3000`, log in with `STUDIO_PASSWORD`, confirm database panel loads.
+
+## 5. Rollback
+
+For any service that fails to come up healthy within 2 minutes:
+
+```bash
+# Revert the image tag in docker-compose.yml to the pinned previous version.
+git checkout -- docker-compose.yml
+docker compose up -d <service>
+```
+
+For postgres major rollback: delete the new volume, restore the `*.sql` dump into the previous-major volume (which was not removed, only renamed-away).
+
+## 6. Post-upgrade validation
+
+Run the section-7 smoke test from `selfhost-backup-restore.md`. Then:
+
+```bash
+# Check every container is running and not restarting.
+docker compose ps
+
+# Confirm no schema-cache mismatch in PostgREST.
+curl -fsS -H "apikey: ${ANON_KEY}" http://localhost:8000/rest/v1/ | jq '.paths | keys | length'
+
+# Replication slot still alive?
+docker exec acmehosted-postgres psql -U postgres -c "SELECT slot_name, active FROM pg_replication_slots;"
+```
+
+File the run as a release artefact under `reports/current/runbooks/upgrade-<date>.md`.
+
+## 7. Cross-references
+
+- `selfhost-backup-restore.md` — prerequisite
+- `docs/governance/release-parity-policy.md` — tag pinning rules
+- `docs/runtime/handoff-plan-contract.md` — how to document this upgrade's outcome

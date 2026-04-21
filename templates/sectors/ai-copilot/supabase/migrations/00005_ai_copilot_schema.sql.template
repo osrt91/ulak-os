@@ -1,0 +1,203 @@
+-- {{product_name_pascal}} — ai-copilot sector overlay (Ulak OS v{{ulak_os_version}})
+-- Migration: 00005_ai_copilot_schema
+-- Date: {{migration_date}}
+-- Depends on: 00001_initial_schema (tenants, user_role_assignments), 00002_rls_policies
+--
+-- Scope:
+--   - Conversations + messages (LLM chat threads for DeltaCopilot fictional tenant)
+--   - ai_usage_log — per-request token + cost accounting (AP-AI-02 prevention)
+--   - cost_caps — per-tier + per-user daily ceiling (AP-AI-01 prevention)
+--   - model_allowlist — which providers/models the tenant can call
+--   - context_window_truncated_at hint for summarize-on-overflow UX
+
+-- =============================================================================
+-- TABLE: conversations
+-- =============================================================================
+create table if not exists public.conversations (
+  id              uuid primary key default uuid_generate_v4(),
+  tenant_id       uuid not null references public.tenants(id) on delete cascade,
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  title           text,
+  system_prompt   text,                            -- override default system prompt per-thread
+  default_model   text,                            -- e.g. 'claude-opus-4-5'
+  -- Summarize-on-overflow: when we truncate earlier turns into a summary, we
+  -- record the message_id of the LAST truncated message. Client uses this to
+  -- show "earlier context summarized" banner.
+  context_window_truncated_at uuid,                -- references messages(id), loose FK
+  total_tokens_input  integer not null default 0,
+  total_tokens_output integer not null default 0,
+  total_cost_cents    integer not null default 0,  -- accumulated from ai_usage_log
+  archived_at     timestamptz,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+create index if not exists idx_conversations_user_time on public.conversations(user_id, created_at desc);
+create index if not exists idx_conversations_tenant_time on public.conversations(tenant_id, created_at desc);
+drop trigger if exists conversations_touch on public.conversations;
+create trigger conversations_touch before update on public.conversations
+  for each row execute function public.touch_updated_at();
+
+-- =============================================================================
+-- TABLE: messages
+-- =============================================================================
+create table if not exists public.messages (
+  id              uuid primary key default uuid_generate_v4(),
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  tenant_id       uuid not null references public.tenants(id) on delete cascade,
+  role            text not null check (role in ('user', 'assistant', 'system', 'tool')),
+  content         text not null,
+  tool_name       text,                            -- populated when role=tool
+  tool_args       jsonb,
+  model           text,                            -- which model produced this (assistant only)
+  tokens_input    integer,
+  tokens_output   integer,
+  cost_cents      integer,
+  finish_reason   text,                            -- 'stop' | 'length' | 'content_filter' | etc.
+  created_at      timestamptz not null default now()
+);
+create index if not exists idx_messages_conversation_time on public.messages(conversation_id, created_at asc);
+create index if not exists idx_messages_tenant_time on public.messages(tenant_id, created_at desc);
+
+-- =============================================================================
+-- TABLE: ai_usage_log (AP-AI-02 prevention — every API call logged)
+-- Append-only. Drives cost-cap decisions + billing reconciliation + observability.
+-- =============================================================================
+create table if not exists public.ai_usage_log (
+  id              uuid primary key default uuid_generate_v4(),
+  tenant_id       uuid not null references public.tenants(id) on delete cascade,
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  conversation_id uuid references public.conversations(id) on delete set null,
+  message_id      uuid references public.messages(id) on delete set null,
+  provider        text not null check (provider in ('anthropic', 'openai', 'google')),
+  model           text not null,
+  tokens_input    integer not null default 0,
+  tokens_output   integer not null default 0,
+  cost_cents      integer not null default 0,      -- computed from provider's published rate
+  latency_ms      integer,
+  error           text,                            -- populated on provider failure
+  created_at      timestamptz not null default now()
+);
+create index if not exists idx_ai_usage_user_day on public.ai_usage_log(user_id, date_trunc('day', created_at));
+create index if not exists idx_ai_usage_tenant_day on public.ai_usage_log(tenant_id, date_trunc('day', created_at));
+
+-- =============================================================================
+-- TABLE: cost_caps (AP-AI-01 prevention)
+-- Two-level cap: per-user daily + per-tier daily (plan defines ceiling).
+-- Writer layer (lib/ai/cost-cap.ts) queries SUM(cost_cents) for today + rejects
+-- before calling provider if ceiling breached.
+-- =============================================================================
+create table if not exists public.cost_caps (
+  id              uuid primary key default uuid_generate_v4(),
+  tenant_id       uuid not null references public.tenants(id) on delete cascade,
+  scope           text not null check (scope in ('user', 'tier')),
+  scope_ref       text not null,                   -- user_id when scope=user; plan name when scope=tier
+  daily_cents_ceiling integer not null check (daily_cents_ceiling > 0),
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  unique (tenant_id, scope, scope_ref)
+);
+create index if not exists idx_cost_caps_tenant on public.cost_caps(tenant_id);
+drop trigger if exists cost_caps_touch on public.cost_caps;
+create trigger cost_caps_touch before update on public.cost_caps
+  for each row execute function public.touch_updated_at();
+
+-- =============================================================================
+-- TABLE: model_allowlist
+-- Which provider+model combos a tenant may call. Relay rejects anything not here.
+-- =============================================================================
+create table if not exists public.model_allowlist (
+  id              uuid primary key default uuid_generate_v4(),
+  tenant_id       uuid not null references public.tenants(id) on delete cascade,
+  provider        text not null check (provider in ('anthropic', 'openai', 'google')),
+  model           text not null,
+  is_default      boolean not null default false,
+  rate_cents_per_input_1k  integer not null default 0,
+  rate_cents_per_output_1k integer not null default 0,
+  max_tokens_per_request   integer not null default 4096,
+  created_at      timestamptz not null default now(),
+  unique (tenant_id, provider, model)
+);
+create index if not exists idx_model_allowlist_tenant on public.model_allowlist(tenant_id);
+
+-- =============================================================================
+-- RLS
+-- =============================================================================
+alter table public.conversations    enable row level security;
+alter table public.messages         enable row level security;
+alter table public.ai_usage_log     enable row level security;
+alter table public.cost_caps        enable row level security;
+alter table public.model_allowlist  enable row level security;
+
+-- Conversations: owner-only R/W; admins see tenant-scoped for support
+create policy "conversations_owner_rw" on public.conversations
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+create policy "conversations_admin_read" on public.conversations
+  for select to authenticated
+  using (
+    exists (select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid() and ura.tenant_id = public.conversations.tenant_id and ura.role in ('admin', 'support'))
+  );
+
+-- Messages: same owner model via conversation join
+create policy "messages_owner_read" on public.messages
+  for select to authenticated
+  using (
+    exists (select 1 from public.conversations c
+      where c.id = public.messages.conversation_id and c.user_id = auth.uid())
+  );
+
+create policy "messages_owner_insert" on public.messages
+  for insert to authenticated
+  with check (
+    exists (select 1 from public.conversations c
+      where c.id = public.messages.conversation_id and c.user_id = auth.uid())
+  );
+
+create policy "messages_admin_read" on public.messages
+  for select to authenticated
+  using (
+    exists (select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid() and ura.tenant_id = public.messages.tenant_id and ura.role in ('admin', 'support'))
+  );
+
+-- ai_usage_log: user reads own; admins read tenant-scoped
+create policy "ai_usage_self_read" on public.ai_usage_log
+  for select to authenticated using (user_id = auth.uid());
+
+create policy "ai_usage_admin_read" on public.ai_usage_log
+  for select to authenticated
+  using (
+    exists (select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid() and ura.tenant_id = public.ai_usage_log.tenant_id and ura.role = 'admin')
+  );
+-- INSERT on ai_usage_log via service_role (relay writes post-call)
+
+-- cost_caps + model_allowlist: admin-managed, user-readable (to render budget UI)
+create policy "cost_caps_read" on public.cost_caps
+  for select to authenticated using (true);
+create policy "cost_caps_admin_write" on public.cost_caps
+  for all to authenticated
+  using (
+    exists (select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid() and ura.tenant_id = public.cost_caps.tenant_id and ura.role = 'admin')
+  )
+  with check (
+    exists (select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid() and ura.tenant_id = public.cost_caps.tenant_id and ura.role = 'admin')
+  );
+
+create policy "model_allowlist_read" on public.model_allowlist
+  for select to authenticated using (true);
+create policy "model_allowlist_admin_write" on public.model_allowlist
+  for all to authenticated
+  using (
+    exists (select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid() and ura.tenant_id = public.model_allowlist.tenant_id and ura.role = 'admin')
+  )
+  with check (
+    exists (select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid() and ura.tenant_id = public.model_allowlist.tenant_id and ura.role = 'admin')
+  );

@@ -1,0 +1,156 @@
+import 'server-only'
+
+import { ServiceProvider, IdentityProvider } from 'samlify'
+
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// {{product_name_pascal}} — SAML AuthnRequest builder + Response verifier
+//
+// Protocol:
+//   1. Admin configures IdP in /admin/sso (stores sso_providers row)
+//   2. User hits /login/sso → buildAuthnRequest() → redirect to IdP
+//   3. IdP posts SAMLResponse back → verifyResponse() validates signature
+//   4. Claim mapping runs via applyClaimMapping() — AP-SSO-01: we NEVER trust
+//      an IdP-asserted role without confirming user_role_assignments row.
+//
+// Dependencies: samlify (installed by scaffolder when enterprise-b2b sector is
+// enabled). ExampleB2B fictional tenant is used in inline docstrings.
+
+export interface SamlProviderRow {
+  id: string
+  tenant_id: string
+  saml_entity_id: string | null
+  saml_sso_url: string | null
+  saml_cert_pem: string | null
+  default_role: 'customer' | 'admin' | 'partner' | 'support'
+}
+
+export interface SamlVerifyResult {
+  ok: true
+  email: string
+  nameId: string
+  claims: Record<string, string | string[]>
+  /** Role AFTER local DB confirmation. Never trust `claims.role` directly. */
+  confirmedRole: 'customer' | 'admin' | 'partner' | 'support'
+  tenantId: string
+}
+
+export type SamlVerifyError =
+  | { ok: false; reason: 'bad-signature' }
+  | { ok: false; reason: 'expired-assertion' }
+  | { ok: false; reason: 'issuer-mismatch' }
+  | { ok: false; reason: 'missing-email' }
+  | { ok: false; reason: 'no-local-assignment'; email: string }
+
+function getServiceProvider(tenantId: string) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.example.com'
+  return ServiceProvider({
+    entityID: `${baseUrl}/saml/metadata/${tenantId}`,
+    assertionConsumerService: [
+      {
+        Binding: 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
+        Location: `${baseUrl}/api/auth/sso/saml/callback`,
+      },
+    ],
+  })
+}
+
+function getIdentityProvider(row: SamlProviderRow) {
+  if (!row.saml_entity_id || !row.saml_sso_url || !row.saml_cert_pem) {
+    throw new Error('saml-provider-incomplete')
+  }
+  return IdentityProvider({
+    entityID: row.saml_entity_id,
+    singleSignOnService: [{ Binding: 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect', Location: row.saml_sso_url }],
+    signingCert: row.saml_cert_pem,
+    wantAuthnRequestsSigned: false,
+  })
+}
+
+export function buildAuthnRequest(row: SamlProviderRow): { redirectUrl: string; requestId: string } {
+  const sp = getServiceProvider(row.tenant_id)
+  const idp = getIdentityProvider(row)
+  const { context, id } = sp.createLoginRequest(idp, 'redirect')
+  return { redirectUrl: context, requestId: id }
+}
+
+export async function verifyResponse(
+  row: SamlProviderRow,
+  samlResponseB64: string
+): Promise<SamlVerifyResult | SamlVerifyError> {
+  const sp = getServiceProvider(row.tenant_id)
+  const idp = getIdentityProvider(row)
+
+  let parsed: { extract: { nameID: string; attributes: Record<string, string | string[]>; issuer: string } }
+  try {
+    parsed = await sp.parseLoginResponse(idp, 'post', {
+      body: { SAMLResponse: samlResponseB64 },
+    })
+  } catch {
+    return { ok: false, reason: 'bad-signature' }
+  }
+
+  if (parsed.extract.issuer !== row.saml_entity_id) {
+    return { ok: false, reason: 'issuer-mismatch' }
+  }
+
+  const attrs = parsed.extract.attributes
+  const email = typeof attrs.email === 'string' ? attrs.email : parsed.extract.nameID
+  if (!email || !email.includes('@')) {
+    return { ok: false, reason: 'missing-email' }
+  }
+
+  // AP-SSO-01: confirm local user_role_assignments row. If absent, deny login.
+  const supabase = createAdminClient()
+  const { data: authUser } = await supabase.auth.admin.getUserByEmail?.(email) ?? { data: null }
+  const userId = authUser?.user?.id
+
+  if (!userId) {
+    return { ok: false, reason: 'no-local-assignment', email }
+  }
+
+  const { data: assignment } = await supabase
+    .from('user_role_assignments')
+    .select('role, tenant_id')
+    .eq('user_id', userId)
+    .eq('tenant_id', row.tenant_id)
+    .maybeSingle()
+
+  if (!assignment) {
+    return { ok: false, reason: 'no-local-assignment', email }
+  }
+
+  return {
+    ok: true,
+    email,
+    nameId: parsed.extract.nameID,
+    claims: attrs,
+    confirmedRole: assignment.role as SamlVerifyResult['confirmedRole'],
+    tenantId: assignment.tenant_id as string,
+  }
+}
+
+/**
+ * Translate IdP-asserted claim values → local role via sso_claims_mapping.
+ * Returns the MAPPED role as a SUGGESTION ONLY. The caller still has to write
+ * (or confirm) user_role_assignments. AP-SSO-01 prevents claim-to-role autopilot.
+ */
+export async function applyClaimMapping(
+  providerId: string,
+  claims: Record<string, string | string[]>
+): Promise<{ suggestedRole: string | null; suggestedTeamId: string | null }> {
+  const supabase = createAdminClient()
+  const { data: mappings } = await supabase
+    .from('sso_claims_mapping')
+    .select('claim_name, claim_value, target_role, target_team_id')
+    .eq('sso_provider_id', providerId)
+
+  for (const m of mappings ?? []) {
+    const actual = claims[m.claim_name]
+    const values = Array.isArray(actual) ? actual : actual ? [actual] : []
+    if (values.includes(m.claim_value)) {
+      return { suggestedRole: m.target_role, suggestedTeamId: m.target_team_id ?? null }
+    }
+  }
+  return { suggestedRole: null, suggestedTeamId: null }
+}

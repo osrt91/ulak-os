@@ -1,0 +1,151 @@
+// {{product_name_pascal}} — AI cost dashboard (daily/weekly/monthly + by user/feature/model)
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { t } from "@/lib/i18n";
+import { formatUsd } from "@/lib/i18n/format";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
+type Range = "7d" | "30d" | "mtd";
+
+interface CostSeriesPoint { day: string; usd: number; }
+interface CostBreakdown {
+  by_user: Array<{ user_id: string; email: string; usd: number }>;
+  by_feature: Array<{ feature: string; usd: number }>;
+  by_model: Array<{ model: string; usd: number }>;
+  total_usd: number;
+}
+interface CostResponse { series: CostSeriesPoint[]; breakdown: CostBreakdown; budget_cap_usd: number; }
+
+export default function AICostsPage(): JSX.Element {
+  const [range, setRange] = useState<Range>("30d");
+  const [data, setData] = useState<CostResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/admin/ai-costs?range=${range}`, { cache: "no-store" });
+        setData((await res.json()) as CostResponse);
+      } catch { setError(t("admin.ai-costs.load-failed")); }
+    })();
+  }, [range]);
+
+  const spendPct = useMemo(() => {
+    if (!data || data.budget_cap_usd <= 0) return 0;
+    return Math.min(100, Math.round((data.breakdown.total_usd / data.budget_cap_usd) * 100));
+  }, [data]);
+
+  const exportCsv = () => {
+    if (!data) return;
+    const lines = ["day,usd"];
+    for (const p of data.series) lines.push(`${p.day},${p.usd.toFixed(4)}`);
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `ai-costs-${range}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (error) return <Alert variant="destructive" role="alert">{error}</Alert>;
+  if (!data) return <div className="h-96 bg-surface-muted rounded animate-pulse" />;
+
+  return (
+    <div className="space-y-6 max-w-6xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{t("admin.ai-costs.title")}</h1>
+          <p className="text-ink-muted">{t("admin.ai-costs.subtitle")}</p>
+        </div>
+        <div className="flex gap-2">
+          {(["7d", "30d", "mtd"] as Range[]).map((r) => (
+            <button key={r} onClick={() => setRange(r)} aria-pressed={range === r}
+              className={`px-3 py-1.5 rounded-md text-sm border ${range === r ? "bg-primary-500 text-white border-primary-500" : "border-surface-strong hover:bg-surface-muted"}`}>
+              {t(`admin.ai-costs.range.${r}`)}
+            </button>
+          ))}
+          <Button variant="outline" size="sm" onClick={exportCsv}>{t("admin.ai-costs.export-csv")}</Button>
+        </div>
+      </header>
+
+      <section className="rounded-lg border border-surface-strong bg-surface-raised p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <p className="text-sm text-ink-muted">{t("admin.ai-costs.total-spend")}</p>
+            <p className="text-3xl font-semibold tabular-nums">{formatUsd(data.breakdown.total_usd)}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-ink-muted">{t("admin.ai-costs.budget-cap")}</p>
+            <p className="text-lg tabular-nums">{formatUsd(data.budget_cap_usd)}</p>
+            <Badge variant={spendPct >= 90 ? "danger" : spendPct >= 70 ? "warning" : "success"}>
+              {spendPct}% {t("admin.ai-costs.used")}
+            </Badge>
+          </div>
+        </div>
+        <div className="w-full bg-surface-muted rounded-full h-2 overflow-hidden" role="progressbar" aria-valuenow={spendPct} aria-valuemin={0} aria-valuemax={100}>
+          <div className={`h-full ${spendPct >= 90 ? "bg-danger-500" : spendPct >= 70 ? "bg-warning-500" : "bg-success-500"}`} style={{ width: `${spendPct}%` }} />
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-surface-strong bg-surface-raised p-4">
+        <h2 className="font-semibold mb-3">{t("admin.ai-costs.trend")}</h2>
+        <div className="h-64">
+          <ResponsiveContainer>
+            <AreaChart data={data.series}>
+              <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+              <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+              <YAxis tickFormatter={(v) => `$${v}`} tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(v: number) => formatUsd(v)} />
+              <Area type="monotone" dataKey="usd" stroke="currentColor" fill="currentColor" fillOpacity={0.15} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <section className="rounded-lg border border-surface-strong bg-surface-raised p-4">
+          <h2 className="font-semibold mb-3">{t("admin.ai-costs.by-model")}</h2>
+          <div className="h-56">
+            <ResponsiveContainer>
+              <BarChart data={data.breakdown.by_model}>
+                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                <XAxis dataKey="model" tick={{ fontSize: 11 }} />
+                <YAxis tickFormatter={(v) => `$${v}`} tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v: number) => formatUsd(v)} />
+                <Legend />
+                <Bar dataKey="usd" fill="currentColor" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-surface-strong bg-surface-raised p-4">
+          <h2 className="font-semibold mb-3">{t("admin.ai-costs.by-feature")}</h2>
+          <ul className="space-y-2">
+            {data.breakdown.by_feature.slice(0, 8).map((row) => (
+              <li key={row.feature} className="flex items-center justify-between text-sm">
+                <span className="truncate">{row.feature}</span>
+                <span className="tabular-nums font-medium">{formatUsd(row.usd)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      <section className="rounded-lg border border-surface-strong bg-surface-raised p-4">
+        <h2 className="font-semibold mb-3">{t("admin.ai-costs.top-users")}</h2>
+        <ul className="space-y-2">
+          {data.breakdown.by_user.slice(0, 10).map((row) => (
+            <li key={row.user_id} className="flex items-center justify-between text-sm">
+              <code className="truncate">{row.email}</code>
+              <span className="tabular-nums font-medium">{formatUsd(row.usd)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}

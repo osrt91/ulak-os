@@ -1,0 +1,174 @@
+// {{product_name_pascal}} — SSO configuration (admin surface, enterprise-b2b overlay)
+//
+// Surface: /admin/sso — single provider per tenant (SAML or OIDC)
+// AP-SSO-01: claim mapping is SUGGESTIVE, final role STILL written to
+// user_role_assignments under admin control.
+
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+
+import { getAuthContext } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
+import { t } from '@/lib/i18n'
+import { formatDateTime } from '@/lib/i18n/format'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert } from '@/components/ui/alert'
+import { EmptyState } from '@/components/shared/empty-state'
+
+interface SsoProviderRow {
+  id: string
+  protocol: 'saml' | 'oidc'
+  name: string
+  vendor: 'okta' | 'azuread' | 'google' | 'generic-saml' | 'generic-oidc'
+  is_active: boolean
+  default_role: string
+  saml_entity_id: string | null
+  saml_sso_url: string | null
+  oidc_issuer: string | null
+  oidc_client_id: string | null
+  oidc_discovery_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface ClaimMappingRow {
+  id: string
+  claim_name: string
+  claim_value: string
+  target_role: string
+  target_team_id: string | null
+}
+
+export default async function AdminSsoPage() {
+  const ctx = await getAuthContext({ require_role: 'admin', force_refresh: true })
+  if (!ctx.allowed) redirect(ctx.redirectTo)
+
+  const supabase = await createServerClient()
+  const { data: providers } = await supabase
+    .from('sso_providers')
+    .select('*')
+    .eq('tenant_id', ctx.tenantId!)
+    .order('created_at', { ascending: false })
+
+  const activeProvider = (providers as SsoProviderRow[] | null)?.find((p) => p.is_active) ?? null
+
+  const { data: mappings } = activeProvider
+    ? await supabase
+        .from('sso_claims_mapping')
+        .select('id, claim_name, claim_value, target_role, target_team_id')
+        .eq('sso_provider_id', activeProvider.id)
+    : { data: [] }
+
+  return (
+    <div className="space-y-8 max-w-5xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{t('admin.sso.title')}</h1>
+          <p className="text-ink-muted">{t('admin.sso.subtitle')}</p>
+        </div>
+        <Button asChild>
+          <Link href="/admin/sso/new">{t('admin.sso.new-provider')}</Link>
+        </Button>
+      </header>
+
+      <Alert variant="info" role="note">
+        <strong>{t('admin.sso.ap-warning-title')}</strong>
+        <p className="mt-1 text-sm">{t('admin.sso.ap-warning-body')}</p>
+      </Alert>
+
+      {!activeProvider ? (
+        <EmptyState
+          title={t('admin.sso.empty-title')}
+          body={t('admin.sso.empty-body')}
+          actionHref="/admin/sso/new"
+          actionLabel={t('admin.sso.empty-cta')}
+        />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <span>{activeProvider.name}</span>
+              <Badge variant="success">{t('admin.sso.active')}</Badge>
+              <Badge variant="neutral">{activeProvider.protocol.toUpperCase()}</Badge>
+              <Badge variant="outline">{activeProvider.vendor}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              {activeProvider.protocol === 'saml' ? (
+                <>
+                  <div>
+                    <dt className="text-ink-muted">{t('admin.sso.saml.entity-id')}</dt>
+                    <dd className="font-mono break-all">{activeProvider.saml_entity_id ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-muted">{t('admin.sso.saml.sso-url')}</dt>
+                    <dd className="font-mono break-all">{activeProvider.saml_sso_url ?? '—'}</dd>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <dt className="text-ink-muted">{t('admin.sso.oidc.issuer')}</dt>
+                    <dd className="font-mono break-all">{activeProvider.oidc_issuer ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-muted">{t('admin.sso.oidc.client-id')}</dt>
+                    <dd className="font-mono">{activeProvider.oidc_client_id ?? '—'}</dd>
+                  </div>
+                </>
+              )}
+              <div>
+                <dt className="text-ink-muted">{t('admin.sso.default-role')}</dt>
+                <dd><Badge>{activeProvider.default_role}</Badge></dd>
+              </div>
+              <div>
+                <dt className="text-ink-muted">{t('admin.sso.updated')}</dt>
+                <dd>{formatDateTime(activeProvider.updated_at)}</dd>
+              </div>
+            </dl>
+
+            <div className="pt-4 border-t border-surface-strong">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold">{t('admin.sso.claims.title')}</h2>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href={`/admin/sso/${activeProvider.id}/claims/new`}>{t('admin.sso.claims.add')}</Link>
+                </Button>
+              </div>
+              {(mappings as ClaimMappingRow[] | null)?.length ? (
+                <ul className="divide-y divide-surface-strong">
+                  {(mappings as ClaimMappingRow[]).map((m) => (
+                    <li key={m.id} className="py-2 flex items-center gap-3 text-sm">
+                      <span className="font-mono text-ink-muted">{m.claim_name}</span>
+                      <span className="text-ink-muted">=</span>
+                      <span className="font-mono">{m.claim_value}</span>
+                      <span className="text-ink-muted">→</span>
+                      <Badge>{m.target_role}</Badge>
+                      {m.target_team_id ? <Badge variant="outline">team</Badge> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-ink-muted">{t('admin.sso.claims.empty')}</p>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t border-surface-strong">
+              <Button variant="outline" asChild>
+                <Link href={`/admin/sso/${activeProvider.id}/edit`}>{t('admin.sso.edit')}</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href={`/admin/sso/${activeProvider.id}/test`}>{t('admin.sso.test')}</Link>
+              </Button>
+              <Button variant="destructive-outline" asChild>
+                <Link href={`/admin/sso/${activeProvider.id}/deactivate`}>{t('admin.sso.deactivate')}</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}

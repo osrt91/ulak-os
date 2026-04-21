@@ -1,0 +1,95 @@
+# DeltaK8s — per-tenant-environment namespace template
+# Naming: delta-<tenant>-<env>  e.g. delta-acme-staging, delta-acme-prod
+# Labels follow Kubernetes recommended labels + DeltaK8s tenant taxonomy.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: delta-{{TENANT_SLUG}}-{{ENVIRONMENT}}
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    delta.k8s/tenant: "{{TENANT_SLUG}}"
+    delta.k8s/environment: "{{ENVIRONMENT}}"            # dev | staging | prod
+    delta.k8s/data-region: "{{DATA_REGION}}"            # eu-central | tr-central | us-east
+    delta.k8s/compliance-tier: "{{COMPLIANCE_TIER}}"    # standard | regulated
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    delta.k8s/owner: "{{OWNER_TEAM}}"
+    delta.k8s/cost-center: "{{COST_CENTER}}"
+
+---
+# Resource quota — prevents noisy-neighbor runaway
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: delta-{{TENANT_SLUG}}-{{ENVIRONMENT}}-quota
+  namespace: delta-{{TENANT_SLUG}}-{{ENVIRONMENT}}
+spec:
+  hard:
+    requests.cpu: "{{QUOTA_CPU_REQUEST}}"            # e.g. "4"
+    requests.memory: "{{QUOTA_MEM_REQUEST}}"         # e.g. "8Gi"
+    limits.cpu: "{{QUOTA_CPU_LIMIT}}"                # e.g. "8"
+    limits.memory: "{{QUOTA_MEM_LIMIT}}"             # e.g. "16Gi"
+    requests.storage: "{{QUOTA_STORAGE}}"            # e.g. "100Gi"
+    persistentvolumeclaims: "{{QUOTA_PVC_COUNT}}"    # e.g. "10"
+    pods: "{{QUOTA_POD_COUNT}}"                      # e.g. "50"
+    services.loadbalancers: "2"
+    services.nodeports: "0"
+
+---
+# Default limit range — every pod without explicit requests gets sane defaults
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: delta-{{TENANT_SLUG}}-{{ENVIRONMENT}}-limits
+  namespace: delta-{{TENANT_SLUG}}-{{ENVIRONMENT}}
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "500m"
+        memory: "512Mi"
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+      max:
+        cpu: "4"
+        memory: "8Gi"
+      min:
+        cpu: "10m"
+        memory: "32Mi"
+
+---
+# Network policy — default deny, allow only within the namespace + ingress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: delta-{{TENANT_SLUG}}-{{ENVIRONMENT}}-default-deny
+  namespace: delta-{{TENANT_SLUG}}-{{ENVIRONMENT}}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+    - from:
+        - podSelector: {}
+  egress:
+    - to:
+        - podSelector: {}
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

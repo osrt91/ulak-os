@@ -1,0 +1,165 @@
+// {{product_name_pascal}} — course catalog (search + category filter + enrollment status badge)
+// Sector overlay: education (SP-education)
+import Link from "next/link";
+
+import { getAuthContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/empty-state";
+
+export const dynamic = "force-dynamic";
+
+interface CourseRow {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  category: string | null;
+  cover_url: string | null;
+  duration_minutes: number | null;
+  level: "beginner" | "intermediate" | "advanced" | null;
+  published_at: string | null;
+}
+
+interface SearchParams {
+  q?: string;
+  category?: string;
+}
+
+export default async function CourseCatalogPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const authCtx = await getAuthContext({ require_role: "customer" });
+  if (!authCtx.allowed || !authCtx.session.user || !authCtx.session.tenantId) {
+    return (
+      <EmptyState
+        title={t("education.courses.session-lost")}
+        body={t("customer.dashboard.session-lost-body")}
+        cta={{ href: "/login", label: t("auth.login.cta") }}
+      />
+    );
+  }
+
+  const params = await searchParams;
+  const q = (params.q ?? "").trim();
+  const category = (params.category ?? "").trim();
+
+  const supabase = await createClient();
+
+  // Tenant-scoped catalog query (belt-and-suspenders on top of RLS)
+  let query = supabase
+    .from("courses")
+    .select("id, slug, title, summary, category, cover_url, duration_minutes, level, published_at")
+    .eq("tenant_id", authCtx.session.tenantId)
+    .not("published_at", "is", null)
+    .order("published_at", { ascending: false });
+
+  if (q) query = query.ilike("title", `%${q}%`);
+  if (category) query = query.eq("category", category);
+
+  const { data: courseRows, error: courseErr } = await query.limit(48);
+  const courses: CourseRow[] = courseErr ? [] : (courseRows ?? []);
+
+  // Fetch enrollment status for this user so we can badge "Enrolled" cards
+  const { data: myEnrollments } = await supabase
+    .from("enrollments")
+    .select("course_id, status")
+    .eq("tenant_id", authCtx.session.tenantId)
+    .eq("user_id", authCtx.session.user.id);
+  const enrolledIds = new Set((myEnrollments ?? []).map((e) => e.course_id));
+
+  // Distinct category list for the filter chip-bar
+  const { data: catRows } = await supabase
+    .from("courses")
+    .select("category")
+    .eq("tenant_id", authCtx.session.tenantId)
+    .not("category", "is", null);
+  const categories = Array.from(new Set((catRows ?? []).map((r) => r.category as string))).sort();
+
+  return (
+    <div className="space-y-8 max-w-7xl">
+      <header className="space-y-2">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          {t("education.courses.title")}
+        </h1>
+        <p className="text-ink-muted">{t("education.courses.subtitle")}</p>
+      </header>
+
+      <form className="flex flex-col sm:flex-row gap-3" role="search">
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder={t("education.courses.search-placeholder")}
+          aria-label={t("education.courses.search-label")}
+          className="flex-1 rounded-md border border-surface-strong bg-surface-raised px-3 py-2"
+        />
+        <select
+          name="category"
+          defaultValue={category}
+          aria-label={t("education.courses.category-label")}
+          className="rounded-md border border-surface-strong bg-surface-raised px-3 py-2"
+        >
+          <option value="">{t("education.courses.all-categories")}</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <Button type="submit" variant="outline">{t("education.courses.apply")}</Button>
+      </form>
+
+      {courses.length === 0 ? (
+        <EmptyState
+          title={t("education.courses.empty-title")}
+          body={t("education.courses.empty-body")}
+        />
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {courses.map((c) => (
+            <Card key={c.id} className="overflow-hidden">
+              {c.cover_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={c.cover_url}
+                  alt=""
+                  className="h-40 w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="h-40 w-full bg-surface-muted" aria-hidden />
+              )}
+              <CardHeader className="space-y-2">
+                <div className="flex items-center gap-2">
+                  {c.category ? <Badge variant="neutral">{c.category}</Badge> : null}
+                  {c.level ? <Badge>{t(`education.levels.${c.level}`, { fallback: c.level })}</Badge> : null}
+                  {enrolledIds.has(c.id) ? (
+                    <Badge variant="success">{t("education.courses.enrolled")}</Badge>
+                  ) : null}
+                </div>
+                <CardTitle className="line-clamp-2">{c.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-ink-muted line-clamp-3">{c.summary ?? ""}</p>
+                <div className="flex items-center justify-between text-xs text-ink-muted">
+                  <span>
+                    {c.duration_minutes
+                      ? t("education.courses.duration-minutes", { minutes: c.duration_minutes })
+                      : ""}
+                  </span>
+                  <Link href={`/courses/${c.id}`} className="font-medium text-brand-600 hover:underline">
+                    {t("education.courses.details")}
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

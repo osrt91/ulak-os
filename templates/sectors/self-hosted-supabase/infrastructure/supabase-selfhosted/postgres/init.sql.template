@@ -1,0 +1,121 @@
+-- AcmeHosted — postgres bootstrap
+-- Runs once on empty data dir via docker-entrypoint-initdb.d.
+-- Mirrors the role layout managed Supabase ships with, so portability works both ways.
+
+\set pg_password `echo "$POSTGRES_PASSWORD"`
+
+------------------------------------------------------------------
+-- Extensions
+------------------------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS pgcrypto     WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp"  WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pg_graphql   WITH SCHEMA graphql;
+CREATE EXTENSION IF NOT EXISTS pgsodium     WITH SCHEMA pgsodium;
+CREATE EXTENSION IF NOT EXISTS vector       WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+------------------------------------------------------------------
+-- Schemas
+------------------------------------------------------------------
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE SCHEMA IF NOT EXISTS storage;
+CREATE SCHEMA IF NOT EXISTS graphql_public;
+CREATE SCHEMA IF NOT EXISTS _realtime;
+CREATE SCHEMA IF NOT EXISTS _analytics;
+
+------------------------------------------------------------------
+-- Roles
+------------------------------------------------------------------
+-- supabase_admin: owner of most schemas, elevated rights.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'supabase_admin') THEN
+    CREATE ROLE supabase_admin LOGIN PASSWORD :'pg_password' CREATEDB CREATEROLE REPLICATION BYPASSRLS;
+  END IF;
+END
+$$;
+
+-- authenticator: PostgREST connects as this; no direct privileges, switches via SET ROLE.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticator') THEN
+    CREATE ROLE authenticator LOGIN PASSWORD :'pg_password' NOINHERIT;
+  END IF;
+END
+$$;
+
+-- anon: public read (subject to RLS).
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon NOLOGIN NOINHERIT;
+  END IF;
+END
+$$;
+
+-- authenticated: a verified user (subject to RLS).
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    CREATE ROLE authenticated NOLOGIN NOINHERIT;
+  END IF;
+END
+$$;
+
+-- service_role: bypass RLS; server-only.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    CREATE ROLE service_role NOLOGIN NOINHERIT BYPASSRLS;
+  END IF;
+END
+$$;
+
+-- Auth service admin.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
+    CREATE ROLE supabase_auth_admin LOGIN PASSWORD :'pg_password' NOINHERIT CREATEROLE;
+  END IF;
+END
+$$;
+
+-- Storage service admin.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
+    CREATE ROLE supabase_storage_admin LOGIN PASSWORD :'pg_password' NOINHERIT;
+  END IF;
+END
+$$;
+
+-- Pgbouncer pool user.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pgbouncer') THEN
+    CREATE ROLE pgbouncer LOGIN PASSWORD :'pg_password';
+  END IF;
+END
+$$;
+
+------------------------------------------------------------------
+-- Grants
+------------------------------------------------------------------
+GRANT anon, authenticated, service_role TO authenticator;
+
+GRANT ALL ON SCHEMA public, auth, storage, graphql_public TO supabase_admin;
+GRANT USAGE ON SCHEMA public                 TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA auth                   TO supabase_auth_admin;
+GRANT USAGE, CREATE ON SCHEMA storage        TO supabase_storage_admin;
+GRANT USAGE ON SCHEMA graphql_public         TO anon, authenticated, service_role;
+
+-- Default privileges on tables created in public going forward.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT ON TABLES TO anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON TABLES TO service_role;
+
+-- Pgbouncer needs to introspect authenticator credentials for auth_query.
+GRANT CONNECT ON DATABASE postgres TO pgbouncer;

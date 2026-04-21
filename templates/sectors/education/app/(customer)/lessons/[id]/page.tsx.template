@@ -1,0 +1,206 @@
+// {{product_name_pascal}} — lesson viewer (video + transcript + quiz + progress marker)
+// Sector overlay: education (SP-education)
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { getAuthContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/empty-state";
+
+export const dynamic = "force-dynamic";
+
+interface LessonRow {
+  id: string;
+  course_id: string;
+  position: number;
+  title: string;
+  video_url: string | null;
+  transcript: string | null;
+  duration_minutes: number | null;
+  is_preview: boolean;
+}
+
+interface QuizRow {
+  id: string;
+  question: string;
+  choices: string[];
+  correct_index: number;
+}
+
+interface ProgressRow {
+  lesson_id: string;
+  completed_at: string | null;
+  last_position_seconds: number;
+}
+
+export default async function LessonViewerPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const authCtx = await getAuthContext({ require_role: "customer" });
+  if (!authCtx.allowed || !authCtx.session.user || !authCtx.session.tenantId) {
+    return (
+      <EmptyState
+        title={t("education.courses.session-lost")}
+        body={t("customer.dashboard.session-lost-body")}
+        cta={{ href: "/login", label: t("auth.login.cta") }}
+      />
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { data: lesson } = await supabase
+    .from("lessons")
+    .select("id, course_id, position, title, video_url, transcript, duration_minutes, is_preview")
+    .eq("tenant_id", authCtx.session.tenantId)
+    .eq("id", id)
+    .maybeSingle<LessonRow>();
+
+  if (!lesson) notFound();
+
+  // Verify enrollment (unless lesson is preview)
+  if (!lesson.is_preview) {
+    const { data: enr } = await supabase
+      .from("enrollments")
+      .select("id, status")
+      .eq("tenant_id", authCtx.session.tenantId)
+      .eq("course_id", lesson.course_id)
+      .eq("user_id", authCtx.session.user.id)
+      .maybeSingle();
+    if (!enr || enr.status !== "active") {
+      return (
+        <EmptyState
+          title={t("education.lessons.locked-title")}
+          body={t("education.lessons.locked-body")}
+          cta={{ href: `/courses/${lesson.course_id}`, label: t("education.lessons.back-to-course") }}
+        />
+      );
+    }
+  }
+
+  const [{ data: quizRows }, { data: progressRows }, { data: siblingLessons }] = await Promise.all([
+    supabase
+      .from("quizzes")
+      .select("id, question, choices, correct_index")
+      .eq("tenant_id", authCtx.session.tenantId)
+      .eq("lesson_id", lesson.id)
+      .order("position", { ascending: true }),
+    supabase
+      .from("lesson_progress")
+      .select("lesson_id, completed_at, last_position_seconds")
+      .eq("tenant_id", authCtx.session.tenantId)
+      .eq("user_id", authCtx.session.user.id)
+      .eq("lesson_id", lesson.id)
+      .maybeSingle<ProgressRow>(),
+    supabase
+      .from("lessons")
+      .select("id, position, title")
+      .eq("tenant_id", authCtx.session.tenantId)
+      .eq("course_id", lesson.course_id)
+      .order("position", { ascending: true }),
+  ]);
+
+  const quizzes: QuizRow[] = quizRows ?? [];
+  const progress = progressRows ?? null;
+  const allLessons = siblingLessons ?? [];
+  const currentIdx = allLessons.findIndex((l) => l.id === lesson.id);
+  const prevLesson = currentIdx > 0 ? allLessons[currentIdx - 1] : null;
+  const nextLesson = currentIdx >= 0 && currentIdx < allLessons.length - 1 ? allLessons[currentIdx + 1] : null;
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <nav className="text-sm text-ink-muted">
+        <Link href={`/courses/${lesson.course_id}`} className="hover:underline">
+          {t("education.lessons.back-to-course")}
+        </Link>
+      </nav>
+
+      <header className="space-y-1">
+        <p className="text-xs text-ink-muted">
+          {t("education.lessons.lesson-n", { n: lesson.position })}
+        </p>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">{lesson.title}</h1>
+      </header>
+
+      {lesson.video_url ? (
+        <div className="aspect-video overflow-hidden rounded-lg border border-surface-strong bg-black">
+          <video
+            src={lesson.video_url}
+            controls
+            className="h-full w-full"
+            data-lesson-id={lesson.id}
+            data-last-position={progress?.last_position_seconds ?? 0}
+          >
+            {t("education.lessons.video-unsupported")}
+          </video>
+        </div>
+      ) : (
+        <EmptyState title={t("education.lessons.no-video")} body="" />
+      )}
+
+      {lesson.transcript ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("education.lessons.transcript")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-line text-sm leading-relaxed">{lesson.transcript}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {quizzes.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("education.lessons.quiz-title")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={`/api/lessons/${lesson.id}/quiz`} method="post" className="space-y-5">
+              {quizzes.map((q, i) => (
+                <fieldset key={q.id} className="space-y-2">
+                  <legend className="text-sm font-medium">
+                    {i + 1}. {q.question}
+                  </legend>
+                  {q.choices.map((choice, ci) => (
+                    <label key={ci} className="flex items-center gap-2 text-sm">
+                      <input type="radio" name={`q_${q.id}`} value={ci} required />
+                      <span>{choice}</span>
+                    </label>
+                  ))}
+                </fieldset>
+              ))}
+              <Button type="submit" variant="outline">{t("education.lessons.submit-quiz")}</Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <form action={`/api/lessons/${lesson.id}/progress`} method="post" className="flex flex-wrap items-center justify-between gap-3 border-t border-surface-strong pt-4">
+        <div className="text-sm text-ink-muted">
+          {progress?.completed_at
+            ? t("education.lessons.completed")
+            : t("education.lessons.mark-to-complete")}
+        </div>
+        <div className="flex gap-2">
+          {prevLesson ? (
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/lessons/${prevLesson.id}`}>{t("education.lessons.prev")}</Link>
+            </Button>
+          ) : null}
+          <Button type="submit" size="sm">{t("education.lessons.mark-complete")}</Button>
+          {nextLesson ? (
+            <Button asChild size="sm">
+              <Link href={`/lessons/${nextLesson.id}`}>{t("education.lessons.next")}</Link>
+            </Button>
+          ) : null}
+        </div>
+      </form>
+    </div>
+  );
+}

@@ -1,0 +1,86 @@
+// {{product_name_pascal}} — model fallback chain (AP-AI-03 guard)
+// When primary cap is hit at tier-level, downgrade along a predeclared chain.
+// Chain is tenant-configurable; a default ships below.
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
+export interface FallbackDecision {
+  chosen_model: string;
+  downgrades: string[];       // models skipped above `chosen_model`
+  reason: "primary_over_cap" | "primary_rate_limited" | "primary_unavailable" | "chain_exhausted";
+  chain_exhausted: boolean;
+}
+
+const DEFAULT_CHAIN: Record<string, string[]> = {
+  "gpt-4o": ["gpt-4o-mini", "local-llama-70b"],
+  "gpt-4o-mini": ["local-llama-70b"],
+  "claude-sonnet-4-7": ["claude-haiku-4-6", "local-llama-70b"],
+  "claude-haiku-4-6": ["local-llama-70b"],
+  "local-llama-70b": [],
+};
+
+export interface FallbackInput {
+  tenant_id: string;
+  requested_model: string;
+  trigger: "primary_over_cap" | "primary_rate_limited" | "primary_unavailable";
+  prompt_tokens: number;
+  remaining_tenant_usd: number;
+}
+
+export async function selectFallbackModel(input: FallbackInput): Promise<FallbackDecision> {
+  const chain = await loadChain(input.tenant_id, input.requested_model);
+  if (chain.length === 0) {
+    return {
+      chosen_model: input.requested_model,
+      downgrades: [],
+      reason: input.trigger,
+      chain_exhausted: true,
+    };
+  }
+
+  const downgrades: string[] = [];
+  for (const candidate of chain) {
+    const affordable = await canAfford(candidate, input.prompt_tokens, input.remaining_tenant_usd);
+    if (affordable) {
+      return {
+        chosen_model: candidate,
+        downgrades,
+        reason: input.trigger,
+        chain_exhausted: false,
+      };
+    }
+    downgrades.push(candidate);
+  }
+
+  return {
+    chosen_model: chain[chain.length - 1]!,
+    downgrades: downgrades.slice(0, -1),
+    reason: input.trigger,
+    chain_exhausted: true,
+  };
+}
+
+async function loadChain(tenantId: string, primary: string): Promise<string[]> {
+  const { data } = await supabaseAdmin
+    .from("ai_fallback_chains")
+    .select("chain")
+    .eq("tenant_id", tenantId)
+    .eq("primary_model", primary)
+    .maybeSingle();
+  if (data && Array.isArray(data.chain) && data.chain.length > 0) return data.chain as string[];
+  return DEFAULT_CHAIN[primary] ?? [];
+}
+
+async function canAfford(model: string, promptTokens: number, remainingUsd: number): Promise<boolean> {
+  // Lookup the per-1k price from the materialized view; if unknown, treat as affordable
+  // for the free local fallback, but never for hosted models.
+  const { data } = await supabaseAdmin
+    .from("ai_model_prices")
+    .select("input_per_1k_usd, output_per_1k_usd, is_local")
+    .eq("model", model)
+    .maybeSingle();
+  if (!data) return model.startsWith("local-");
+  if (data.is_local) return true;
+  const projected = (promptTokens / 1000) * (data.input_per_1k_usd ?? 0)
+    + (512 / 1000) * (data.output_per_1k_usd ?? 0); // small completion budget assumption
+  return projected <= remainingUsd;
+}

@@ -1,0 +1,190 @@
+// {{product_name_pascal}} — course detail + enrollment CTA + lesson list
+// Sector overlay: education (SP-education)
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { getAuthContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/empty-state";
+
+export const dynamic = "force-dynamic";
+
+interface LessonRow {
+  id: string;
+  position: number;
+  title: string;
+  duration_minutes: number | null;
+  is_preview: boolean;
+}
+
+interface CourseRow {
+  id: string;
+  title: string;
+  summary: string | null;
+  description: string | null;
+  category: string | null;
+  level: "beginner" | "intermediate" | "advanced" | null;
+  duration_minutes: number | null;
+  cover_url: string | null;
+  instructor_name: string | null;
+  published_at: string | null;
+  min_age: number | null;
+}
+
+export default async function CourseDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const authCtx = await getAuthContext({ require_role: "customer" });
+  if (!authCtx.allowed || !authCtx.session.user || !authCtx.session.tenantId) {
+    return (
+      <EmptyState
+        title={t("education.courses.session-lost")}
+        body={t("customer.dashboard.session-lost-body")}
+        cta={{ href: "/login", label: t("auth.login.cta") }}
+      />
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { data: course } = await supabase
+    .from("courses")
+    .select("id, title, summary, description, category, level, duration_minutes, cover_url, instructor_name, published_at, min_age")
+    .eq("tenant_id", authCtx.session.tenantId)
+    .eq("id", id)
+    .maybeSingle<CourseRow>();
+
+  if (!course || !course.published_at) notFound();
+
+  const [{ data: lessonRows }, { data: myEnrollment }] = await Promise.all([
+    supabase
+      .from("lessons")
+      .select("id, position, title, duration_minutes, is_preview")
+      .eq("tenant_id", authCtx.session.tenantId)
+      .eq("course_id", course.id)
+      .order("position", { ascending: true }),
+    supabase
+      .from("enrollments")
+      .select("id, status, progress_percent, parental_consent_at")
+      .eq("tenant_id", authCtx.session.tenantId)
+      .eq("course_id", course.id)
+      .eq("user_id", authCtx.session.user.id)
+      .maybeSingle(),
+  ]);
+
+  const lessons: LessonRow[] = lessonRows ?? [];
+  const isEnrolled = !!myEnrollment && myEnrollment.status === "active";
+  const needsParentalConsent =
+    course.min_age != null && course.min_age < 13 && !myEnrollment?.parental_consent_at;
+
+  return (
+    <div className="space-y-8 max-w-5xl">
+      <nav className="text-sm text-ink-muted">
+        <Link href="/courses" className="hover:underline">{t("education.courses.back-to-catalog")}</Link>
+      </nav>
+
+      <header className="grid gap-6 md:grid-cols-[2fr_1fr]">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            {course.category ? <Badge variant="neutral">{course.category}</Badge> : null}
+            {course.level ? <Badge>{t(`education.levels.${course.level}`, { fallback: course.level })}</Badge> : null}
+          </div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{course.title}</h1>
+          {course.summary ? <p className="text-ink-muted">{course.summary}</p> : null}
+          {course.instructor_name ? (
+            <p className="text-sm text-ink-muted">
+              {t("education.courses.instructed-by", { name: course.instructor_name })}
+            </p>
+          ) : null}
+        </div>
+
+        <Card>
+          <CardContent className="p-5 space-y-4">
+            {course.cover_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={course.cover_url} alt="" className="rounded-md w-full object-cover" />
+            ) : null}
+            <dl className="text-sm grid grid-cols-2 gap-2">
+              <dt className="text-ink-muted">{t("education.courses.duration")}</dt>
+              <dd>{course.duration_minutes ? `${course.duration_minutes} min` : "—"}</dd>
+              <dt className="text-ink-muted">{t("education.courses.lessons-count")}</dt>
+              <dd>{lessons.length}</dd>
+            </dl>
+            {isEnrolled ? (
+              <Button asChild className="w-full">
+                <Link href={lessons[0] ? `/lessons/${lessons[0].id}` : "#"}>
+                  {t("education.courses.continue")}
+                </Link>
+              </Button>
+            ) : needsParentalConsent ? (
+              // COPPA age-gate — under-13 learners cannot enroll without parental_consent_at
+              <form action="/api/enrollments/parental-consent" method="post" className="space-y-2">
+                <input type="hidden" name="course_id" value={course.id} />
+                <p className="text-xs text-ink-muted">{t("education.coppa.consent-required")}</p>
+                <Button type="submit" variant="outline" className="w-full">
+                  {t("education.coppa.request-consent")}
+                </Button>
+              </form>
+            ) : (
+              <form action="/api/enrollments" method="post">
+                <input type="hidden" name="course_id" value={course.id} />
+                <Button type="submit" className="w-full">
+                  {t("education.courses.enroll")}
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+      </header>
+
+      {course.description ? (
+        <section className="prose max-w-none">
+          <h2 className="font-display text-xl font-semibold">{t("education.courses.about")}</h2>
+          <p className="text-ink whitespace-pre-line">{course.description}</p>
+        </section>
+      ) : null}
+
+      <section className="space-y-3">
+        <h2 className="font-display text-xl font-semibold">{t("education.courses.curriculum")}</h2>
+        {lessons.length === 0 ? (
+          <EmptyState title={t("education.courses.no-lessons")} body="" />
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <ul className="divide-y divide-surface-strong">
+                {lessons.map((ls) => (
+                  <li key={ls.id} className="flex items-center justify-between px-5 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs tabular-nums text-ink-muted w-6">{ls.position}.</span>
+                      <div>
+                        <p className="text-sm font-medium">{ls.title}</p>
+                        <p className="text-xs text-ink-muted">
+                          {ls.duration_minutes ? `${ls.duration_minutes} min` : ""}
+                          {ls.is_preview ? ` · ${t("education.lessons.preview")}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    {isEnrolled || ls.is_preview ? (
+                      <Link href={`/lessons/${ls.id}`} className="text-sm text-brand-600 hover:underline">
+                        {t("education.lessons.open")}
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-ink-muted">{t("education.lessons.locked")}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+    </div>
+  );
+}

@@ -1,0 +1,139 @@
+# Runbook — AcmeHosted self-hosted Supabase backup & restore
+
+**AP-SHS-01 blocker**: If this runbook is absent or any step is skipped the stack is considered non-production. Evidence of a **successful restore test** in the last 30 days is required before any release signoff.
+
+## 1. Scope
+
+Targets the Postgres volume, the Storage API volume, and Kong declarative config. Realtime + Auth + REST are stateless (config is sourced from `.env`).
+
+| Asset | Source | Destination | Frequency |
+|---|---|---|---|
+| Postgres logical dump | `pg_dump` inside the `postgres` container | Cold storage (S3-compatible bucket or encrypted rsync target) | Nightly, 02:00 UTC |
+| Postgres WAL | `archive_command` to cold storage | Same bucket, `wal/` prefix | Continuous |
+| Storage volume | `rsync` of `/var/lib/storage` | Cold storage, `storage/` prefix | Nightly, 02:30 UTC |
+| Kong config | Git repo | Already versioned | On change |
+
+## 2. Prerequisites
+
+- An S3-compatible bucket (`acmehosted-backups`) with object-lock enabled (immutable for at least 30 days).
+- Server-side encryption (SSE-KMS or SSE-C with rotated key).
+- Cron or systemd-timer on the docker host with write access to the bucket via an IAM role or `~/.aws/credentials`.
+- `rclone` or `aws` CLI installed on the host.
+
+## 3. Nightly backup script
+
+Drop the following at `/opt/acmehosted/bin/nightly-backup.sh` and chmod 750:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+TS=$(date -u +%Y%m%dT%H%M%SZ)
+BUCKET=s3://acmehosted-backups
+
+# 1. Logical dump — custom format, parallel jobs.
+docker exec -t acmehosted-postgres \
+  pg_dump -U postgres -d postgres -Fc -Z 9 -f /tmp/dump-${TS}.pgc
+
+docker cp acmehosted-postgres:/tmp/dump-${TS}.pgc /var/backups/
+docker exec acmehosted-postgres rm /tmp/dump-${TS}.pgc
+
+aws s3 cp /var/backups/dump-${TS}.pgc ${BUCKET}/db/dump-${TS}.pgc \
+  --sse aws:kms
+
+# 2. Storage volume (rsync keeps incremental deltas).
+rsync -a --delete \
+  /var/lib/docker/volumes/acmehosted_storage-data/_data/ \
+  /var/backups/storage/
+
+aws s3 sync /var/backups/storage/ ${BUCKET}/storage/ \
+  --sse aws:kms --delete
+
+# 3. Retention: keep last 30 dumps locally.
+find /var/backups -name 'dump-*.pgc' -mtime +30 -delete
+
+echo "[$(date -u)] backup complete ts=${TS}"
+```
+
+Cron entry:
+
+```cron
+0 2 * * * /opt/acmehosted/bin/nightly-backup.sh >> /var/log/acmehosted-backup.log 2>&1
+```
+
+## 4. PITR via WAL shipping
+
+Add to `postgresql.conf` inside the postgres container (mount via `volumes:`):
+
+```conf
+wal_level = replica
+archive_mode = on
+archive_command = 'aws s3 cp %p s3://acmehosted-backups/wal/%f --sse aws:kms'
+max_wal_senders = 3
+```
+
+Reload the container. Verify with:
+
+```bash
+docker exec acmehosted-postgres psql -U postgres -c "SELECT pg_switch_wal();"
+aws s3 ls s3://acmehosted-backups/wal/ | tail
+```
+
+## 5. Restore — full stack
+
+1. Stop everything: `docker compose down`.
+2. Wipe and recreate the pg-data volume: `docker volume rm acmehosted_pg-data`.
+3. Start only postgres: `docker compose up -d postgres`.
+4. Wait for it to become healthy (`docker compose ps`).
+5. Download the dump: `aws s3 cp s3://acmehosted-backups/db/dump-<TS>.pgc /tmp/`.
+6. Copy into the container and restore:
+   ```bash
+   docker cp /tmp/dump-<TS>.pgc acmehosted-postgres:/tmp/
+   docker exec -t acmehosted-postgres \
+     pg_restore -U postgres -d postgres -j 4 --clean --if-exists /tmp/dump-<TS>.pgc
+   ```
+7. Restore the storage volume:
+   ```bash
+   aws s3 sync s3://acmehosted-backups/storage/ \
+     /var/lib/docker/volumes/acmehosted_storage-data/_data/
+   ```
+8. Start the rest: `docker compose up -d`.
+9. Smoke test (see section 7).
+
+## 6. PITR restore (target time)
+
+1. Same as full restore steps 1-6 but start with an earlier base dump.
+2. Before starting the rest of the stack, stage a `recovery.signal`:
+   ```bash
+   docker exec -it acmehosted-postgres bash -c "touch /var/lib/postgresql/data/recovery.signal"
+   ```
+3. Add to `postgresql.conf`:
+   ```conf
+   restore_command = 'aws s3 cp s3://acmehosted-backups/wal/%f %p'
+   recovery_target_time = '2026-04-20 14:00:00+00'
+   ```
+4. Restart postgres, watch logs for "archive recovery complete".
+5. Promote: `docker exec acmehosted-postgres psql -U postgres -c "SELECT pg_wal_replay_resume();"`
+6. Proceed with storage restore + stack start.
+
+## 7. Smoke test (must pass before declaring restore successful)
+
+```bash
+# Count check on a known table
+docker exec acmehosted-postgres psql -U postgres -d postgres -c "SELECT count(*) FROM auth.users;"
+
+# API liveness
+curl -fsS http://localhost:8000/auth/v1/health
+curl -fsS -H "apikey: ${ANON_KEY}" http://localhost:8000/rest/v1/
+
+# Storage object head
+curl -fsS -H "apikey: ${ANON_KEY}" http://localhost:8000/storage/v1/bucket
+```
+
+All four must return 2xx. File the outcome as a restore-drill artefact under `reports/current/runbooks/`.
+
+## 8. Cross-references
+
+- `docs/governance/lock-file-hygiene.md` — image-tag pinning used in docker-compose
+- `docs/governance/secrets-rotation-policy.md` — key rotation schedule
+- `docs/runtime/live-probe-contract.md` — smoke-test evidence format

@@ -1,0 +1,369 @@
+-- {{product_name_pascal}} — Marketplace schema (sector overlay: marketplace)
+-- Migration: 00005_marketplace_schema
+-- Date: {{migration_date}}
+-- Depends on: 00001_initial_schema (tenants), 00002_rls_policies, 00004_payments
+--
+-- Tables: listings, orders, order_items, reviews, disputes, commission_rates,
+--         payouts, payout_events
+--
+-- Sector anti-patterns addressed:
+--   AP-MP-01 COMMISSION-RATE IMMUTABILITY
+--   -------------------------------------------------------------------------
+--   Commission is copied into listings.commission_rate_bps at creation time
+--   and MUST NOT be updated retroactively. Operator-level rate changes
+--   (commission_rates.rate_bps) only affect NEW listings. A BEFORE UPDATE
+--   trigger rejects attempts to change listings.commission_rate_bps after
+--   insert.
+--
+--   AP-MP-02 ESCROW / PAYOUT FSM
+--   -------------------------------------------------------------------------
+--   Seller payouts follow a 3-state FSM:
+--     pending_hold  → released  → paid
+--     (held)         (cleared)    (wired)
+--   Orders go pending_hold for N days (returns window) before eligible for
+--   release. Terminal states: paid, reversed. State transitions go through
+--   a trigger that validates legal transitions only.
+--
+--   AP-MP-03 DISPUTE FSM
+--   -------------------------------------------------------------------------
+--   5-state FSM: filed → in_review → mediation → resolved_buyer | resolved_seller
+--   Enforced via CHECK constraint + transition trigger.
+
+-- =============================================================================
+-- TABLE: commission_rates (operator-defined tiers)
+-- =============================================================================
+create table if not exists public.commission_rates (
+  id             uuid primary key default gen_random_uuid(),
+  tenant_id      uuid not null references public.tenants(id) on delete cascade,
+  category       text,
+  rate_bps       integer not null check (rate_bps between 0 and 10000),  -- 0-100% in bps
+  min_order_minor bigint,
+  effective_from timestamptz not null default now(),
+  effective_to   timestamptz,
+  created_at     timestamptz not null default now()
+);
+create index if not exists commission_rates_lookup_idx
+  on public.commission_rates (tenant_id, category, effective_from desc);
+
+-- =============================================================================
+-- TABLE: listings (seller-owned offers)
+-- =============================================================================
+create table if not exists public.listings (
+  id                    uuid primary key default gen_random_uuid(),
+  tenant_id             uuid not null references public.tenants(id) on delete cascade,
+  seller_user_id        uuid not null references auth.users(id) on delete restrict,
+  seller_display_name   text not null,
+  seller_rating_avg     numeric(3,2),
+  slug                  text not null,
+  title                 text not null,
+  description           text,
+  category              text,
+  price_minor           bigint not null check (price_minor > 0),
+  currency              text not null check (currency in ('USD', 'TRY', 'EUR')),
+  cover_url             text,
+  gallery               text[],
+  location_city         text,
+  location_country      text,
+  status                text not null default 'draft'
+                          check (status in ('draft', 'active', 'sold', 'withdrawn')),
+  -- commission snapshot at listing-creation time; IMMUTABLE afterward (AP-MP-01)
+  commission_rate_bps   integer not null check (commission_rate_bps between 0 and 10000),
+  views_count           integer not null default 0,
+  watch_count           integer not null default 0,
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now()
+);
+create unique index if not exists listings_slug_idx on public.listings (tenant_id, slug);
+create index if not exists listings_status_idx on public.listings (status, created_at desc) where status = 'active';
+create index if not exists listings_seller_idx on public.listings (seller_user_id, created_at desc);
+drop trigger if exists listings_touch on public.listings;
+create trigger listings_touch before update on public.listings
+  for each row execute function public.touch_updated_at();
+
+-- AP-MP-01 enforcement: reject retroactive commission changes
+create or replace function public.reject_commission_retroactive()
+returns trigger as $$
+begin
+  if new.commission_rate_bps is distinct from old.commission_rate_bps then
+    raise exception 'AP-MP-01: commission_rate_bps is immutable after listing creation';
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists listings_commission_immutable on public.listings;
+create trigger listings_commission_immutable
+  before update on public.listings
+  for each row execute function public.reject_commission_retroactive();
+
+-- =============================================================================
+-- TABLE: orders + order_items (marketplace-specific — buyer/seller pairs)
+-- =============================================================================
+create table if not exists public.orders (
+  id                      uuid primary key default gen_random_uuid(),
+  tenant_id               uuid not null references public.tenants(id) on delete cascade,
+  buyer_user_id           uuid not null references auth.users(id) on delete restrict,
+  seller_user_id          uuid not null references auth.users(id) on delete restrict,
+  listing_id              uuid not null references public.listings(id) on delete restrict,
+  amount_minor            bigint not null check (amount_minor > 0),
+  commission_minor        bigint not null check (commission_minor >= 0),   -- amount * rate_bps / 10000
+  seller_net_minor        bigint not null check (seller_net_minor >= 0),   -- amount - commission
+  currency                text not null check (currency in ('USD', 'TRY', 'EUR')),
+  status                  text not null default 'pending'
+                            check (status in ('pending', 'paid', 'shipped', 'delivered', 'completed', 'canceled', 'refunded')),
+  provider                text,
+  provider_payment_intent text,
+  placed_at               timestamptz,
+  paid_at                 timestamptz,
+  completed_at            timestamptz,
+  created_at              timestamptz not null default now(),
+  updated_at              timestamptz not null default now()
+);
+create index if not exists orders_buyer_idx on public.orders (buyer_user_id, created_at desc);
+create index if not exists orders_seller_idx on public.orders (seller_user_id, created_at desc);
+create index if not exists orders_tenant_status_idx on public.orders (tenant_id, status);
+drop trigger if exists orders_touch on public.orders;
+create trigger orders_touch before update on public.orders
+  for each row execute function public.touch_updated_at();
+
+-- Commission calculation trigger on order_completed (paid → completed transition).
+-- Snapshots the rate from the listing (already commission-immutable) and
+-- writes the commission + seller_net amounts into the order.
+create or replace function public.calc_commission_on_completion()
+returns trigger as $$
+declare
+  rate int;
+begin
+  if new.status = 'completed' and (old.status is null or old.status <> 'completed') then
+    select commission_rate_bps into rate from public.listings where id = new.listing_id;
+    if rate is null then rate := 0; end if;
+    new.commission_minor := (new.amount_minor * rate) / 10000;
+    new.seller_net_minor := new.amount_minor - new.commission_minor;
+    new.completed_at := coalesce(new.completed_at, now());
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists orders_commission_calc on public.orders;
+create trigger orders_commission_calc
+  before update on public.orders
+  for each row execute function public.calc_commission_on_completion();
+
+-- =============================================================================
+-- TABLE: reviews (buyer reviews for seller/listing)
+-- =============================================================================
+create table if not exists public.reviews (
+  id               uuid primary key default gen_random_uuid(),
+  tenant_id        uuid not null references public.tenants(id) on delete cascade,
+  order_id         uuid not null references public.orders(id) on delete cascade,
+  buyer_user_id    uuid not null references auth.users(id) on delete cascade,
+  seller_user_id   uuid not null references auth.users(id) on delete cascade,
+  rating           integer not null check (rating between 1 and 5),
+  title            text,
+  body             text,
+  created_at       timestamptz not null default now()
+);
+create unique index if not exists reviews_order_idx on public.reviews (order_id);
+create index if not exists reviews_seller_idx on public.reviews (seller_user_id, created_at desc);
+
+-- =============================================================================
+-- TABLE: disputes (AP-MP-03 FSM)
+-- =============================================================================
+create table if not exists public.disputes (
+  id              uuid primary key default gen_random_uuid(),
+  tenant_id       uuid not null references public.tenants(id) on delete cascade,
+  order_id        uuid not null references public.orders(id) on delete restrict,
+  buyer_user_id   uuid not null references auth.users(id) on delete restrict,
+  seller_user_id  uuid not null references auth.users(id) on delete restrict,
+  reason          text not null,
+  amount_minor    bigint not null,
+  currency        text not null,
+  state           text not null default 'filed'
+                    check (state in ('filed', 'in_review', 'mediation', 'resolved_buyer', 'resolved_seller')),
+  assigned_to     uuid references auth.users(id) on delete set null,
+  opened_at       timestamptz not null default now(),
+  last_update_at  timestamptz not null default now(),
+  resolution_note text
+);
+create index if not exists disputes_tenant_state_idx on public.disputes (tenant_id, state);
+create index if not exists disputes_order_idx on public.disputes (order_id);
+
+-- AP-MP-03 FSM guard: only allowed transitions
+create or replace function public.enforce_dispute_fsm()
+returns trigger as $$
+begin
+  if old.state = new.state then return new; end if;
+  if old.state = 'filed' and new.state in ('in_review', 'resolved_buyer', 'resolved_seller') then return new; end if;
+  if old.state = 'in_review' and new.state in ('mediation', 'resolved_buyer', 'resolved_seller') then return new; end if;
+  if old.state = 'mediation' and new.state in ('resolved_buyer', 'resolved_seller') then return new; end if;
+  raise exception 'AP-MP-03: illegal dispute transition % → %', old.state, new.state;
+end;
+$$ language plpgsql;
+
+drop trigger if exists disputes_fsm_guard on public.disputes;
+create trigger disputes_fsm_guard before update on public.disputes
+  for each row execute function public.enforce_dispute_fsm();
+
+-- =============================================================================
+-- TABLE: payouts + payout_events (AP-MP-02 escrow FSM)
+-- =============================================================================
+create table if not exists public.payouts (
+  id                  uuid primary key default gen_random_uuid(),
+  tenant_id           uuid not null references public.tenants(id) on delete cascade,
+  seller_user_id      uuid not null references auth.users(id) on delete restrict,
+  order_id            uuid references public.orders(id) on delete set null,
+  amount_minor        bigint not null check (amount_minor > 0),
+  currency            text not null,
+  state               text not null default 'pending_hold'
+                        check (state in ('pending_hold', 'released', 'paid', 'reversed')),
+  hold_until          timestamptz,
+  released_at         timestamptz,
+  paid_at             timestamptz,
+  provider_transfer_id text,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
+);
+create index if not exists payouts_seller_idx on public.payouts (seller_user_id, created_at desc);
+create index if not exists payouts_state_idx on public.payouts (tenant_id, state);
+drop trigger if exists payouts_touch on public.payouts;
+create trigger payouts_touch before update on public.payouts
+  for each row execute function public.touch_updated_at();
+
+-- AP-MP-02 FSM guard for payouts
+create or replace function public.enforce_payout_fsm()
+returns trigger as $$
+begin
+  if old.state = new.state then return new; end if;
+  if old.state = 'pending_hold' and new.state in ('released', 'reversed') then return new; end if;
+  if old.state = 'released' and new.state in ('paid', 'reversed') then return new; end if;
+  raise exception 'AP-MP-02: illegal payout transition % → %', old.state, new.state;
+end;
+$$ language plpgsql;
+
+drop trigger if exists payouts_fsm_guard on public.payouts;
+create trigger payouts_fsm_guard before update on public.payouts
+  for each row execute function public.enforce_payout_fsm();
+
+create table if not exists public.payout_events (
+  id           uuid primary key default gen_random_uuid(),
+  tenant_id    uuid not null references public.tenants(id) on delete cascade,
+  payout_id    uuid not null references public.payouts(id) on delete cascade,
+  kind         text not null,
+  actor_user_id uuid references auth.users(id) on delete set null,
+  metadata     jsonb not null default '{}',
+  created_at   timestamptz not null default now()
+);
+create index if not exists payout_events_payout_idx on public.payout_events (payout_id, created_at desc);
+
+-- =============================================================================
+-- RLS — seller reads own listings/orders/payouts; buyer reads own orders;
+--        admin reads all in tenant; disputes admin-only; public reads active listings.
+-- =============================================================================
+alter table public.listings          enable row level security;
+alter table public.orders            enable row level security;
+alter table public.reviews           enable row level security;
+alter table public.disputes          enable row level security;
+alter table public.payouts           enable row level security;
+alter table public.payout_events     enable row level security;
+alter table public.commission_rates  enable row level security;
+
+-- listings: public can read active; seller + admin manage
+drop policy if exists listings_public_read on public.listings;
+create policy listings_public_read on public.listings for select to anon, authenticated
+  using (public.listings.status = 'active');
+
+drop policy if exists listings_seller_manage on public.listings;
+create policy listings_seller_manage on public.listings for all to authenticated
+  using (
+    public.listings.seller_user_id = auth.uid()
+    or exists (
+      select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid()
+        and ura.tenant_id = public.listings.tenant_id
+        and ura.role in ('admin', 'support')
+    )
+  )
+  with check (
+    public.listings.seller_user_id = auth.uid()
+    or exists (
+      select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid()
+        and ura.tenant_id = public.listings.tenant_id
+        and ura.role in ('admin', 'support')
+    )
+  );
+
+-- orders: buyer + seller + admin read
+drop policy if exists orders_parties on public.orders;
+create policy orders_parties on public.orders for select to authenticated
+  using (
+    public.orders.buyer_user_id = auth.uid()
+    or public.orders.seller_user_id = auth.uid()
+    or exists (
+      select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid()
+        and ura.tenant_id = public.orders.tenant_id
+        and ura.role in ('admin', 'support')
+    )
+  );
+
+-- reviews: public read (marketplace trust signal), own-buyer write
+drop policy if exists reviews_public_read on public.reviews;
+create policy reviews_public_read on public.reviews for select to anon, authenticated using (true);
+drop policy if exists reviews_buyer_write on public.reviews;
+create policy reviews_buyer_write on public.reviews for insert to authenticated
+  with check (public.reviews.buyer_user_id = auth.uid());
+
+-- disputes: admin-only
+drop policy if exists disputes_admin on public.disputes;
+create policy disputes_admin on public.disputes for select to authenticated
+  using (
+    public.disputes.buyer_user_id = auth.uid()
+    or public.disputes.seller_user_id = auth.uid()
+    or exists (
+      select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid()
+        and ura.tenant_id = public.disputes.tenant_id
+        and ura.role = 'admin'
+    )
+  );
+
+-- payouts: seller reads own; admin all
+drop policy if exists payouts_self_or_admin on public.payouts;
+create policy payouts_self_or_admin on public.payouts for select to authenticated
+  using (
+    public.payouts.seller_user_id = auth.uid()
+    or exists (
+      select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid()
+        and ura.tenant_id = public.payouts.tenant_id
+        and ura.role = 'admin'
+    )
+  );
+
+drop policy if exists payout_events_via_payout on public.payout_events;
+create policy payout_events_via_payout on public.payout_events for select to authenticated
+  using (
+    exists (
+      select 1 from public.payouts p
+      where p.id = public.payout_events.payout_id
+        and (p.seller_user_id = auth.uid()
+          or exists (
+            select 1 from public.user_role_assignments ura
+            where ura.user_id = auth.uid() and ura.tenant_id = p.tenant_id and ura.role = 'admin'
+          ))
+    )
+  );
+
+-- commission_rates: admin-only read/write
+drop policy if exists commission_rates_admin on public.commission_rates;
+create policy commission_rates_admin on public.commission_rates for all to authenticated
+  using (
+    exists (
+      select 1 from public.user_role_assignments ura
+      where ura.user_id = auth.uid()
+        and ura.tenant_id = public.commission_rates.tenant_id
+        and ura.role = 'admin'
+    )
+  );

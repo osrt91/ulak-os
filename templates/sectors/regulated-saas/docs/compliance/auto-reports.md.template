@@ -1,0 +1,65 @@
+# BetaRegulated — automated compliance report schedule
+
+Every regulated program needs a predictable drumbeat of reports. This file is the source of truth for the CI/CD scheduled jobs that publish compliance evidence. Missing a report is an audit finding.
+
+## 1. Report calendar
+
+| Cadence | Report | Source | Delivered to | Retention |
+|---|---|---|---|---|
+| Monthly (1st calendar day) | Security dashboard digest | SIEM + alert export | `security@` + audit vault | 7 years |
+| Monthly (1st) | Access-control exception report | IAM + HRIS diff | `security@` + DPO | 7 years |
+| Monthly (5th) | Vulnerability remediation summary | Dependabot / Snyk / Trivy | Engineering + security | 3 years |
+| Monthly (15th) | DSAR throughput report | `dsar_requests` table | DPO + legal | 7 years |
+| Quarterly (close of quarter + 5 business days) | Access review report | Role assignments + manager attestations | Compliance | 7 years |
+| Quarterly | Backup restore drill evidence | Runbook execution log | Infra lead + auditor | 7 years |
+| Quarterly | Change-management sample pack | Merge commits + approvers | Compliance | 7 years |
+| Quarterly | Sub-processor DPA status | `vendor-register.md` + signed DPAs | DPO + procurement | 7 years |
+| Biannual | Tabletop incident exercise | Runbook execution | Security + exec sponsor | 7 years |
+| Biannual | KVKK VERBİS güncellemesi | `processing_activities` | VERBİS temsilcisi | 7 years |
+| Annual | Third-party penetration test summary | External vendor report | CTO + auditor | 7 years |
+| Annual | Risk register refresh | Threat model | Exec + board | 7 years |
+| Annual | SOC 2 evidence bundle | All of the above, hash-sealed | External auditor | 7 years |
+| Continuous | Control monitoring (CI gate) | Each PR | Engineering | 90 days |
+
+## 2. Jobs that produce these reports
+
+| Job | Where | Trigger |
+|---|---|---|
+| `.github/workflows/compliance-monthly.yml` | GitHub Actions | `schedule: cron: '0 6 1 * *'` |
+| `.github/workflows/compliance-quarterly.yml` | GitHub Actions | `schedule: cron: '0 6 1 1,4,7,10 *'` |
+| `.github/workflows/compliance-annual.yml` | GitHub Actions | `schedule: cron: '0 6 1 1 *'` |
+| `supabase/functions/ropa-export` | Supabase Edge Function | Manual on demand |
+| `supabase/functions/dsar-throughput-digest` | Supabase Edge Function | `schedule: cron: '0 6 15 * *'` |
+
+Each job writes the output as a signed JSON + PDF to the evidence bucket under `s3://betaregulated-evidence/<year>/<report>/<ts>/`.
+
+## 3. Evidence sealing
+
+Every report is:
+1. Hashed (SHA-256).
+2. Signed with an offline-rotated KMS key (see `docs/governance/secrets-rotation-policy.md`).
+3. Entries written to the `compliance_audit_log.report_id` chain, each row referencing the previous row's hash (tamper-evident).
+4. Bucket has object-lock enabled (legal hold) for the retention window.
+
+## 4. Alert thresholds (red-flag policy)
+
+| Condition | Severity | Action |
+|---|---|---|
+| Any monthly report missed by > 24 h | P2 | Incident ticket opened, DPO notified |
+| Any quarterly report missed by > 5 business days | P1 | Exec escalation + board-visible |
+| Annual audit bundle missing by 15 Jan | P0 | External auditor notified; audit-window at risk |
+| Any report produced with empty / zero-row data | P2 | Auto-flagged for human review (likely pipeline break) |
+
+## 5. Regulator submission shortcuts
+
+| Regulator | Portal / contact | Report |
+|---|---|---|
+| **[KVKK]** Kişisel Verileri Koruma Kurulu | verbis.kvkk.gov.tr + kvkk@kvkk.gov.tr | VERBİS updates, breach notifications |
+| **[GDPR]** Supervisory Authority (DE BfDI / IE DPC / ...) | Authority-specific portal | Breach notifications, DPIA queries |
+| **[CCPA]** California AG | oag.ca.gov/privacy/ccpa | Breach notifications when CA residents affected |
+
+## 6. Cross-references
+
+- `soc2-readiness-checklist.md` — what each report maps to in TSC
+- `gdpr-kvkk-runbook.md` — operational context for DSAR + breach reports
+- `docs/governance/observability-baseline.md` — where the SIEM data comes from

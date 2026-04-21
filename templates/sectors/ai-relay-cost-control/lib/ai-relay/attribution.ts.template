@@ -1,0 +1,62 @@
+// {{product_name_pascal}} — cost attribution recorder
+// Writes one row per completed (or terminated) relay so BI can break
+// spend down by tenant / user / feature / conversation / model.
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
+export interface AttributionRow {
+  tenant_id: string;
+  user_id: string;
+  feature: string;
+  conversation_id: string | null;
+  model: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_usd: number;
+  outcome: "finished" | "cap_hit" | "upstream_error" | "client_aborted";
+}
+
+export async function recordAttribution(row: AttributionRow): Promise<void> {
+  try {
+    await supabaseAdmin.from("ai_cost_events").insert({
+      tenant_id: row.tenant_id,
+      user_id: row.user_id,
+      feature: row.feature,
+      conversation_id: row.conversation_id,
+      model: row.model,
+      prompt_tokens: row.prompt_tokens,
+      completion_tokens: row.completion_tokens,
+      total_usd: row.total_usd,
+      outcome: row.outcome,
+    });
+    // Best-effort rollup — RPC updates materialized daily tiles atomically.
+    await supabaseAdmin.rpc("ai_cost_rollup_touch", {
+      p_tenant_id: row.tenant_id,
+      p_day: new Date().toISOString().slice(0, 10),
+    });
+  } catch (err) {
+    // Attribution must never block the relay; log and move on.
+    // eslint-disable-next-line no-console
+    console.error("[ai-relay] attribution failed", err);
+  }
+}
+
+export interface AttributionBreakdown {
+  by_user: Array<{ user_id: string; email: string; usd: number }>;
+  by_feature: Array<{ feature: string; usd: number }>;
+  by_model: Array<{ model: string; usd: number }>;
+  total_usd: number;
+}
+
+export async function breakdownForRange(
+  tenantId: string,
+  fromIso: string,
+  toIso: string,
+): Promise<AttributionBreakdown> {
+  const { data } = await supabaseAdmin.rpc("ai_cost_breakdown", {
+    p_tenant_id: tenantId,
+    p_from: fromIso,
+    p_to: toIso,
+  });
+  const row = (data as AttributionBreakdown | null) ?? { by_user: [], by_feature: [], by_model: [], total_usd: 0 };
+  return row;
+}

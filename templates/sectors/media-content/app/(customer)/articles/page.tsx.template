@@ -1,0 +1,163 @@
+// {{product_name_pascal}} — article listing (customer/public surface, media-content overlay)
+//
+// BetaMedia fictional tenant displays published articles with filters and
+// infinite-scroll pagination. Category + tag + author filters map to query params.
+
+import Link from 'next/link'
+import Image from 'next/image'
+
+import { createServerClient } from '@/lib/supabase/server'
+import { t } from '@/lib/i18n'
+import { formatDate } from '@/lib/i18n/format'
+import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/shared/empty-state'
+
+interface ArticleCard {
+  id: string
+  slug: string
+  title: string
+  excerpt: string | null
+  cover_image_url: string | null
+  reading_time_minutes: number | null
+  published_at: string
+  author: { display_name: string; slug: string } | null
+  category: { name: string; slug: string } | null
+  tags: { name: string; slug: string }[]
+}
+
+interface RefRow { slug: string; name: string }
+
+const PAGE_SIZE = 12
+
+export default async function ArticlesIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string; tag?: string; author?: string; page?: string }>
+}) {
+  const params = await searchParams
+  const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
+  const offset = (page - 1) * PAGE_SIZE
+
+  const supabase = await createServerClient()
+
+  let query = supabase
+    .from('articles')
+    .select(`
+      id, slug, title, excerpt, cover_image_url, reading_time_minutes, published_at,
+      authors ( display_name, slug ),
+      categories ( name, slug ),
+      article_tags ( tags ( name, slug ) )
+    `)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .range(offset, offset + PAGE_SIZE - 1)
+
+  if (params.category) query = query.eq('categories.slug', params.category)
+  if (params.author) query = query.eq('authors.slug', params.author)
+
+  const { data: rows } = await query
+  const { data: categories } = await supabase.from('categories').select('slug, name').order('sort_order')
+  const { data: tags } = await supabase.from('tags').select('slug, name').limit(20)
+
+  const articles: ArticleCard[] = (rows ?? []).map((r: {
+    id: string; slug: string; title: string; excerpt: string | null;
+    cover_image_url: string | null; reading_time_minutes: number | null;
+    published_at: string;
+    authors: { display_name: string; slug: string } | null;
+    categories: { name: string; slug: string } | null;
+    article_tags: { tags: { name: string; slug: string } }[] | null;
+  }) => ({
+    id: r.id, slug: r.slug, title: r.title, excerpt: r.excerpt,
+    cover_image_url: r.cover_image_url, reading_time_minutes: r.reading_time_minutes,
+    published_at: r.published_at, author: r.authors, category: r.categories,
+    tags: (r.article_tags ?? []).map((at) => at.tags).filter(Boolean),
+  }))
+
+  // Tag filter applied client-side for now (server join would require RPC)
+  const filtered = params.tag ? articles.filter((a) => a.tags.some((tg) => tg.slug === params.tag)) : articles
+
+  return (
+    <main className="mx-auto max-w-6xl px-4 py-12 space-y-8">
+      <header>
+        <h1 className="font-display text-4xl font-semibold tracking-tight">{t('articles.title')}</h1>
+        <p className="text-ink-muted mt-2">{t('articles.subtitle')}</p>
+      </header>
+
+      <nav className="flex flex-wrap gap-4 text-sm" aria-label={t('articles.filter-label')}>
+        <div className="flex gap-2 items-center">
+          <span className="text-ink-muted">{t('articles.filter.category')}:</span>
+          <Link href="/articles" className={!params.category ? 'font-semibold' : 'text-ink-muted hover:text-ink'}>
+            {t('articles.filter.all')}
+          </Link>
+          {(categories as RefRow[] | null)?.map((c) => (
+            <Link
+              key={c.slug}
+              href={`/articles?category=${c.slug}`}
+              className={params.category === c.slug ? 'font-semibold' : 'text-ink-muted hover:text-ink'}
+            >
+              {c.name}
+            </Link>
+          ))}
+        </div>
+        {tags?.length ? (
+          <div className="flex gap-2 items-center flex-wrap">
+            <span className="text-ink-muted">{t('articles.filter.tag')}:</span>
+            {(tags as RefRow[]).map((tg) => (
+              <Link
+                key={tg.slug}
+                href={`/articles?tag=${tg.slug}`}
+                className={params.tag === tg.slug ? 'font-semibold' : 'text-ink-muted hover:text-ink'}
+              >
+                #{tg.name}
+              </Link>
+            ))}
+          </div>
+        ) : null}
+      </nav>
+
+      {filtered.length === 0 ? (
+        <EmptyState title={t('articles.empty-title')} body={t('articles.empty-body')} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map((a) => (
+            <article key={a.id} className="group">
+              <Link href={`/articles/${a.slug}`} className="block space-y-3">
+                {a.cover_image_url ? (
+                  <div className="aspect-video relative rounded-lg overflow-hidden bg-surface-muted">
+                    <Image src={a.cover_image_url} alt="" fill className="object-cover group-hover:scale-[1.02] transition-transform" sizes="(min-width: 1024px) 33vw, 100vw" />
+                  </div>
+                ) : null}
+                <div className="space-y-2">
+                  {a.category ? <Badge variant="outline">{a.category.name}</Badge> : null}
+                  <h2 className="font-display text-xl font-semibold group-hover:text-accent-600 transition-colors">{a.title}</h2>
+                  {a.excerpt ? <p className="text-sm text-ink-muted line-clamp-2">{a.excerpt}</p> : null}
+                </div>
+              </Link>
+              <footer className="mt-3 flex items-center justify-between text-xs text-ink-muted">
+                <span>{a.author?.display_name ?? t('articles.anonymous')}</span>
+                <span>
+                  {formatDate(a.published_at)}
+                  {a.reading_time_minutes ? ` · ${t('articles.reading-time', { n: a.reading_time_minutes })}` : null}
+                </span>
+              </footer>
+            </article>
+          ))}
+        </div>
+      )}
+
+      <nav className="flex items-center justify-center gap-4 pt-8" aria-label={t('pagination.label')}>
+        {page > 1 ? (
+          <Link href={`?${new URLSearchParams({ ...params, page: String(page - 1) }).toString()}`} className="text-sm hover:underline">
+            ← {t('pagination.prev')}
+          </Link>
+        ) : null}
+        <span className="text-sm text-ink-muted">{t('pagination.page', { n: page })}</span>
+        {filtered.length === PAGE_SIZE ? (
+          <Link href={`?${new URLSearchParams({ ...params, page: String(page + 1) }).toString()}`} className="text-sm hover:underline">
+            {t('pagination.next')} →
+          </Link>
+        ) : null}
+      </nav>
+    </main>
+  )
+}
