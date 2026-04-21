@@ -1,12 +1,41 @@
 #!/usr/bin/env bash
-# Ulak OS — JSON/TOML schema validator (with $schema conformance as of v2.1.4)
+# Ulak OS — JSON/TOML schema validator (with $schema conformance as of v2.1.4;
+# vendored schemas + strict mode as of v1.0.1)
 # Parses JSON + TOML files. If a JSON file declares a `$schema` URL, attempts
 # actual schema conformance (not just parse validity) — closes DY-02.
+#
+# Schema lookup order (v1.0.1+, SEC-B-09 fix):
+#   1. Local `schemas/<slug>.json` (slug = filename from $schema URL)
+#   2. Network fetch (unless --strict, which forbids network)
+#   3. WARN + parse-only (only if --strict NOT passed)
+#
+# --strict flag (recommended for CI): fail on any missing local vendored
+# schema; never reach the network; never fall back to parse-only silently.
 
 set -euo pipefail
 
 ERRORS=0
 WARNINGS=0
+STRICT_MODE=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --strict) STRICT_MODE=1 ;;
+    --help|-h)
+      cat <<'HLP'
+Usage: validate-schemas.sh [--strict]
+
+Default mode: tries local schemas/<slug>.json first; network fallback; parse-only on
+network error (warn).
+
+--strict:
+  Local-only. Fails on any missing vendored schema. Fails on any $schema-declaring
+  JSON whose conformance check cannot be run. Recommended for CI.
+HLP
+      exit 0
+      ;;
+  esac
+done
 
 # Check Python is available
 if ! command -v python3 >/dev/null 2>&1 && ! command -v python >/dev/null 2>&1; then
@@ -74,10 +103,12 @@ except Exception:
     if [[ -z "$SCHEMA_URL" ]]; then
       echo "✓ $f (parse-only; no \$schema declared)"
     else
-      # Attempt schema conformance
-      VALIDATION_OUT=$("$PYTHON" - "$f" "$SCHEMA_URL" <<'PYEOF' 2>&1
+      # Attempt schema conformance (v1.0.1: local-first, then network, then parse-only)
+      VALIDATION_OUT=$("$PYTHON" - "$f" "$SCHEMA_URL" "$STRICT_MODE" <<'PYEOF' 2>&1
 import json
+import os
 import sys
+from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import URLError
 import socket
@@ -91,30 +122,54 @@ except ImportError:
 
 instance_path = sys.argv[1]
 schema_url = sys.argv[2]
+strict = sys.argv[3] == "1"
 
-# Fetch schema with short timeout (don't hang CI on network flakes)
-try:
-    socket.setdefaulttimeout(5)
-    req = Request(schema_url, headers={"User-Agent": "ulak-os-validator/2.1.4"})
-    with urlopen(req) as r:
-        schema = json.loads(r.read().decode("utf-8"))
-except (URLError, socket.timeout) as e:
-    print(f"WARN: could not fetch {schema_url}: {e}")
-    sys.exit(0)
-except Exception as e:
-    print(f"WARN: schema fetch error: {e}")
-    sys.exit(0)
+schema = None
+schema_source = ""
+
+# Step 1: try vendored local schema (v1.0.1+, SEC-B-09 fix)
+slug = schema_url.rstrip("/").rsplit("/", 1)[-1]
+local_path = Path("schemas") / slug
+if local_path.is_file():
+    try:
+        with open(local_path, "r", encoding="utf-8") as fh:
+            schema = json.load(fh)
+        schema_source = f"local:schemas/{slug}"
+    except Exception as e:
+        print(f"ERROR: vendored schema {local_path} unreadable: {e}")
+        sys.exit(1)
+
+# Step 2: network fetch (skipped in --strict mode)
+if schema is None:
+    if strict:
+        print(f"ERROR: --strict mode but no local vendored schema at schemas/{slug}")
+        print(f"  action: curl -fsSL {schema_url} -o schemas/{slug}")
+        sys.exit(1)
+    try:
+        socket.setdefaulttimeout(5)
+        req = Request(schema_url, headers={"User-Agent": "ulak-os-validator/1.0.1"})
+        with urlopen(req) as r:
+            schema = json.loads(r.read().decode("utf-8"))
+        schema_source = f"network:{schema_url}"
+    except (URLError, socket.timeout) as e:
+        print(f"WARN: could not fetch {schema_url}: {e}")
+        print(f"  hint: vendor the schema into schemas/{slug} to remove this dependency")
+        sys.exit(0)
+    except Exception as e:
+        print(f"WARN: schema fetch error: {e}")
+        sys.exit(0)
 
 with open(instance_path) as fh:
     instance = json.load(fh)
 
 try:
     validate(instance=instance, schema=schema)
-    print("OK: conforms to schema")
+    print(f"OK: conforms to schema ({schema_source})")
     sys.exit(0)
 except ValidationError as ve:
     print(f"ERROR: {ve.message}")
     print(f"  path: {list(ve.absolute_path)}")
+    print(f"  schema source: {schema_source}")
     sys.exit(1)
 PYEOF
       )

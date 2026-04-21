@@ -1,5 +1,53 @@
 # Changelog
 
+## [1.0.1] — 2026-04-21 — Phase A polish: security deferred items + agent stubs + governance closure
+
+### Context
+
+First patch release after v1.0.0 public-GA. Closes the P1/P2 deferred items from the v1.0.0 red-team + cartography passes; expands the remaining 8 thin specialist agents to full production specs. No breaking changes; purely additive + governance polish.
+
+### Security hardening (deferred items from v1.0.0 red-team)
+
+- **SEC-B-05** — Install one-liner now has a published SHA256 verification path. `README.md` + `README.en.md` Quickstart show Method 1b (curl + sha256sum -c + run). `docs/runbooks/install-methods.md` §Method 1b adds the full walkthrough for POSIX + PowerShell. SHA256 files ship with each tagged GitHub Release.
+- **SEC-B-09** — `scripts/validate-schemas.sh` now reads local vendored schemas first (from `schemas/<slug>.json`), then falls back to network fetch, then to parse-only. New `--strict` flag forbids network and parse-only fallback; recommended for CI. `schemas/README.md` explains the vendor policy. Closes the silent-fail-on-network-error surface flagged in v1.0.0 red-team.
+- **SEC-B-11** — New `scripts/check-secret-rotation-due.sh` parses `active-variables.yaml` rotation-due dates; warns on 7d+ overdue, errors on 30d+ overdue. Closes the docs-promise-vs-reality gap where `secrets-rotation-policy.md:104` referenced a non-existent script.
+
+### Agent expansions (A.3 — 8 remaining thin stubs → production specs)
+
+Every one of the following was 31L at v1.0.0 GA and is now 90-99L with the canonical structure (role + when-to-dispatch + 8 focus areas + evidence rules + sample YAML finding + hard rules + artefact-write-authorization + deliverable shape):
+
+- `localization-i18n-lead.md` — 95L
+- `release-readiness-auditor.md` — 95L
+- `privacy-compliance-counsel.md` — 99L
+- `seo-aso-growth-strategist.md` — 96L
+- `product-business-strategist.md` — 90L
+- `support-ops-orchestrator.md` — 93L
+- `market-researcher.md` — 93L
+- `educational-ux-specialist.md` — 94L
+
+Front-matter `tools:` lists preserved verbatim. Every sample YAML finding conforms to `docs/governance/finding-schema.md`. Total agents at production depth: 10 → 18; stubs remaining: 0 (excluding the persona family which follows a distinct shorter contract).
+
+### Governance stub closure (cartography residuals CART-003/004/006)
+
+- **`docs/governance/rule-collision-matrix.md`** — 12L stub → 81L with 5 worked collision examples covering security-vs-UX, reversibility-vs-pack-quality, evidence-vs-validation, security-vs-reversibility, pack-vs-UX. Resolution protocol documented; every finding with `contradiction_status: direct` now has a canonical process.
+- **`docs/governance/autonomy-pressure-layer.md`** — 10L stub → 48L with when-applies / when-not-applies / 6 rules / integration with other governance + anti-patterns.
+- **`docs/governance/hidden-maintainer-surface-template.md`** — 11L stub → 70L with what-belongs matrix + authoring conventions + skeleton template. Clarifies the Layer 1 (public runtime) vs Layer 2 (hidden maintainer) split.
+- **`tests/README.md`** — new orientation doc explaining why `tests/` is empty at the repo root (prompt regression lives under `evals/`; scaffolder tests live in `templates/saas-starter/tests/`). Closes cartography finding CART-004.
+
+### Package metadata
+
+- `package.json` version: 1.0.0 → 1.0.1
+- `prompts/pack.json` version: 1.0.0 → 1.0.1
+- `.claude-plugin/plugin.json` version: 1.0.0 → 1.0.1
+
+### Deferred to v1.0.2+
+
+- **SEC-B-08** (middleware /api/public integration test) — scaffolder-template polish; ships with v1.1 scaffolder completion
+- **SEC-B-10** (deploy rollback .next/ cleanup + COMMIT validation) — scaffolder-template polish; v1.1
+- **SEC-B-12** (install-hooks HMAC bypass token) — v1.0.2 or later
+- **SEC-B-14** (MCP allowlist load-time gate) — v1.0.2 or later
+- **CART-005** (3 near-orphan docs) — still low-priority; decide in v1.0.2 whether to expand cross-links or accept as "README-only reachable"
+
 ## [1.0.0] — 2026-04-21 — Public General Availability (semantic reset from internal v2.4.0)
 
 ### Context
