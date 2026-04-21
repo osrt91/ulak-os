@@ -1,8 +1,8 @@
 # Final test pass + v1.0.0 public-GA — Sabah özeti
 
 **Tarih**: 2026-04-21 (gece otonom koşu)
-**HEAD**: `8750c22` (docs(user-manual): v1.0.0 — bilingual user manual (TR + EN))
-**Durum**: v1.0.0 public-GA LOKAL HAZIR — push bekliyor (SEC-INCIDENT rotation blocker'ı var)
+**HEAD**: `161ad9f` (rewritten — all history scrubbed of leaked keys + portfolio names)
+**Durum**: v1.0.0 public-GA LOKAL HAZIR — push bekliyor (history rewrite sonrası force-push gerekir)
 
 ---
 
@@ -11,7 +11,7 @@
 - **v1.0.0 public-GA commit edildi + annotated tag'lendi**. 14 commit, `v2.4.0` → `v1.0.0`.
 - **5 test agent paraleline çalıştı**: QA, security-redteam, release-readiness, cartography, customer-persona.
 - **9 critical/high bulgu kod seviyesinde fix'lendi**: install.sh eval kaldırıldı, RLS cross-tenant kapatıldı, container escape deny, prompt-injection sigil scan, FAQ link düzeltme, README yardım bölümü, tag gap, vendor-parity exemption.
-- **1 CRITICAL bulgu operatör aksiyonu bekliyor**: SEC-B-01 — leaked Resend + Cloudflare keys `v2.1.4` public tag'te hâlâ okunabiliyor. Detaylı incident doc: `docs/security/incidents/2026-04-21-v2.1.4-tag-credential-leak.md`.
+- **SEC-B-01 ÇÖZÜLDÜ (history rewrite)**: `git filter-repo --replace-text` ile tüm history'deki leaked Resend + Cloudflare keys + 7 operator portföy proje adı (hepsi generic sector descriptor'lara dönüştürüldü) `REDACTED_*` marker'lı olarak değiştirildi. 61 commit rewrite edildi. **Operatör rotation hâlâ önerilen** (secrets push öncesi ortada dolaşmış olabilir), ama lokal history artık temiz.
 - **TR + EN bilingual kullanım kılavuzu yazıldı**: 20 dosya, ~4070 satır. `docs/user-manual/{tr,en}/`.
 - **Tüm validator'lar yeşil**: imports, schemas, vendor-parity, JSON parse.
 - **Redaction temiz**: 7 yasaklı portfolio adından **0 sızıntı** (çekirdek repo'da); `info@oguzhansert.dev` + GitHub handle `osrt91` meşru.

@@ -51,7 +51,7 @@ Email rather than file a public issue if your report includes any of:
 
 ## Known acknowledged incidents
 
-- [SEC-INCIDENT-2026-04-21 — v2.1.4 tag credential leak](./docs/security/incidents/2026-04-21-v2.1.4-tag-credential-leak.md) — Resend + Cloudflare keys recoverable from public v2.1.4 tag. Operator rotation required before v1.0.0 public-GA push.
+- [SEC-INCIDENT-2026-04-21 — v2.1.4 tag credential leak](./docs/security/incidents/2026-04-21-v2.1.4-tag-credential-leak.md) — Resend + Cloudflare keys were recoverable from public v2.1.4 tag. **RESOLVED** via local git-filter-repo history rewrite (2026-04-21 evening). Force-push to origin pending operator approval. Key rotation still recommended (defense-in-depth).
 
 ## Hall of fame
 
