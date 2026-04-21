@@ -39,6 +39,8 @@ ulak doctor
 
 Tüm komutlar hatasız dönmeli. `ulak doctor` yeşil çıktı vermeli.
 
+> **İpucu:** v1.0.0'dan itibaren `ulak` komutu aynı zamanda `ulak-os` adıyla da çağrılabilir (aynı binary'nin iki alias'ı). Hangisini tercih ederseniz onu kullanın — `ulak-os doctor` ve `ulak doctor` birebir aynı.
+
 **Ne zaman seçilir:** Bir makinede hızlıca denemek için. Her zaman `main` dalını takip eder, sürüm pinleme yoktur.
 
 ## Yöntem 2 — Git clone + manuel CLAUDE.md düzenlemesi
@@ -182,7 +184,7 @@ pwd
 ls .claude/commands/ 2>/dev/null || echo "no .claude/commands here"
 ```
 
-Eğer `.claude/commands/` yoksa, ya `ulak init .` koşun (import bağlantısı kurulur, komutlar kurulum dizininden gelir) ya da Claude Code'u `~/.ulak-os/` dizininden açın — orada 9 komut hazır durumdadır.
+Eğer `.claude/commands/` yoksa, ya `ulak init .` koşun (import bağlantısı kurulur, komutlar kurulum dizininden gelir) ya da Claude Code'u `~/.ulak-os/` dizininden açın — orada 15 komut hazır durumdadır.
 
 Detaylı sorun giderme: [troubleshooting runbook](../../runbooks/troubleshooting.md).
 

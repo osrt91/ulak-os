@@ -1,10 +1,11 @@
 {
   "name": "ulak-os",
-  "version": "3.0.0",
+  "version": "1.0.0",
   "description": "Vendor-neutral prompt operating system CLI — audit, govern, scaffold full-stack SaaS across Claude Code / Codex / Gemini CLI",
   "type": "module",
   "bin": {
-    "ulak": "./dist/cli/index.js"
+    "ulak": "./dist/cli/index.js",
+    "ulak-os": "./dist/cli/index.js"
   },
   "engines": {
     "node": ">=18"

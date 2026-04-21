@@ -155,6 +155,8 @@ ulak doctor
 
 `ulak doctor` runs every validator in sequence and reports green, yellow, or red on each. A green run means the pack is structurally healthy.
 
+> **Tip:** starting from v1.0.0, the command is also exposed under the longer alias `ulak-os`. Both `ulak doctor` and `ulak-os doctor` hit the same binary — pick whichever you prefer; the alias helps in shells where the short `ulak` name clashes with another tool.
+
 ### Direct validator scripts (POSIX)
 
 If you used Method 2 or want to inspect the validators one by one:

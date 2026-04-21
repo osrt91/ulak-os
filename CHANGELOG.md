@@ -1,6 +1,29 @@
 # Changelog
 
-## [3.0.0] — 2026-04-21 — Public launch consolidation (hybrid systems + 14 sectors + hardening)
+## [1.0.0] — 2026-04-21 — First public launch (semver reset for marketplace submission)
+
+### Why the version dropped from 3.0.0 → 1.0.0
+
+The pre-launch working tree carried a 3.0.0 manifest label inherited from an internal consolidation cycle. For the first **publicly distributed** version, the honest label is **v1.0.0**: this is the first artefact a stranger can clone from a public registry without asking the author. Version number inflation (v3 for a never-released product) hurts trust signals for marketplace listings, awesome-list submissions, and first-time evaluators.
+
+All the capabilities listed under the [3.0.0] section below ship under the v1.0.0 label. No feature was removed. The only delta is:
+
+- `package.json` / `prompts/pack.json` / `.claude-plugin/plugin.json` → `3.0.0` → `1.0.0`
+- `plugin.json.capabilities.scaffolder_templates` aligned to actual on-disk count (175 → 284)
+- `plugin.json.capabilities.sector_overlays` aligned to actual materialised count (17 → 14)
+- `.github/vendor-parity-exemptions.txt` adds the 6 v2.1 community-ecosystem wrappers (ulak-audit-deep, ulak-brainstorm, ulak-mcp-discover, ulak-pattern-extract, ulak-subagent-dispatch, ulak-test-driven) — their Gemini CLI adapters are scheduled for v1.1
+
+### What v1.0.0 contains
+
+Everything from the "[3.0.0]" block below is the v1.0.0 payload. See that section for the full capability table (v1.0.0 baseline → current delta), hardening pass summary, and hardcore history-scrub verification.
+
+### Push status
+
+v1.0.0 is **locally tagged**. Origin push remains blocked on SEC-INCIDENT-2026-04-21 operator-side key rotation (Resend + Cloudflare). After rotation + revocation confirmation, the operator pushes `main` + `v1.0.0` + `v1.0.0-launch` (collision-free alias) with `--follow-tags`.
+
+---
+
+## [3.0.0] — 2026-04-21 — Public launch consolidation (hybrid systems + 14 sectors + hardening) [SUPERSEDED BY 1.0.0]
 
 ### Context
 

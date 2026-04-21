@@ -37,3 +37,17 @@ gemini:triage-build
 # dispatch semantics with superpowers:saas-scaffolder skill. Gemini CLI adapter deferred to
 # post-v1.0.0 (requires skill-equivalent abstraction in the Gemini runtime).
 gemini:ulak-scaffold
+
+# ----------------------------------------------------------------------------
+# v1.0.0-cycle community-ecosystem wrappers (added post-internal-v2.1 batch).
+# These 6 commands wrap superpowers disciplines (TDD, brainstorming,
+# subagent-driven-development, fourteen-dimension-audit, MCP governance,
+# pattern extraction). Gemini CLI adapter is deferred to v1.1 — the underlying
+# skills are Claude-Code-specific runtime constructs.
+# ----------------------------------------------------------------------------
+gemini:ulak-audit-deep
+gemini:ulak-brainstorm
+gemini:ulak-mcp-discover
+gemini:ulak-pattern-extract
+gemini:ulak-subagent-dispatch
+gemini:ulak-test-driven
