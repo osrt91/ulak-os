@@ -34,7 +34,16 @@ curl -fsSL https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install
 iwr -useb https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install.ps1 | iex
 ```
 
-Installer `$HOME/.ulak-os/` altına indirir + PATH'e `ulak` komutu ekler. `sudo` istemez. Dry-run için `--dry-run` / `-DryRun` switch'i var. Alternatifler için [docs/runbooks/install-methods.md](./docs/runbooks/install-methods.md).
+**Güvenli yol (checksum doğrulama)** — curl | sh yerine SHA256 doğrulaması ile:
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install.sh -o /tmp/ulak-install.sh
+curl -fsSL https://github.com/osrt91/ulak-os/releases/latest/download/install.sh.sha256 -o /tmp/ulak-install.sh.sha256
+(cd /tmp && sha256sum -c ulak-install.sh.sha256) && sh /tmp/ulak-install.sh
+```
+
+Installer `$HOME/.ulak-os/` altına indirir + PATH'e `ulak` komutu ekler. `sudo` istemez. Dry-run için `--dry-run` / `-DryRun` switch'i var. Alternatifler + checksum yöntemleri için [docs/runbooks/install-methods.md](./docs/runbooks/install-methods.md).
 
 **Manuel klon** (vendor lock-in olmadan inceleme için):
 

@@ -34,7 +34,16 @@ curl -fsSL https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install
 iwr -useb https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install.ps1 | iex
 ```
 
-Installs to `$HOME/.ulak-os/` and adds the `ulak` command to PATH. No `sudo` required. Pass `--dry-run` / `-DryRun` to preview. Alternatives (clone, submodule, plugin) in [docs/runbooks/install-methods.md](./docs/runbooks/install-methods.md).
+**Safer path (SHA256 verification)** — prefer this if you don't trust pipe-to-shell:
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install.sh -o /tmp/ulak-install.sh
+curl -fsSL https://github.com/osrt91/ulak-os/releases/latest/download/install.sh.sha256 -o /tmp/ulak-install.sh.sha256
+(cd /tmp && sha256sum -c ulak-install.sh.sha256) && sh /tmp/ulak-install.sh
+```
+
+Installs to `$HOME/.ulak-os/` and adds the `ulak` command to PATH. No `sudo` required. Pass `--dry-run` / `-DryRun` to preview. Alternatives + checksum methods in [docs/runbooks/install-methods.md](./docs/runbooks/install-methods.md).
 
 **Manual clone** (for vendor-lock-free inspection):
 

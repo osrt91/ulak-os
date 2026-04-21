@@ -38,6 +38,39 @@ ulak doctor
 
 **When to choose:** you want to try Ulak OS on your own box, you trust the URL (it is a static file in the public repo), and you are fine tracking `main`.
 
+### Method 1b — One-liner with SHA256 verification (recommended if you don't pipe curl to sh)
+
+For operators who prefer to inspect or verify before executing, the installer's SHA256 hash is published with every tagged release at `https://github.com/osrt91/ulak-os/releases/latest/download/install.sh.sha256`.
+
+**macOS / Linux:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install.sh -o /tmp/ulak-install.sh
+curl -fsSL https://github.com/osrt91/ulak-os/releases/latest/download/install.sh.sha256 -o /tmp/ulak-install.sh.sha256
+
+# Verify checksum matches the signed release artifact
+(cd /tmp && sha256sum -c ulak-install.sh.sha256)
+
+# Only run after the checksum line prints "OK"
+sh /tmp/ulak-install.sh
+```
+
+**Windows PowerShell:**
+
+```powershell
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install.ps1 -OutFile $env:TEMP\ulak-install.ps1
+Invoke-WebRequest -Uri https://github.com/osrt91/ulak-os/releases/latest/download/install.ps1.sha256 -OutFile $env:TEMP\ulak-install.ps1.sha256
+
+# Verify
+$expected = (Get-Content $env:TEMP\ulak-install.ps1.sha256).Split(" ")[0]
+$actual = (Get-FileHash $env:TEMP\ulak-install.ps1 -Algorithm SHA256).Hash.ToLower()
+if ($expected -eq $actual) { & $env:TEMP\ulak-install.ps1 } else { Write-Error "checksum mismatch" }
+```
+
+**When to choose:** you pin installer integrity against the signed release artifact. The release-build pipeline publishes the `.sha256` files; `main` branch `HEAD` may drift slightly between releases, so this flow is most useful when you pin to a released tag.
+
+**Source-of-truth:** SHA256 files live in the GitHub Release body of each tagged version (v1.0.0+). Earlier tags do not have checksums published.
+
 **Pros:** zero cognitive cost, idempotent, detects Claude / Codex / Gemini and prints tailored next steps.
 
 **Cons:** always tracks `main` (no pinning); network required; implicit trust in the installer.
