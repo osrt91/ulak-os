@@ -2,7 +2,7 @@
 
 > **Vendor-neutral prompt operating system** — plan, audit, govern, and **scaffold full-stack SaaS** with Claude Code, Codex, or Gemini CLI.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE) [![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)](./CHANGELOG.md) [![Vendor](https://img.shields.io/badge/vendor-claude%20%7C%20codex%20%7C%20gemini-orange.svg)](./docs/adapters/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE) [![Version](https://img.shields.io/badge/version-1.0.0--public--GA-blue.svg)](./CHANGELOG.md) [![Vendor](https://img.shields.io/badge/vendor-claude%20%7C%20codex%20%7C%20gemini-orange.svg)](./docs/adapters/)
 
 **English (this file)** · **[Türkçe](./README.md)**
 
@@ -111,7 +111,7 @@ scripts/ ← validators + install + fetch-design-references
 
 Detailed architecture diagrams (mermaid, GitHub-native render): [docs/architecture/](./docs/architecture/) — overview · director-protocol · scaffolder-flow · vendor-adapters.
 
-## What's included (v2.4.0)
+## What's included (v1.0.0 public GA)
 
 - **24 sector packs** — education, saas, fintech, ecommerce, marketplace, enterprise-b2b, media-content, health-sensitive, ai-copilot, pwa-desktop, multi-tenant-supabase, container-orchestrating-app, payment-integrated-saas, regulated-saas, reseller-enabled-saas, vps-nginx-compose-topology, admin-cms-hardening, ai-relay-cost-control, telegram-bot, member-gated-community-platform, multi-app-nextjs-expo-monorepo, self-hosted-supabase-orchestration, multi-project-traefik-edge, greenfield-saas-starter
 - **8 rule packs** — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo
@@ -188,4 +188,4 @@ Bug report: [`.github/ISSUE_TEMPLATE/bug_report.md`](./.github/ISSUE_TEMPLATE/bu
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.4.0**. Build metadata: [`prompts/pack.json`](./prompts/pack.json). Core contract: [`prompts/core/ulak-os-core-contract-2.0.0.md`](./prompts/core/ulak-os-core-contract-2.0.0.md).
+Authoritative as of Ulak OS **v1.0.0 (public GA)**. Build metadata: [`prompts/pack.json`](./prompts/pack.json). Core contract: [`prompts/core/ulak-os-core-contract-2.0.0.md`](./prompts/core/ulak-os-core-contract-2.0.0.md). Release notes: [`docs/release/v1.0.0-release-notes.md`](./docs/release/v1.0.0-release-notes.md).

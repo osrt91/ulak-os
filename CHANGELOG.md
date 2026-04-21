@@ -1,5 +1,90 @@
 # Changelog
 
+## [1.0.0] — 2026-04-21 — Public General Availability (semantic reset from internal v2.4.0)
+
+### Context
+
+v1.0.0 is a **semantic reset**. The internal v1.x → v2.x lineage described in `docs/history/version-lineage.md` was operator-controlled; no external audience was expected to clone and depend on it. v1.0.0 (public GA) is the first release where:
+
+- MIT license is explicit across every package manifest
+- README is bilingual (TR + EN) and written for a stranger with five minutes
+- Community files (CONTRIBUTING, CODE_OF_CONDUCT, issue/PR templates) are in place
+- Installer scripts (POSIX + PowerShell) provide a one-liner install path
+- Full showcase + architecture + runbooks + FAQ exist for self-serve adoption
+- 8 specialist agent stubs were expanded to production 80–110-line specs
+- Plugin marketplace submission prep (CATEGORIES, RATIONALE, screenshots dir) is complete
+- awesome-claude-code PR draft ready for upstream submission
+- 5-agent adversarial final-test pass (QA, security, release-readiness, cartography, customer-persona) verified the repo against shipping criteria
+
+The version number reset (2.4.0 → 1.0.0) is **intentional**. It follows the same "fresh release under a new distribution context" pattern as the 1.9.1 → 1.0.0 brand-rebrand in 2026-04-07. It is not a regression in capability.
+
+### Tag collision note
+
+The legacy `v1.0.0` tag at commit `39b88e9` (2026-04-07 brand-rename release) is preserved on `origin` for historical reference. This public-GA release ships as `1.0.0` in package manifests; the annotated git tag for public-GA is placed at the public-GA HEAD. See `docs/history/version-lineage.md` for the complete rationale.
+
+### What's in this GA (delta from v2.4.0)
+
+The following content lived on `main` between the v2.4.0 tag and this GA commit, never tagged as independent intermediate releases:
+
+- **Architecture** — 5 mermaid diagrams (overview, director-protocol, scaffolder-flow, vendor-adapters) + index README
+- **Showcase** — 4 abstract walkthroughs (audit, scaffold, persona dispatch, cross-project pattern absorption) + video script + index README
+- **Installers** — `scripts/install.sh` (POSIX) + `scripts/install.ps1` (PowerShell) + `bin/ulak` wrapper with `doctor` / `init` / `update` / `where` subcommands
+- **Runbooks** — first-hour-with-ulak-os, upgrading-from-v2.x, install-methods, troubleshooting
+- **FAQ** — `docs/FAQ.md`, 18+ Q&A including "what Ulak OS is NOT"
+- **Agent expansions** — 8 previously-31-line stubs expanded to 80–110-line production specs (backend-api-architect, data-database-governor, qa-validation-commander, red-team-challenger, design-system-architect, frontend-ios-flutter-director, prompt-skill-plugin-governor, security-hardening-lead polish)
+- **Plugin marketplace prep** — `.claude-plugin/CATEGORIES.md`, `.claude-plugin/RATIONALE.md`, `.claude-plugin/screenshots/README.md` placeholder
+- **Distribution** — `docs/distribution/awesome-claude-code-pr.md` ready-to-copy upstream PR draft
+- **History** — `docs/history/version-lineage.md` extended through v2.4.0 and documenting the v1.0.0 public-GA semantic reset
+- **Release notes** — `docs/release/v1.0.0-release-notes.md`
+
+### Security hardening in GA commit
+
+The red-team adversarial pass surfaced 2 critical + 4 high findings. Code-level fixes landed in this release:
+
+- `scripts/install.sh` — removed `eval` entirely; every command dispatches through argv; `ULAK_*` env vars validated against strict regex allowlists before use; rollback `rm -rf` refuses to delete unless `ULAK_HOME` matches `$HOME/.ulak-os` or `$HOME/.ulak-os-*` pattern
+- `templates/saas-starter/supabase/migrations/00002_rls_policies.sql.template` — `role_admin_write` and `role_admin_update` policies now tenant-scoped (binding `NEW.tenant_id = caller.tenant_id`); blocks cross-tenant admin privilege escalation
+- `templates/saas-starter/.claude/settings.json.template` — `Bash(docker compose:*)` wildcard split into explicit verbs (ps/up/down/logs/build/restart); `docker run` / `docker exec` / `find -exec` added to deny list; `disableSkillShellExecution: true`
+- `scripts/fetch-design-references.sh` — prompt-injection sigil scan before writing third-party upstream content into `reports/current/design-references/`; size sanity check
+- `.claude/settings.json` — `Bash(find *)` narrowed to `-name` / `-type` / `-maxdepth`; `find -exec` added to deny; `settings.local.json` read/write denied
+- `SECURITY.md` added at repo root with responsible-disclosure policy
+- `docs/security/incidents/2026-04-21-v2.1.4-tag-credential-leak.md` — documents SEC-B-01 (Resend + Cloudflare keys recoverable from public v2.1.4 tag); operator rotation required before public push
+
+### Polish landed in GA commit
+
+- README Quickstart surfaces the one-liner installer (curl/iwr) directly (was buried in runbooks drill-down)
+- Both READMEs have a new "Yardım + daha fazla okuma" / "Help + further reading" section linking FAQ + runbooks + showcase + architecture + history
+- "coming in v2.4.1" stubs replaced with direct links to existing content
+- `docs/FAQ.md` broken internal link paths fixed (`./LICENSE` → `../LICENSE` etc.)
+- Anti-pattern count corrected to accurately describe 98 bullets / 19 numbered AP-NN
+- `.github/vendor-parity-exemptions.txt` — `gemini:ulak-scaffold` exemption documented
+- `scripts/validate-imports.sh` — skips `docs/runbooks/` + `docs/user-manual/` and fenced code blocks (prevents false-positive on pedagogical `@`-import examples)
+- Retroactive annotated tags for `v2.1.2` and `v2.1.3` (previously CHANGELOG-referenced but missing from git)
+- Maintainer section added to both READMEs
+- Author and version metadata consistent across package.json, prompts/pack.json, .claude-plugin/plugin.json
+
+### Package metadata
+
+- `package.json` — version: 2.4.0 → 1.0.0; added `bugs` URL + `homepage`; expanded keywords (added claude-code, gemini-cli, codex-cli, audit, scaffolder, governance)
+- `prompts/pack.json` — version: 2.4.0 → 1.0.0; corrected skills count 9 → 8; replaced stale `anti_patterns: 79` with `anti_pattern_bullets: 98` + `anti_pattern_numbered: 19`; `compatibility.cli` bumped to `>=1.0.0`
+- `.claude-plugin/plugin.json` — version: 2.4.0 → 1.0.0; corrected skills 9 → 8; corrected `scaffolder_templates: 15` → 27; installer one-liners added to `install_notes`; `compatibility.claude_code` bumped to `>=1.0.0`
+
+### Known residual risks (tracked, non-blocking for GA)
+
+- **SEC-B-01** (SECURITY-INCIDENT-2026-04-21) — operator rotation of Resend + Cloudflare keys required before v1.0.0 tag is pushed to origin. Documented in `docs/security/incidents/`.
+- **CLI `src/` — empty** — `src/` directory scaffold exists but has no implementation. `ulak` is a shell wrapper. Node/Python CLI rewrite tracked for v1.1.
+- **`tests/` — empty** — no unit tests. `evals/` provides golden-set regression coverage. Unit tests tracked for v1.1.
+- **Screenshots — placeholder** — operator capture ships in v1.0.1.
+- **Plugin marketplace submission** — prep docs ready; actual submission when Claude Code marketplace opens.
+- **awesome-claude-code PR** — draft ready; operator submits upstream when v1.0.0 tag is public.
+
+### Forward versioning
+
+- v1.0.1 — patch (screenshots, small polish, deferred security items SEC-B-05/08/09/10/11/12/14)
+- v1.1.0 — first post-GA minor (CLI rewrite, unit tests, additional sector packs)
+- v2.0.0 — next post-GA major (alternative stack templates, LightRAG memory upgrade, Firecrawl MCP)
+
+The internal v1.x → v2.x lineage is **not** the same as the post-GA v2.0.0 that will eventually follow this v1.0.0. See `docs/history/version-lineage.md` for the complete disambiguation.
+
 ## [2.4.0] — 2026-04-21 — Public-launch baseline (Phase 3.0-A): MIT · bilingual README · community files · redaction pass 2
 
 ### Context

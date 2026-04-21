@@ -1,7 +1,7 @@
 {
   "name": "ulak-os",
-  "version": "2.4.0",
-  "description": "Vendor-neutral prompt operating system CLI",
+  "version": "1.0.0",
+  "description": "Vendor-neutral prompt operating system CLI — audit, govern, scaffold full-stack SaaS across Claude Code / Codex / Gemini CLI",
   "type": "module",
   "bin": {
     "ulak": "./dist/cli/index.js"
@@ -32,11 +32,28 @@
     "typescript": "^5.5.0",
     "vitest": "^2.0.0"
   },
-  "keywords": ["prompt", "ai", "cli", "operating-system", "vendor-neutral"],
+  "keywords": [
+    "prompt",
+    "ai",
+    "cli",
+    "operating-system",
+    "vendor-neutral",
+    "claude-code",
+    "gemini-cli",
+    "codex-cli",
+    "audit",
+    "scaffolder",
+    "governance"
+  ],
   "author": "Oğuzhan Sert <info@oguzhansert.dev>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/osrt91/ulak-os.git"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/osrt91/ulak-os/issues",
+    "email": "info@oguzhansert.dev"
+  },
+  "homepage": "https://github.com/osrt91/ulak-os#readme"
 }

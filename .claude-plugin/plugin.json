@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "ulak-os",
   "displayName": "Ulak OS — Prompt Operating System",
-  "version": "2.4.0",
-  "description": "Vendor-neutral prompt operating system for Claude Code / Codex / Gemini. Structured Phase 0→5 director protocol: environment lock → deep inventory → parallel specialist evidence → did-you-know discovery → synthesis → manager verdict. Audit, govern, and scaffold full-stack SaaS with 24 sector packs, 8 rule packs, 79 anti-patterns, 22 governance docs, 27 specialist agents, 9 slash-commands, 9 skills, 33 runtime rules, 15 scaffolder templates. Deep-inventory discipline rejects folder dumps; parallel specialist dispatch rejects single-agent evidence; validation gate rejects unverified signoff.",
+  "version": "1.0.0",
+  "description": "Vendor-neutral prompt operating system for Claude Code / Codex / Gemini. Structured Phase 0→5 director protocol: environment lock → deep inventory → parallel specialist evidence → did-you-know discovery → synthesis → manager verdict. Audit, govern, and scaffold full-stack SaaS with 24 sector packs, 8 rule packs, ~100 anti-pattern bullets (19 numbered AP-NN), 22 governance docs, 27 specialist agents, 9 slash-commands, 8 skills, 33 runtime rules, 27 scaffolder templates. Deep-inventory discipline rejects folder dumps; parallel specialist dispatch rejects single-agent evidence; validation gate rejects unverified signoff.",
   "short_description": "Phase 0→5 prompt OS: deep inventory, parallel specialist evidence, did-you-know discovery, validation gate, full-stack SaaS scaffolder.",
   "author": {
     "name": "osrt91",
@@ -58,7 +58,7 @@
     "contributing": "CONTRIBUTING.md",
     "rationale": ".claude-plugin/RATIONALE.md",
     "categories": ".claude-plugin/CATEGORIES.md",
-    "release_notes": "RELEASE_NOTES_2.0.0.md"
+    "release_notes": "docs/release/v1.0.0-release-notes.md"
   },
   "homepage": "https://github.com/osrt91/ulak-os#readme",
   "bugs": {
@@ -75,13 +75,14 @@
   "capabilities": {
     "commands": 9,
     "agents": 27,
-    "skills": 9,
+    "skills": 8,
     "rule_packs": 8,
     "sector_packs": 24,
-    "anti_patterns": 79,
+    "anti_pattern_bullets": 98,
+    "anti_pattern_numbered": 19,
     "governance_docs": 22,
     "runtime_rules": 33,
-    "scaffolder_templates": 15
+    "scaffolder_templates": 27
   },
   "flagship_commands": [
     "/director",
@@ -102,8 +103,7 @@
     "final-validation",
     "pack-gap-completion",
     "project-intake",
-    "research-currency",
-    "ulak-design-ref"
+    "research-currency"
   ],
   "vendors_supported": [
     "claude-code",
@@ -111,14 +111,15 @@
     "gemini-cli"
   ],
   "compatibility": {
-    "claude_code": ">=2.0.0",
-    "node": ">=20",
+    "claude_code": ">=1.0.0",
+    "node": ">=18",
     "pnpm": ">=9"
   },
   "install_notes": {
-    "method_a": "Clone: git clone https://github.com/osrt91/ulak-os.git && cd ulak-os",
-    "method_b": "As plugin (future): claude plugin install osrt91/ulak-os",
-    "method_c": "As submodule: git submodule add https://github.com/osrt91/ulak-os.git .ulak-os",
+    "method_a": "One-liner (POSIX): curl -fsSL https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install.sh | sh",
+    "method_b": "One-liner (Windows): iwr -useb https://raw.githubusercontent.com/osrt91/ulak-os/main/scripts/install.ps1 | iex",
+    "method_c": "Manual clone: git clone https://github.com/osrt91/ulak-os.git && cd ulak-os",
+    "method_d": "As submodule: git submodule add https://github.com/osrt91/ulak-os.git .ulak-os",
     "quickstart": "After install, open Claude Code in any directory and run /director komple to audit OR /ulak-scaffold to start a new SaaS"
   },
   "license_note": "MIT-licensed. See LICENSE. Commercial use welcome; issues and PRs appreciated."
