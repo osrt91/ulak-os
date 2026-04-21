@@ -73,20 +73,27 @@
     "settings": ".claude/settings.json"
   },
   "capabilities": {
-    "commands": 9,
+    "commands": 15,
     "agents": 27,
-    "skills": 8,
+    "skills": 10,
     "rule_packs": 8,
     "sector_packs": 24,
+    "sector_overlays": 17,
     "anti_pattern_bullets": 98,
     "anti_pattern_numbered": 19,
     "governance_docs": 22,
     "runtime_rules": 33,
-    "scaffolder_templates": 27
+    "scaffolder_templates": 175
   },
   "flagship_commands": [
     "/director",
     "/ulak-scaffold",
+    "/ulak-audit-deep",
+    "/ulak-brainstorm",
+    "/ulak-subagent-dispatch",
+    "/ulak-test-driven",
+    "/ulak-pattern-extract",
+    "/ulak-mcp-discover",
     "/final-verdict",
     "/intake",
     "/frontend-war-room",
@@ -103,7 +110,9 @@
     "final-validation",
     "pack-gap-completion",
     "project-intake",
-    "research-currency"
+    "research-currency",
+    "mcp-governance-auto",
+    "awesome-packs-index"
   ],
   "vendors_supported": [
     "claude-code",
