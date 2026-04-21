@@ -1,5 +1,6 @@
 ---
-description: Run the Autonomous Program Director. Use for complete, end-to-end, rescue, greenfield, brownfield, or "komple" requests. The director auto-routes, runs deep inventory plus parallel specialist scans, surfaces non-obvious findings, and finishes with one manager verdict. Shallow inventory and single-agent evidence are rejected.
+description: Otonom Program Director'ı çalıştır. "Komple", baştan sona, rescue, greenfield, brownfield veya tam denetim istekleri için. Director otomatik route eder, deep inventory + paralel specialist tarama koşturur, non-obvious bulguları ortaya çıkarır ve tek bir manager verdict ile bitirir. Yüzeysel inventory ve tek-ajan evidence reddedilir.
+description_en: Run the Autonomous Program Director. Use for complete, end-to-end, rescue, greenfield, brownfield, or "komple" requests. The director auto-routes, runs deep inventory plus parallel specialist scans, surfaces non-obvious findings, and finishes with one manager verdict. Shallow inventory and single-agent evidence are rejected.
 ---
 
 Use the autonomous-program-director subagent and this pack's runtime docs.

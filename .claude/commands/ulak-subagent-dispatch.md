@@ -1,6 +1,7 @@
 ---
 name: ulak-subagent-dispatch
-description: Dispatch N independent subagents in parallel for a bounded scope. Enforces the superpowers:dispatching-parallel-agents + subagent-driven-development discipline: identify truly-independent work, hand each subagent a self-contained brief, collect + reconcile outputs, commit the merged result. Use for large content-generation tasks (N-file template creation, N-agent expansion, cross-service refactor) where serial work would waste hours.
+description: Sınırlı bir kapsam için N bağımsız subagent'ı paralel dispatch et. superpowers:dispatching-parallel-agents + subagent-driven-development disiplinini zorunlu kılar: gerçekten bağımsız işi tanımla, her subagent'a kendi kendine yeten brief ver, çıktıları topla + uzlaştır, birleşik sonucu commit et. Seri çalışmanın saatler harcayacağı büyük içerik üretim işlerinde (N-file template oluşturma, N-ajan genişletme, cross-service refactor) kullan.
+description_en: Dispatch N independent subagents in parallel for a bounded scope. Enforces the superpowers:dispatching-parallel-agents + subagent-driven-development discipline: identify truly-independent work, hand each subagent a self-contained brief, collect + reconcile outputs, commit the merged result. Use for large content-generation tasks (N-file template creation, N-agent expansion, cross-service refactor) where serial work would waste hours.
 agent: autonomous-program-director
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---

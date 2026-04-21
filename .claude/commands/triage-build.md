@@ -1,5 +1,6 @@
 ---
-description: Triage a failing build by stack. Runs toolchain-precheck first, then dispatches to the right subsystem (frontend, backend, container, mobile) with standard diagnostic commands. Use when build/test is red and the cause is unclear.
+description: Kırılan build'i stack'ine göre triaj et. Önce toolchain-precheck koşar, sonra doğru alt sisteme (frontend, backend, container, mobile) standart tanı komutlarıyla yönlendirir. Build/test kırmızı ve neden belirsizse kullan.
+description_en: Triage a failing build by stack. Runs toolchain-precheck first, then dispatches to the right subsystem (frontend, backend, container, mobile) with standard diagnostic commands. Use when build/test is red and the cause is unclear.
 phases_run: [0]
 ---
 

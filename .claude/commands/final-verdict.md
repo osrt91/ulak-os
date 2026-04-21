@@ -1,5 +1,6 @@
 ---
-description: Run final validation, challenge assumptions, and produce the single merged manager verdict.
+description: Final doğrulamayı çalıştır, varsayımlara meydan oku ve tek birleşik manager verdict üret.
+description_en: Run final validation, challenge assumptions, and produce the single merged manager verdict.
 phases_run: [4.5, 5]
 ---
 

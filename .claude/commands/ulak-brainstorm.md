@@ -1,6 +1,7 @@
 ---
 name: ulak-brainstorm
-description: Pre-implementation ideation for a new feature / product / surface. Enforces the "explore intent + requirements + alternatives BEFORE touching code" discipline. Wraps the superpowers:brainstorming skill with Ulak OS governance (records outcome in docs/superpowers/specs/<date>-<topic>.md so future runs can reference the decision). Use when starting any non-trivial feature, adding a new user-facing capability, or making a design decision that will outlive this session.
+description: Yeni bir feature / ürün / yüzey için kod yazmadan önce yapılandırılmış ideation. "Koda dokunmadan ÖNCE niyet + gereksinim + alternatifleri araştır" disiplinini zorunlu kılar. superpowers:brainstorming skill'ini Ulak OS governance'ı ile sarar (sonucu `docs/superpowers/specs/<date>-<topic>.md` içine yazar, gelecek run'lar karara referans verebilir). Önemsiz olmayan herhangi bir feature'a başlarken, yeni bir kullanıcı yüzeyi eklerken veya bu oturumun ötesine geçecek bir tasarım kararı verirken kullan.
+description_en: Pre-implementation ideation for a new feature / product / surface. Enforces the "explore intent + requirements + alternatives BEFORE touching code" discipline. Wraps the superpowers:brainstorming skill with Ulak OS governance (records outcome in docs/superpowers/specs/<date>-<topic>.md so future runs can reference the decision). Use when starting any non-trivial feature, adding a new user-facing capability, or making a design decision that will outlive this session.
 agent: autonomous-program-director
 allowed-tools: Read, Grep, Glob, Write
 ---

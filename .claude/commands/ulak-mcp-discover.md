@@ -1,6 +1,7 @@
 ---
 name: ulak-mcp-discover
-description: Discover new MCP servers from the public registry, classify by trust tier, propose addition to the Ulak OS MCP allowlist with governance gate. Produces a candidate report for operator review; does NOT auto-install. Use when evaluating community MCP servers for integration into an Ulak OS run or a scaffolded project.
+description: Public registry'den yeni MCP server'ları keşfet, trust tier'a göre sınıflandır ve governance kapısıyla Ulak OS MCP allowlist'ine eklenmesini öner. Operator incelemesi için aday raporu üretir; otomatik kurmaz. Community MCP server'larını Ulak OS run'ına veya scaffold edilmiş bir projeye entegre etmek için değerlendirirken kullan.
+description_en: Discover new MCP servers from the public registry, classify by trust tier, propose addition to the Ulak OS MCP allowlist with governance gate. Produces a candidate report for operator review; does NOT auto-install. Use when evaluating community MCP servers for integration into an Ulak OS run or a scaffolded project.
 agent: autonomous-program-director
 allowed-tools: Read, Grep, Glob, Bash, WebFetch
 ---

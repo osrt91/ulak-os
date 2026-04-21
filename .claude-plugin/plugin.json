@@ -73,7 +73,7 @@
     "settings": ".claude/settings.json"
   },
   "capabilities": {
-    "commands": 15,
+    "commands": 21,
     "agents": 27,
     "skills": 10,
     "rule_packs": 8,

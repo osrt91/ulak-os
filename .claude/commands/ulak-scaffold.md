@@ -1,5 +1,6 @@
 ---
-description: Scaffold a full-stack SaaS project with Ulak OS governance baked in. Produces a shippable Next.js + Supabase + payment + auth + i18n project skeleton in a greenfield directory with CI, tests, RLS policies, deploy pattern, and all Ulak rule packs + sector packs pre-wired. Use when starting a new SaaS product from scratch.
+description: Ulak OS governance'ı pişmiş halde gelen full-stack SaaS projesi scaffold et. Greenfield bir dizinde ship edilebilir Next.js + Supabase + payment + auth + i18n proje iskeleti üretir; CI, testler, RLS policy'ler, deploy pattern ve tüm Ulak rule pack'leri + sector pack'leri önceden bağlı gelir. Sıfırdan yeni bir SaaS ürünü başlatırken kullan.
+description_en: Scaffold a full-stack SaaS project with Ulak OS governance baked in. Produces a shippable Next.js + Supabase + payment + auth + i18n project skeleton in a greenfield directory with CI, tests, RLS policies, deploy pattern, and all Ulak rule packs + sector packs pre-wired. Use when starting a new SaaS product from scratch.
 phases_run: [0, 4, 5]
 ---
 

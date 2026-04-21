@@ -1,6 +1,7 @@
 ---
 name: ulak-pattern-extract
-description: Extract a reusable pattern from a candidate source project and register it in the pattern-import-ledger with T1/T2 evidence. Produces a native Ulak OS rule-pack / sector-pack / anti-pattern entry that other projects can adopt via /director komple or /ulak-scaffold. Use when you have read a real project that exhibits a pattern worth propagating across the portfolio.
+description: Aday bir kaynak projeden yeniden kullanılabilir pattern çıkar ve T1/T2 evidence ile pattern-import-ledger'a kaydet. Diğer projelerin /director komple veya /ulak-scaffold üzerinden adopte edebileceği native Ulak OS rule-pack / sector-pack / anti-pattern girişi üretir. Portföy genelinde yayılmaya değer bir pattern sergileyen gerçek bir proje okuduğunda kullan.
+description_en: Extract a reusable pattern from a candidate source project and register it in the pattern-import-ledger with T1/T2 evidence. Produces a native Ulak OS rule-pack / sector-pack / anti-pattern entry that other projects can adopt via /director komple or /ulak-scaffold. Use when you have read a real project that exhibits a pattern worth propagating across the portfolio.
 agent: autonomous-program-director
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---

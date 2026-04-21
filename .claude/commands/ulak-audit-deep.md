@@ -1,6 +1,7 @@
 ---
 name: ulak-audit-deep
-description: Run the 14-dimension audit scorecard against the current repo. Deeper than /director komple for quality-bar surfaces (Architecture, Testing, Secrets, Observability, CI/CD, Duplication, Dependencies, Type Safety, Plugins, API Design, Infrastructure, Frontend, Data Validation, Documentation). Produces per-dimension 0-100 scores + A-F grade + target-state + gap analysis. Use for project baselines, post-modernization verification, quarterly health reports, or when /director komple's signoff_status: ready needs a second-opinion scorecard.
+description: Mevcut repo üzerinde 14-dimension audit scorecard çalıştır. /director komple'den daha derin kalite-barı yüzeyler için (Architecture, Testing, Secrets, Observability, CI/CD, Duplication, Dependencies, Type Safety, Plugins, API Design, Infrastructure, Frontend, Data Validation, Documentation). Dimension başına 0-100 skor + A-F grade + target-state + gap analysis üretir. Proje baseline'ları, modernization sonrası doğrulama, quarterly health report veya /director komple'nin signoff_status: ready çıktısına ikinci görüş scorecard gerektiğinde kullan.
+description_en: Run the 14-dimension audit scorecard against the current repo. Deeper than /director komple for quality-bar surfaces (Architecture, Testing, Secrets, Observability, CI/CD, Duplication, Dependencies, Type Safety, Plugins, API Design, Infrastructure, Frontend, Data Validation, Documentation). Produces per-dimension 0-100 scores + A-F grade + target-state + gap analysis. Use for project baselines, post-modernization verification, quarterly health reports, or when /director komple's signoff_status: ready needs a second-opinion scorecard.
 agent: autonomous-program-director
 allowed-tools: Read, Grep, Glob, Bash
 ---

@@ -12,7 +12,7 @@
 
 | Kategori / Category | Adet / Count | Kaynak / Source |
 |---|---|---|
-| Komutlar / Commands | 19 | `.claude/commands/*.md` |
+| Komutlar / Commands | 21 [^1] | `.claude/commands/*.md` |
 | Skill'ler / Skills | 10 | `.claude/skills/*/SKILL.md` |
 | Ajanlar / Agents | 27 (20 specialist + 7 persona) | `.claude/agents/*.md` |
 | Sector overlay kitleri / Sector overlay kits | 15 | `templates/sectors/*/` |
@@ -23,11 +23,14 @@
 | Runbook'lar / Runbooks | 4 | `docs/runbooks/*.md` |
 | Scaffolder template'leri / Scaffolder templates | 284 | `templates/` (tüm alt dizinler) |
 
-**Toplam entry / Total entries**: 135 (19+10+27+15+24+8+22+6+4)
+**Toplam entry / Total entries**: 137 (21+10+27+15+24+8+22+6+4)
+
+[^1]: `scripts/validate-vendor-parity.sh` 23 komut sayar çünkü vendor union'ı ölçer: 21 Claude Code komutu + 2 Gemini-only komut (`market-scan` Claude'daki `market-researcher` ajanına bir sarmalayıcı; `war-room` `frontend-war-room`'un eski adaptör-adı, v2.2 rename ile normalize edilecek — bkz. `.github/vendor-parity-exemptions.txt`). Kullanıcı-yüzlü Claude Code kullanıcıları için gerçek sayı **21**'dir.
+      / `scripts/validate-vendor-parity.sh` reports 23 because it measures the vendor union: 21 Claude Code commands + 2 Gemini-only commands (`market-scan` is a wrapper around Claude's `market-researcher` agent; `war-room` is the legacy adapter name for `frontend-war-room`, slated to normalize in v2.2 — see `.github/vendor-parity-exemptions.txt`). For user-facing Claude Code users the real count is **21**.
 
 ---
 
-## A) Komutlar (19) / Commands (19)
+## A) Komutlar (21) / Commands (21)
 
 > Slash komutları — `/komut arg` ile çağrılır. / Invoked as `/command arg`.
 
@@ -40,7 +43,7 @@
 | `/final-verdict` | Final doğrulama + tek birleşik manager verdict | Final validation + single merged manager verdict | Release öncesi kapı |
 | `/triage-build` | Kırık build'i toolchain-precheck ile triaj et | Triage broken build via toolchain-precheck | Build/test kırmızı |
 | `/ulak-ask <query>` | Doğal dil niyeti mevcut kapasiteye yönlendirir | Natural-language intent router to existing capability | "Konuşur gibi" kullanım |
-| `/ulak-start` | 6 soruluk interaktif SaaS sihirbazı (→ /ulak-scaffold) | 6-question interactive SaaS wizard (→ /ulak-scaffold) | Yeni SaaS, flag ezberlemeden |
+| `/ulak-start` | İnteraktif SaaS sihirbazı (→ /ulak-scaffold) | Interactive SaaS wizard (→ /ulak-scaffold) | Yeni SaaS, flag ezberlemeden |
 | `/ulak-scaffold` | Flag'li tam SaaS scaffolder (Next.js + Supabase + payment) | Full SaaS scaffolder with flags (Next.js + Supabase + payment) | Yeni SaaS, parametrik |
 | `/ulak-intake` | Ulak intake artefaktı + opsiyonel brainstorming | Ulak intake artefact + optional brainstorming | Ulak-özgü ilk halka |
 | `/ulak-brainstorm` | Kod yazmadan önce yapılandırılmış ideation | Structured ideation before any code | Büyük karar/feature öncesi |
@@ -52,6 +55,8 @@
 | `/ulak-test-driven` | Red-Green-Refactor TDD + Ulak evals | Red-Green-Refactor TDD + Ulak evals | Ship'lenecek feature/fix |
 | `/ulak-locale <tr\|en\|show>` | Aktif locale yönet (TR/EN toggle) | Manage active locale (TR/EN toggle) | Dil değiştirme |
 | `/ulak-hello` | 30-saniye onboarding tour | 30-second onboarding tour | İlk kullanıcı, "bu nedir?" |
+| `/ulak-packs` | Tüm kapasiteleri inline döker (docs/catalog.md) | Inline dump of all capabilities (docs/catalog.md) | "Her şeyi göster" |
+| `/ulak-search <keyword>` | Kapasite kataloğunda TR/EN keyword araması | TR/EN keyword search across capability catalog | "Aradığım şey var mı?" |
 
 ---
 

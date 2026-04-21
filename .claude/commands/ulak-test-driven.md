@@ -1,6 +1,7 @@
 ---
 name: ulak-test-driven
-description: TDD workflow for a specific feature or bugfix. Writes the failing test first, implements to make it pass, then refactors — enforced via superpowers:test-driven-development discipline. Wraps with Ulak OS evals integration (test added to golden set if cross-project-relevant). Use for any feature implementation or bug fix that will ship; not for throwaway experiments.
+description: Belirli bir feature veya bugfix için TDD workflow. Önce kırık testi yazar, geçirecek şekilde uygular, sonra refactor eder — superpowers:test-driven-development disiplini ile zorunlu tutulur. Ulak OS evals entegrasyonu ile sarar (cross-project-relevant ise test golden set'e eklenir). Ship edilecek herhangi bir feature implementation veya bug fix için kullan; atılabilir deneyler için değil.
+description_en: TDD workflow for a specific feature or bugfix. Writes the failing test first, implements to make it pass, then refactors — enforced via superpowers:test-driven-development discipline. Wraps with Ulak OS evals integration (test added to golden set if cross-project-relevant). Use for any feature implementation or bug fix that will ship; not for throwaway experiments.
 agent: autonomous-program-director
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---

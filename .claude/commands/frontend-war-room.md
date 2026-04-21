@@ -1,5 +1,6 @@
 ---
-description: Run the frontend/mobile war room for premium redesign, visual system cleanup, and implementation ordering.
+description: Premium redesign, görsel sistem temizliği ve uygulama sıralaması için frontend/mobil war room'u çalıştır.
+description_en: Run the frontend/mobile war room for premium redesign, visual system cleanup, and implementation ordering.
 phases_run: [2, 3, 4]
 ---
 

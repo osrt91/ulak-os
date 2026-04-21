@@ -1,7 +1,7 @@
 ---
 name: ulak-packs
-description: Tüm Ulak OS kapasitelerini (19 komut, 10 skill, 27 ajan, 15 sector overlay, 24 sector pack, 8 rule pack, 22 governance, 6 ADR, 4 runbook) tek yerde gösterir. Plugin aramak yerine bu komutu çalıştır — `docs/catalog.md` içeriğini inline döker. "İnsanlar internetten plugin aramasın" vizyonunun operasyonel karşılığı.
-description_en: Shows all Ulak OS capabilities in one place (19 commands, 10 skills, 27 agents, 15 sector overlays, 24 sector packs, 8 rule packs, 22 governance docs, 6 ADRs, 4 runbooks). Instead of hunting for plugins online, run this command — dumps `docs/catalog.md` inline. Operational embodiment of the "no plugin hunting" vision.
+description: Tüm Ulak OS kapasitelerini (21 komut, 10 skill, 27 ajan, 15 sector overlay, 24 sector pack, 8 rule pack, 22 governance, 6 ADR, 4 runbook) tek yerde gösterir. Plugin aramak yerine bu komutu çalıştır — `docs/catalog.md` içeriğini inline döker. "İnsanlar internetten plugin aramasın" vizyonunun operasyonel karşılığı.
+description_en: Shows all Ulak OS capabilities in one place (21 commands, 10 skills, 27 agents, 15 sector overlays, 24 sector packs, 8 rule packs, 22 governance docs, 6 ADRs, 4 runbooks). Instead of hunting for plugins online, run this command — dumps `docs/catalog.md` inline. Operational embodiment of the "no plugin hunting" vision.
 agent: autonomous-program-director
 allowed-tools: Read, Grep, Glob, Bash
 argument-hint: "[section]  (örn: commands | skills | agents | sectors | rules | governance | adrs | runbooks — boş bırakılırsa hepsi)"
@@ -57,7 +57,7 @@ Eğer argüman verilmişse, ilgili bölümü `##` başlığıyla filtrele (örn:
 
 ### 3) Formatla ve göster / Format and show
 
-- Başlık: **"Ulak OS — 135 kapasite, tek ekranda / 135 capabilities, one screen"**
+- Başlık: **"Ulak OS — 137 kapasite, tek ekranda / 137 capabilities, one screen"**
 - Önce özet tablo (kategoriler + adetler)
 - Sonra argüman bölümü (veya hepsi)
 - Son satır: "Aramak için: `/ulak-search <keyword>` · Dosya: `docs/catalog.md`"
@@ -93,7 +93,7 @@ Eğer katalogdaki sayılar diskteki sayılarla **eşleşmiyorsa**, son satıra:
 ```
 /ulak-packs commands
 ```
-→ A bölümü: 19 komut tablosu.
+→ A bölümü: 21 komut tablosu.
 
 ### Örnek 3 — Sector arıyorum / Looking for sectors
 ```
@@ -110,12 +110,12 @@ Eğer katalogdaki sayılar diskteki sayılarla **eşleşmiyorsa**, son satıra:
 ## Çıktı formatı / Output format
 
 ```
-# Ulak OS — 135 kapasite / 135 capabilities
+# Ulak OS — 137 kapasite / 137 capabilities
 
 ## Özet / Summary
 | Kategori | Adet |
 |---|---|
-| Komutlar | 19 |
+| Komutlar | 21 |
 | Skill'ler | 10 |
 | Ajanlar | 27 |
 | ...

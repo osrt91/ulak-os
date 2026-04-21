@@ -1,5 +1,6 @@
 ---
-description: Run project intake and inventory first. Use when the project needs to be read before deeper work starts.
+description: Önce proje intake + inventory çalıştır. Daha derin işe başlamadan projenin okunması gerektiğinde kullan.
+description_en: Run project intake and inventory first. Use when the project needs to be read before deeper work starts.
 phases_run: [0, 1, 2]
 ---
 

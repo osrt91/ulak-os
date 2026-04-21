@@ -1,5 +1,6 @@
 ---
-description: Public bir markanın tasarım referansını (awesome-design-md) indirip frontend ajanlara sağlar
+description: Public bir markanın tasarım referansını (awesome-design-md) indirip frontend ajanlara sağlar.
+description_en: Download a public brand's design reference (awesome-design-md) and supply it to frontend agents.
 ---
 
 # Ulak Design Reference

@@ -1,5 +1,6 @@
 ---
-description: Ulak intake artefaktı üretir; superpowers:brainstorming yüklüyse onu da kullanır
+description: Ulak intake artefaktı üretir; superpowers:brainstorming yüklüyse onu da kullanır.
+description_en: Produces the Ulak intake artefact; also invokes superpowers:brainstorming if that skill is installed.
 ---
 
 # Ulak Intake (PoC Wrapper)
