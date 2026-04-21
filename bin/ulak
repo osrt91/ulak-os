@@ -1,0 +1,138 @@
+#!/usr/bin/env sh
+# ulak — dispatcher for the Ulak OS prompt operating system.
+#
+# This file is symlinked to $PATH by scripts/install.sh. It resolves its own
+# install location so it keeps working even when invoked through a symlink.
+#
+# Subcommands:
+#   ulak --version          print the Ulak OS version from prompts/pack.json
+#   ulak init <dir>         seed a project at <dir> with an @-import to the
+#                           Ulak OS core contract (preserves existing CLAUDE.md)
+#   ulak doctor             run validators (imports, schemas, vendor parity)
+#   ulak update             git pull the install
+#   ulak where              print $ULAK_HOME
+#   ulak help | -h          this help
+
+set -eu
+
+# Resolve the real location of this script (follow symlinks).
+resolve_self() {
+  target="$1"
+  while [ -L "$target" ]; do
+    link="$(readlink "$target")"
+    case "$link" in
+      /*) target="$link" ;;
+      *)  target="$(dirname "$target")/$link" ;;
+    esac
+  done
+  printf '%s\n' "$target"
+}
+
+SELF="$(resolve_self "$0")"
+BIN_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+ULAK_HOME="${ULAK_HOME:-$(cd "$BIN_DIR/.." && pwd)}"
+
+usage() {
+  cat <<HLP
+ulak — Ulak OS CLI wrapper
+
+Usage:
+  ulak --version
+  ulak init <project-dir>
+  ulak doctor
+  ulak update
+  ulak where
+  ulak help
+
+Env:
+  ULAK_HOME   current install: $ULAK_HOME
+HLP
+}
+
+read_version() {
+  pack_json="$ULAK_HOME/prompts/pack.json"
+  if [ -f "$pack_json" ]; then
+    # Cheap, no jq dependency.
+    awk -F'"' '/"version"[[:space:]]*:/ {print $4; exit}' "$pack_json"
+  else
+    echo "unknown"
+  fi
+}
+
+cmd_version() {
+  v="$(read_version)"
+  printf 'ulak %s (install: %s)\n' "$v" "$ULAK_HOME"
+}
+
+cmd_init() {
+  if [ $# -lt 1 ]; then
+    echo "ulak init: missing <project-dir>" >&2
+    exit 2
+  fi
+  target="$1"
+  if [ ! -d "$target" ]; then
+    echo "ulak init: not a directory: $target" >&2
+    exit 1
+  fi
+  claude_md="$target/CLAUDE.md"
+  import_line="@$ULAK_HOME/prompts/core/ulak-os-core-contract-2.0.0.md"
+
+  if [ -f "$claude_md" ]; then
+    if grep -qF "ulak-os-core-contract" "$claude_md" 2>/dev/null; then
+      echo "[ulak] CLAUDE.md already references Ulak OS core — no change."
+      return 0
+    fi
+    cp "$claude_md" "$claude_md.ulak-backup"
+    {
+      echo ""
+      echo "# Ulak OS governance (added by \`ulak init\`)"
+      echo "$import_line"
+    } >> "$claude_md"
+    echo "[ulak] appended import to existing CLAUDE.md (backup: CLAUDE.md.ulak-backup)"
+  else
+    cat > "$claude_md" <<EOF
+# $(basename "$target") — project memory
+
+$import_line
+
+## Runtime defaults
+- validation olmadan done deme
+- artefakt zincirini erken başlat
+EOF
+    echo "[ulak] created CLAUDE.md with Ulak OS core import"
+  fi
+
+  mkdir -p "$target/reports/current"
+  echo "[ulak] ready: open your AI coding CLI in $target and run /director"
+}
+
+cmd_doctor() {
+  cd "$ULAK_HOME"
+  for s in scripts/validate-imports.sh scripts/validate-schemas.sh scripts/validate-vendor-parity.sh; do
+    if [ -f "$s" ]; then
+      echo "[ulak] running $s"
+      bash "$s" || echo "[ulak] WARN: $s failed"
+    fi
+  done
+}
+
+cmd_update() {
+  git -C "$ULAK_HOME" pull --ff-only
+}
+
+cmd_where() {
+  printf '%s\n' "$ULAK_HOME"
+}
+
+sub="${1:-help}"
+[ $# -gt 0 ] && shift || true
+
+case "$sub" in
+  --version|-v|version) cmd_version ;;
+  init)                 cmd_init "$@" ;;
+  doctor)               cmd_doctor ;;
+  update)               cmd_update ;;
+  where)                cmd_where ;;
+  help|--help|-h)       usage ;;
+  *) echo "ulak: unknown subcommand '$sub'" >&2; usage >&2; exit 2 ;;
+esac
