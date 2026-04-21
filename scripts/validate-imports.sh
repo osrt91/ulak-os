@@ -13,11 +13,35 @@ echo "Validating @import chains under: $ROOT"
 # -----------------------------------------------------------------------------
 # Step 1 — File existence check (existing behavior preserved)
 # -----------------------------------------------------------------------------
+# Skip files that legitimately contain example @import lines rather than
+# real imports (user-facing runbooks, install guides, etc.). Lines inside
+# fenced code blocks are also skipped.
+
+SKIP_PATHS=(
+  "$ROOT/docs/runbooks"
+  "$ROOT/docs/user-manual"
+)
+
+should_skip() {
+  local path="$1"
+  for skip in "${SKIP_PATHS[@]}"; do
+    [[ "$path" == "$skip"* ]] && return 0
+  done
+  return 1
+}
 
 while IFS= read -r -d '' mdfile; do
+  should_skip "$mdfile" && continue
   line_num=0
+  in_fence=0
   while IFS= read -r line; do
     line_num=$((line_num + 1))
+    # Toggle fenced code block state
+    if [[ "$line" =~ ^\`\`\` ]]; then
+      in_fence=$((1 - in_fence))
+      continue
+    fi
+    [[ $in_fence -eq 1 ]] && continue
     # Match lines that start with @ followed by a path ending in .md
     if [[ "$line" =~ ^@(.+\.md)[[:space:]]*$ ]]; then
       target="${BASH_REMATCH[1]}"
@@ -59,14 +83,26 @@ from pathlib import Path
 root = Path(sys.argv[1]).resolve()
 graph = {}
 
+# Skip user-facing runbooks/manuals that contain example @ paths rather than real imports
+SKIP_PREFIXES = ("docs/runbooks/", "docs/user-manual/")
+
 # Build adjacency list: file → set of @imported targets
 for md in root.rglob("*.md"):
     rel = str(md.relative_to(root)).replace("\\", "/")
+    if rel.startswith(SKIP_PREFIXES):
+        continue
     graph.setdefault(rel, set())
     try:
         with open(md, "r", encoding="utf-8", errors="replace") as f:
+            in_fence = False
             for line in f:
-                m = re.match(r"^@(.+\.md)\s*$", line.rstrip())
+                stripped = line.rstrip()
+                if stripped.startswith("```"):
+                    in_fence = not in_fence
+                    continue
+                if in_fence:
+                    continue
+                m = re.match(r"^@(.+\.md)\s*$", stripped)
                 if m:
                     target = m.group(1)
                     graph[rel].add(target)
