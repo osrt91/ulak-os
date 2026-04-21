@@ -21,6 +21,7 @@
 | Governance dokümanları / Governance docs | 22 | `docs/governance/*.md` |
 | ADR'ler / ADRs | 6 | `docs/adr/ADR-*.md` |
 | Runbook'lar / Runbooks | 4 | `docs/runbooks/*.md` |
+| External service tutorial'ları / External service tutorials | 4 | `docs/tutorials/*.md` |
 | Scaffolder template'leri / Scaffolder templates | 284 | `templates/` (tüm alt dizinler) |
 
 **Toplam entry / Total entries**: 140 (24+10+27+15+24+8+22+6+4)
@@ -218,6 +219,21 @@
 | `install-methods` | 5 farklı kurulum yöntemi (hız/pin/network/team kriteri) |
 | `troubleshooting` | Yaygın hatalar + symptom/diagnosis/fix tablosu |
 | `upgrading-from-v2.x` | v2.1.3 → v2.4.0+ migration kılavuzu |
+
+---
+
+## I) Tutorials (4) / External service tutorials (4)
+
+> `docs/tutorials/*.md` — beginner için sıfırdan dış servis hesap açma + API key + konfigürasyon rehberleri. TR-primary, ekran-adım bazlı. Scaffold sonrası `/ulak-next-steps` bu tutorial'lara link verir.
+
+| Tutorial | Süre | Kapsam | Dosya |
+|---|---|---|---|
+| `supabase` | 15 dk | Hesap + project + API keys + migration push + ilk admin | `docs/tutorials/supabase.md` |
+| `vercel` | 10 dk | Hesap + GitHub bağlama + env vars + deploy + custom domain | `docs/tutorials/vercel.md` |
+| `github` | 10 dk | Hesap + repo + SSH key + first push + CI + secret scanning | `docs/tutorials/github.md` |
+| `resend` | 5 dk | Hesap + API key + domain verify (DKIM/SPF/DMARC) + first email | `docs/tutorials/resend.md` |
+
+**Index**: `docs/tutorials/README.md` — hangi sırayla okunmalı, toplam süre, beginner-friendly prensipler.
 
 ---
 

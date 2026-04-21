@@ -88,10 +88,12 @@ Kullanıcının cevaplarına göre şunlar aktive olur:
  /ulak-next-steps — runbook for koptak
 ═════════════════════════════════════════════════════════════════
 
- Scaffold tamam. 10 adımda localhost:3000'de giriş yapacaksın.
- Scaffold done. In 10 steps you'll be logged in at localhost:3000.
+ Scaffold tamam. 12 adımda localhost:3000'de giriş yapacaksın
+ + GitHub'a push + Vercel deploy + CI yeşil + baseline audit.
+ Scaffold done. In 12 steps you'll be running at localhost:3000,
+ pushed to GitHub, deployed to Vercel, CI green, baseline audit captured.
 
- Toplam süre / Total time: ~25-40 dk (hesap açma dahil)
+ Toplam süre / Total time: ~55-75 dk (hesap açma + GitHub + Vercel dahil)
 
 ─────────────────────────────────────────────────────────────────
  ADIM 1 — Dizine gir / Enter the directory
@@ -146,6 +148,9 @@ Kullanıcının cevaplarına göre şunlar aktive olur:
  │       "anon public" key → NEXT_PUBLIC_SUPABASE_ANON_KEY    │
  │       "service_role" key → SUPABASE_SERVICE_ROLE_KEY       │
  │       (service_role tam yetkili — asla client'a gitmez)    │
+ │  📖 Detaylı rehber (hesap açma + project + API keys +      │
+ │     migration push + ilk admin, ekran tarifli):            │
+ │     docs/tutorials/supabase.md (15 dk).                    │
  └────────────────────────────────────────────────────────────┘
 
  ┌─── 3.2 Database URL ──────────────────────────────────────┐
@@ -187,6 +192,8 @@ Kullanıcının cevaplarına göre şunlar aktive olur:
  │  ⚠️  Domain verify etmeden sadece onboarding@resend.dev    │
  │     adresinden gönderebilirsin. Production için kendi      │
  │     domain'ini ekle (Settings → Domains).                  │
+ │  📖 Detaylı rehber (domain verify + DKIM/SPF/DMARC +       │
+ │     ilk test email): docs/tutorials/resend.md (15 dk).     │
  └────────────────────────────────────────────────────────────┘
 
 ─────────────────────────────────────────────────────────────────
@@ -264,7 +271,70 @@ Kullanıcının cevaplarına göre şunlar aktive olur:
      ./scripts/install-hooks.sh
 
 ─────────────────────────────────────────────────────────────────
- ADIM 10 — Baseline health score / Baseline health score
+ ADIM 10 — GitHub'a push et / Push to GitHub
+─────────────────────────────────────────────────────────────────
+ ✅ Süre / Time:     ~20 dk (hesap + SSH + repo + push)
+ 📖 Açıklama:         Proje local'de çalışıyor. Şimdi GitHub'a
+                      yükle — CI otomatik yeşile düşsün,
+                      Dependabot + secret scanning aktif olsun.
+ 📋 Akış:
+   1. GitHub hesabı yoksa aç (2FA zorunlu).
+   2. SSH key oluştur + GitHub'a ekle.
+   3. GitHub'da `my-saas` repo'su aç (empty — README/license YOK).
+   4. git remote add + git push.
+   5. Actions sekmesi → CI otomatik çalışır.
+   6. Settings → Security → Dependabot + Secret scanning enable.
+
+ 💻 Komut (özet):
+
+     git init && git add -A
+     git commit -m "feat: initial commit via Ulak OS scaffold"
+     git branch -M main
+     git remote add origin git@github.com:<username>/my-saas.git
+     git push -u origin main
+
+ 📖 Detaylı rehber (her adım + SSH + sorun giderme):
+    docs/tutorials/github.md (20 dk).
+
+ ⚠️  .env.local PUSH EDİLMEMELİ — .gitignore'da. Push protection
+     ek katman; secret yakalarsa commit'i scrub et, key'i rotate
+     et (docs/governance/secrets-rotation-policy.md).
+
+─────────────────────────────────────────────────────────────────
+ ADIM 11 — İlk deploy (Vercel veya VPS) / First deploy
+─────────────────────────────────────────────────────────────────
+ ✅ Süre / Time:     10 dk (Vercel) / 30-60 dk (VPS)
+ 📖 Açıklama:         Proje GitHub'da duruyor. Şimdi canlıya al —
+                      internetten erişilebilir bir URL'in olsun.
+                      İki yol: Vercel (hızlı, beginner-friendly) veya
+                      VPS + Traefik (kontrollü, self-hosted).
+
+ 🅰️  Vercel (deploy=vercel veya beginner default):
+    1. https://vercel.com/signup → "Continue with GitHub".
+    2. "Add New Project" → GitHub repo'sunu seç → Import.
+    3. Framework preset: Next.js (auto-detect).
+    4. Environment Variables bölümünde .env.local'daki key'leri gir:
+       - NEXT_PUBLIC_SUPABASE_URL (Production + Preview)
+       - NEXT_PUBLIC_SUPABASE_ANON_KEY (Production + Preview)
+       - SUPABASE_SERVICE_ROLE_KEY (Production only, Sensitive ✓)
+       - DATABASE_URL (Production only, Sensitive ✓)
+       - Payment/email var'ları (varsa) — Production only
+    5. Deploy → 60-120 sn → <project>.vercel.app canlı.
+
+ 📖 Detaylı rehber (hesap + env + custom domain + preview + sorun
+    giderme): docs/tutorials/vercel.md (10 dk).
+
+ 🅱️  VPS + Traefik (deploy=traefik veya self-host):
+    Scaffold'un ürettiği docker-compose.yml + traefik config
+    hazır. Sunucu kiralama + DNS + SSL setup için ayrı runbook:
+    docs/runbooks/vps-deploy.md (30-60 dk).
+
+ ⚠️  Preview deploy'larına service_role key koyma — her PR'da ayrı
+     URL açılır, leak yüzeyi genişler. Preview için dev Supabase
+     project kullan (AP-08 sandbox ↔ live switch).
+
+─────────────────────────────────────────────────────────────────
+ ADIM 12 — Baseline health score / Baseline health score
 ─────────────────────────────────────────────────────────────────
  ✅ Süre / Time:     5-10 dk
  📖 Açıklama:         Ulak OS üzerinden yeni projenin 14-dimension
@@ -282,6 +352,11 @@ Kullanıcının cevaplarına göre şunlar aktive olur:
  • pnpm supabase:push kırdı  →  DATABASE_URL doğru mu?
  • 3000 portunda başka uyg.  →  pnpm dev -- -p 3001
  • Admin paneli 404          →  profiles.role = 'admin' yapıldı mı?
+ • git push reddedildi       →  docs/tutorials/github.md §11 sorun
+ • Permission denied (ssh)   →  docs/tutorials/github.md §4 SSH key
+ • Email spam'e düşüyor      →  docs/tutorials/resend.md §7 DKIM/SPF
+ • Vercel build fail         →  docs/tutorials/vercel.md §9 sorun
+ • Vercel 500 after deploy   →  env var eksik; vercel.md §5.5
  • /ulak-audit-deep çökerse  →  /triage-build ile triaj et
 
 ═════════════════════════════════════════════════════════════════
@@ -348,7 +423,11 @@ Manuel çağrılırsa (zincir dışı), `/ulak-next-steps` product_path'i arg ol
 - `reports/current/scaffold-log.md` — en son scaffold'un product_path + bayrak seti kaynağı.
 - `docs/runtime/wizard-defaults.md` — sector × payment default matrisi.
 - `docs/governance/secrets-rotation-policy.md` — secret rotation disiplini (Adım 3 altındaki uyarılar).
-- `.claude/commands/ulak-audit-deep.md` — Adım 10'dan referans alınır.
+- `.claude/commands/ulak-audit-deep.md` — Adım 12'den referans alınır.
+- `docs/tutorials/supabase.md` — Adım 3.1 + 4 + 7 (Supabase) detaylı rehberi.
+- `docs/tutorials/vercel.md` — Adım 11 (Vercel deploy) detaylı rehberi.
+- `docs/tutorials/github.md` — Adım 10 (GitHub'a push) detaylı rehberi.
+- `docs/tutorials/resend.md` — Adım 3.4 (Resend email) detaylı rehberi.
 
 ## Vizyon metriği / Vision metric
 

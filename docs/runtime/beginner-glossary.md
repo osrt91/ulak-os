@@ -511,4 +511,69 @@ Arama normalize kuralı:
 
 ---
 
-*Son güncelleme: 2026-04-21 · v3.0.x seed genişletildi · **40 madde** · `/ulak-start` basit mod dual-render otoritesi*
+## ssh
+- **Alias**: ssh-key, secure-shell, ed25519, rsa-key
+- **Basit**: Bilgisayarında üretilen dijital anahtar çifti. Public kısmını GitHub'a eklersin, private kısım diskinde saklanır. Her push'ta "ben gerçekten senim" kanıtı olur — şifre sormaz.
+- **Teknik**: Asymmetric key-pair (Ed25519 veya RSA 4096); `ssh-keygen -t ed25519` ile oluşturulur. Private key `~/.ssh/id_ed25519`, public key `.pub` uzantılı. SSH agent key'i memory'de tutar; GitHub/VPS'te HTTPS+PAT'tan daha güvenli + pratik.
+- **Analoji**: Evinin akıllı kilidi — anahtarın cebinde, kapıya yaklaşınca otomatik tanıyor; her seferinde şifre çevirmiyorsun. Kilit public (herkes görebilir), anahtar private (sende kalır).
+- **Ulak'ta**: GitHub push için default öneri — HTTPS + PAT yerine SSH. `docs/tutorials/github.md` §4 adım-adım kurulum. VPS deploy'da da SSH key mantığı aynı.
+- **İlgili**: github, git, vps, dependabot
+- **Daha fazla**: `docs/tutorials/github.md`, `docs/runbooks/troubleshooting.md`
+
+## dependabot
+- **Alias**: dependency-bot, github-bot, version-update
+- **Basit**: GitHub'ın ücretsiz botu. Her hafta senin `package.json`'daki paketleri kontrol eder; yeni sürüm varsa veya güvenlik açığı çıktıysa otomatik PR açar. "Node paketini güncelle" işini sen kovalamak zorunda kalmıyorsun.
+- **Teknik**: GitHub-native bot; `.github/dependabot.yml` config'iyle schedule + ecosystem + PR limit ayarlanır. Npm, pip, cargo, docker, github-actions destekler. Security update'ler CVE alert'ine bağlı, otomatik PR.
+- **Analoji**: Evdeki buzdolabına bakıp "sütün bitmiş, yarın marketçi getirsin" diye sipariş veren asistan — sen hatırlamıyorsun, işe yarayan şey geliyor.
+- **Ulak'ta**: `/ulak-scaffold` `.github/dependabot.yml`'yi haftalık npm + github-actions schedule ile hazır koyar. GitHub'da Settings → Security → Dependabot enable edilince aktive olur. Detay: `docs/tutorials/github.md` §8.
+- **İlgili**: github, ci, secret-scanning, security
+- **Daha fazla**: `docs/tutorials/github.md`
+
+## secret-scanning
+- **Alias**: push-protection, secret-leak-detection, gitleaks
+- **Basit**: GitHub kodunu tarar ve içinde yanlışlıkla komitlediğin bir API key varsa yakalar. Push protection aktifse commit anında engeller — kirli kod main'e bile girmez.
+- **Teknik**: GitHub native secret pattern detection (Stripe keys, AWS credentials, Resend tokens, 200+ provider pattern) + local gitleaks CI job. Push protection = pre-receive hook; secret bulursa HTTP reject. Repo tarafında bulunursa email + dashboard alert.
+- **Analoji**: Havaalanı X-ray cihazı — valizinde yasak bir şey varsa giriş kapısında yakalar, uçağa bile binemezsin. Push protection = aynı cihaz repo girişinde.
+- **Ulak'ta**: `/ulak-scaffold` CI'da gitleaks job'ı hazır koyar (double-layer: GitHub secret scan + local gitleaks). Settings → Security'den enable edilmesi önerilir. Yakalama durumunda scrub + rotate protokolü: `docs/governance/secrets-rotation-policy.md`.
+- **İlgili**: gitleaks, github, dependabot, env-local, AP-06
+- **Daha fazla**: `docs/tutorials/github.md` §9, `docs/governance/secrets-rotation-policy.md`
+
+## transactional-email
+- **Alias**: transactional, tx-email, trigger-email
+- **Basit**: Kullanıcı bir şey yaptığı için otomatik giden email'ler — "hoş geldin", "şifre sıfırla", "ödeme alındı", "sipariş kargoda". Tek-tek, olay-tetikli. Marketing email'den farklı.
+- **Teknik**: Event-triggered, 1-to-1 email; kullanıcının rıza gerektirmeyen operational kategorisine girer (GDPR/KVKK'ya tabi değil). Resend/Postmark/SES transactional API ile gönderilir. Broadcast/marketing email'den ayrı pipeline.
+- **Analoji**: Restoran garsonunun "siparişin hazır" demesi — bekleneni haber verme. Marketing = her hafta gelen "menümüze yeni tatlı ekledik" newsletter; transactional = bir hesap olayına karşı tek email.
+- **Ulak'ta**: `lib/email/resend.ts` + `emails/welcome.tsx` / `password-reset.tsx` / `magic-link.tsx` scaffold default. Signup/reset/magic-link flow'larına bağlı. Detay: `docs/tutorials/resend.md`.
+- **İlgili**: resend, dkim, spf, dmarc, webhook
+- **Daha fazla**: `docs/tutorials/resend.md`
+
+## dkim
+- **Alias**: domainkeys-identified-mail, email-signature
+- **Basit**: Gönderdiğin her email'e dijital imza atılır. Alıcı sunucu "bu email gerçekten `siten.com`'dan mı geldi?" diye imzayı doğrular. Olmazsa Gmail/Outlook spam klasörüne atar.
+- **Teknik**: DomainKeys Identified Mail (RFC 6376); email başlığına RSA imza eklenir, alıcı DNS'ten `_domainkey` TXT kaydındaki public key ile doğrular. Email provider (Resend) otomatik imzalar; DNS kaydını sen eklersin.
+- **Analoji**: Mektubun üstündeki kişisel mühür — mektubu alan kişi "bu mühür gerçekten X kişisinindi" diye kontrol edebiliyor.
+- **Ulak'ta**: Resend domain verify akışında DNS'e eklenir — `resend._domainkey` TXT record. Domain verified olunca otomatik aktif. Detay: `docs/tutorials/resend.md` §3.
+- **İlgili**: spf, dmarc, transactional-email, resend
+- **Daha fazla**: `docs/tutorials/resend.md`
+
+## spf
+- **Alias**: sender-policy-framework, email-sender-auth
+- **Basit**: Domain'inin "bu sunuculardan email çıkabilir" listesi. Başka bir sunucu `siten.com` adresinden email atmaya çalışırsa, alıcı SPF kaydına bakıp "yasak sunucu, spam" der.
+- **Teknik**: Sender Policy Framework (RFC 7208); DNS TXT record olarak yayınlanır — `v=spf1 include:amazonses.com ~all`. `~all` = "listede olmayan softfail"; `-all` = "hardfail/reject".
+- **Analoji**: Apartmanın ziyaretçi listesi — resepsiyona bildirilenler içeri girer; listede olmayan "kim bu?" diye sorgulanır.
+- **Ulak'ta**: Resend verify akışında `send` subdomain'e TXT record olarak eklenir. DKIM ile birlikte deliverability'nin ikinci ayağı. Detay: `docs/tutorials/resend.md` §3.
+- **İlgili**: dkim, dmarc, transactional-email, resend
+- **Daha fazla**: `docs/tutorials/resend.md`
+
+## dmarc
+- **Alias**: domain-based-message-authentication, email-policy
+- **Basit**: SPF + DKIM başarısız olursa ne yapılsın? "Email'i al ama işaretle" (`p=none`), "spam klasörüne at" (`p=quarantine`), "tamamen reddet" (`p=reject`) — üç seçenek. Başlangıçta `p=none` ile rapor toplar, sonra sertleştirilir.
+- **Teknik**: Domain-based Message Authentication, Reporting & Conformance (RFC 7489); DNS TXT record `_dmarc.siten.com` üstünde policy + aggregate report URI. Alignment (SPF ve DKIM'in From domain'iyle eşleşmesi) zorunlu.
+- **Analoji**: Apartman yönetiminin "kimlik bildirmeyen misafir ne olsun?" kararı — bazı binalar "içeri alın notu düşün" der (none), bazısı "spam postaya atın" (quarantine), bazısı "içeri almayın" (reject).
+- **Ulak'ta**: Resend verify akışında opsiyonel — production'a geçerken `p=none` ile başla, 2-4 hafta raporları izle, sonra `p=quarantine`'e geç. Detay: `docs/tutorials/resend.md` §3.
+- **İlgili**: spf, dkim, transactional-email, resend
+- **Daha fazla**: `docs/tutorials/resend.md`
+
+---
+
+*Son güncelleme: 2026-04-21 · v3.0.x seed + external-service cluster (ssh, dependabot, secret-scanning, transactional-email, dkim, spf, dmarc) · **47 madde** · `/ulak-start` basit mod dual-render otoritesi*

@@ -178,6 +178,8 @@ Supabase = açık kaynaklı backend hizmeti. Database (Postgres), auth, storage,
 
 Ulak OS'ta **default backend**. `/ulak-explain supabase` komutu 5 alanlı açıklama verir (basit / teknik / analoji / Ulak'ta / ilgili).
 
+İlk kez Supabase projesi açmak için sıfırdan 15 dk'lık ekran-adım bazlı rehber: [`docs/tutorials/supabase.md`](./tutorials/supabase.md) — hesap + project + API keys + migration push + ilk admin kullanıcı.
+
 ### Iyzico hesabı nasıl açılır?
 
 `iyzico.com` → Üye ol → TR TC/şirket bilgileri → sandbox hesap otomatik açılır (onaylanırken günler sürebilir). Sandbox'ta test kart numarası ile (`5890 0400 0000 0016`) simulate kredi kartı çalışır.
@@ -204,6 +206,8 @@ Kriterler:
 - **TR data residency zorunlu (KVKK)**: TR-based VPS (Hetzner FRA hariç; İstanbul DC arayan için yerli sağlayıcı).
 
 Ulak OS her iki pattern'i de destekler; scaffold sırasında `--deploy vercel` veya `--deploy vps` seçersin.
+
+Vercel'e ilk kez deploy için 10 dk'lık ekran-adım bazlı rehber: [`docs/tutorials/vercel.md`](./tutorials/vercel.md) — hesap + GitHub bağlama + env vars + custom domain + preview deploy + sorun giderme.
 
 ### Ödeme aldığımda vergi + KDV meselesi?
 
@@ -301,4 +305,72 @@ Boş bir database'i "çalışır örnek veriyle" dolduran initial insert'ler. `s
 - **Authorization** (authz) = "Ne yapabilirsin?" (yetki)
 
 Supabase Auth + RLS, bu iki katmanı birlikte işler. Örn: Ali giriş yaptı (auth), ama admin paneli sadece `role = 'admin'` olanlara açık (authz).
+
+---
+
+## Beginner — GitHub + Resend (external services)
+
+> Scaffold'dan sonra GitHub'a push ve email gönderimi için external service hesap açma soruları. Detaylı adım-adım rehberler: `docs/tutorials/github.md` (20 dk) + `docs/tutorials/resend.md` (15 dk).
+
+### GitHub hesabı açmak ücretli mi?
+
+**Hayır** — kişisel hesap + sınırsız public repo + sınırsız private repo + 2000 CI dakikası/ay (private) / sınırsız (public) **ücretsiz**. Ücretli tier'lar (Pro/Team/Enterprise) ekstra CI dakikası, SSO, advanced security gibi kurumsal feature'lar sağlar; beginner ve small team için gerekmez.
+
+Credit card kayıt zorunlu değil — email + telefon doğrulama yeterli. `/ulak-scaffold` ürettiği projeyi free tier'a push edebilirsin.
+
+### SSH key nedir, neden HTTPS yerine kullanayım?
+
+**SSH key** = lokal makinende üretilen şifreli kimlik çifti (public + private). GitHub'a public'i ekler, private'i diskinde saklarsın. Her push'ta GitHub "private key var mı?" diye bakar — şifre/token sormaz.
+
+**HTTPS yerine SSH**:
+- **Pratiklik**: Bir kez kurulur, her push'ta şifre sormaz. HTTPS artık Personal Access Token (PAT) istiyor — her ay rotate etmen gerekir.
+- **Güvenlik**: Private key diskinde kalır; HTTPS'te token commit'e sızabilir.
+- **Standard**: Çoğu Git rehberi SSH'yi default gösterir.
+
+**HTTPS ne zaman mantıklı**:
+- Kurumsal network SSH port'u (22) blokluyorsa.
+- Geçici bir makinede anlık clone için.
+
+Ulak OS rehberi SSH'yi default öneriyor. Detay: `docs/tutorials/github.md` §4.
+
+### Resend vs Postmark vs SendGrid — hangisini seçmeliyim?
+
+| Servis | Free tier | Aylık ücret (10k email) | Güçlü yan | Zayıf yan |
+|---|---|---|---|---|
+| **Resend** | 3000/ay, 100/gün | $20 (50k email) | DX, React Email, sade pricing, 2023'te çıktı | Yeni — SendGrid kadar battle-tested değil |
+| **Postmark** | 100/ay | $15 (10k email) | Deliverability altın standart, transactional-only | Daha pahalı, marketing email yasak |
+| **SendGrid** | 100/gün | $19.95 (50k email) | Büyük ekosistem, analytics detaylı | Twilio alımından beri UX bozuldu, spam klasörüne düşme artışı raporlanıyor |
+| **AWS SES** | 62k/ay (EC2'den) | $1 (10k email) | Ultra-ucuz, scale sınırsız | Karmaşık kurulum, UI spartan, sandbox'tan çıkma zahmetli |
+
+**Ulak OS default'u Resend** — beginner DX + React Email entegrasyonu + scaffold'un `lib/email/resend.ts` hazır gelmesi + EU region KVKK friendly.
+
+Production'da 50k+ email/ay gönderiyorsan AWS SES'e geçiş düşünülebilir; ama başlangıç Resend.
+
+### Domain'im yok ama test email göndermek istiyorum
+
+İki yol:
+
+1. **Resend'in shared address'i** (`onboarding@resend.dev`) — sadece **kendi Resend hesabının email adresine** gönderim. Başka kimseye gönderemezsin. Dev/test için ideal, production'da görünmez.
+
+2. **Domain satın al** — Namecheap ~$10/yıl, Cloudflare Registrar ~$9/yıl (at-cost), TR için Turhost/Natro ~₺200-400/yıl. DNS kayıtlarını verify et → kendi adresinden email at. Detay: `docs/tutorials/resend.md` §3.
+
+**Pratik tavsiye**: development sırasında `onboarding@resend.dev` ile başla. MVP'yi çalıştırmaya hazır olunca domain al + verify et. Deliverability domain verify olmadan kötüdür.
+
+### Dependabot PR'larını nasıl merge ederim?
+
+Her hafta Pazartesi sabahı inbox'ında 1-5 PR bulabilirsin. Güvenli akış:
+
+1. **PR'ı aç** → "Files changed" ile `package.json` + lockfile diff'ine bak.
+2. **CI yeşil mi**: yeşilse genelde güvenli (patch/minor).
+3. **Changelog'u oku** — PR açıklamasında release notes linki olur. Breaking change var mı?
+4. **Squash and merge** → PR kapanır, main güncellenir.
+
+**Major version bump'larda dikkat**:
+- Next.js 14 → 15 gibi major'lar breaking change getirir.
+- CHANGELOG'u oku + kendi testlerini manuel koş.
+- Şüphe duyuyorsan "close without merging" de — Dependabot gelecek hafta yeniden açar, sen hazır olduğunda.
+
+**Toplu merge şart değil**: 5 PR varsa günde 1 tane merge et, güven geliştikçe tempo artar. "`auto-merge` patches only" ayarı GitHub UI'de repo level açılabilir (Dependabot'un güvenli patch'lerini otomatik merge eder).
+
+Detay: `docs/tutorials/github.md` §8.
 
