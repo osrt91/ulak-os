@@ -1,0 +1,195 @@
+// {{product_name_pascal}} — register (user + tenant created in one transaction)
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+import { createBrowserClient } from "@/lib/supabase/client";
+import { t } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Alert } from "@/components/ui/alert";
+
+// Tenant + user in a single submission. The server action /api/auth/register
+// runs the transaction: auth user, tenants row, user_role_assignments with
+// role='admin' for the first user of the new tenant.
+const schema = z
+  .object({
+    tenantName: z
+      .string()
+      .min(2, { message: "auth.register.tenant-name-too-short" })
+      .max(60, { message: "auth.register.tenant-name-too-long" }),
+    email: z.string().email({ message: "auth.register.email-invalid" }),
+    password: z
+      .string()
+      .min(8, { message: "auth.register.password-too-short" })
+      .regex(/[A-Z]/, { message: "auth.register.password-needs-uppercase" })
+      .regex(/[0-9]/, { message: "auth.register.password-needs-digit" }),
+    passwordConfirm: z.string(),
+    acceptTerms: z.literal(true, {
+      errorMap: () => ({ message: "auth.register.terms-required" }),
+    }),
+  })
+  .refine((v) => v.password === v.passwordConfirm, {
+    path: ["passwordConfirm"],
+    message: "auth.register.password-mismatch",
+  });
+
+type RegisterValues = z.infer<typeof schema>;
+
+export default function RegisterPage() {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const form = useForm<RegisterValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      tenantName: "",
+      email: "",
+      password: "",
+      passwordConfirm: "",
+      acceptTerms: false as unknown as true,
+    },
+  });
+
+  const onSubmit = (values: RegisterValues) => {
+    setError(null);
+    startTransition(async () => {
+      const supabase = createBrowserClient();
+      const { data, error: signUpErr } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: { tenant_display_name: values.tenantName },
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+      if (signUpErr || !data.user) return setError(t("auth.register.signup-failed"));
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tenant_name: values.tenantName, user_id: data.user.id }),
+      });
+      if (!res.ok) return setError(t("auth.register.tenant-creation-failed"));
+      router.replace("/dashboard");
+      router.refresh();
+    });
+  };
+
+  const field = form.control;
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h1 className="font-display text-2xl font-semibold">{t("auth.register.title")}</h1>
+        <p className="text-sm text-ink-muted">{t("auth.register.subtitle")}</p>
+      </div>
+
+      {error ? <Alert variant="destructive" role="alert">{error}</Alert> : null}
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <FormField
+            control={field}
+            name="tenantName"
+            render={({ field }) => (
+              <FormItem>
+                <Label htmlFor="tenantName">{t("auth.register.tenant-name-label")}</Label>
+                <Input
+                  id="tenantName"
+                  type="text"
+                  autoComplete="organization"
+                  placeholder={t("auth.register.tenant-name-placeholder")}
+                  disabled={pending}
+                  {...field}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={field}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <Label htmlFor="email">{t("auth.register.email-label")}</Label>
+                <Input id="email" type="email" autoComplete="email" disabled={pending} {...field} />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={field}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <Label htmlFor="password">{t("auth.register.password-label")}</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  disabled={pending}
+                  {...field}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={field}
+            name="passwordConfirm"
+            render={({ field }) => (
+              <FormItem>
+                <Label htmlFor="passwordConfirm">{t("auth.register.password-confirm-label")}</Label>
+                <Input
+                  id="passwordConfirm"
+                  type="password"
+                  autoComplete="new-password"
+                  disabled={pending}
+                  {...field}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={field}
+            name="acceptTerms"
+            render={({ field }) => (
+              <FormItem className="flex items-start gap-2">
+                <input
+                  id="acceptTerms"
+                  type="checkbox"
+                  className="mt-1"
+                  checked={!!field.value}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                  disabled={pending}
+                />
+                <Label htmlFor="acceptTerms" className="text-sm text-ink-muted">
+                  {t("auth.register.terms-prefix")}{" "}
+                  <a href="/terms" className="text-brand-500 hover:text-brand-600">
+                    {t("footer.terms")}
+                  </a>{" "}
+                  &amp;{" "}
+                  <a href="/privacy" className="text-brand-500 hover:text-brand-600">
+                    {t("footer.privacy")}
+                  </a>
+                </Label>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending ? t("auth.register.submitting") : t("auth.register.submit")}
+          </Button>
+        </form>
+      </Form>
+    </div>
+  );
+}

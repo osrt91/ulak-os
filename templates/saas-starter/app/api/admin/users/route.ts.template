@@ -1,0 +1,135 @@
+import 'server-only'
+
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+
+import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth'
+
+// {{product_name_pascal}} — GET /api/admin/users
+//
+// Admin-scoped user listing with pagination + filter.
+// RESPONSES:
+//   200 — { users: UserRow[], page, limit, total }
+//   400 — invalid query parameters (zod failure)
+//   401 — no session
+//   403 — role != admin
+//   429 — rate limited (basic token bucket keyed by admin user_id)
+//
+// DISCIPLINE:
+//   - every query explicitly .eq('tenant_id', authCtx.tenant_id)
+//   - limit capped at 100 to prevent accidental full-table scans
+//   - no Server-Sent Events — plain JSON (simpler, proxy-friendly,
+//     scales better through Traefik + edge caches)
+//   - rate limit is best-effort in-process; real prod should use Redis/Upstash
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+const QuerySchema = z.object({
+  page: z.coerce.number().int().positive().max(10_000).default(1),
+  limit: z.coerce.number().int().positive().max(100).default(50),
+  role: z.enum(['customer', 'admin', 'support', 'partner']).optional(),
+  q: z.string().trim().max(120).optional(),
+})
+
+interface UserRow {
+  user_id: string
+  email: string
+  role: string
+  status: string
+  created_at: string
+}
+
+interface ListResponse {
+  users: UserRow[]
+  page: number
+  limit: number
+  total: number
+}
+
+// Naive in-process bucket — replace with Upstash/Redis for multi-pod deploys
+const buckets = new Map<string, { count: number; resetAt: number }>()
+const RATE_WINDOW_MS = 60_000
+const RATE_MAX = 60
+
+function allow(key: string): boolean {
+  const now = Date.now()
+  const entry = buckets.get(key)
+  if (!entry || entry.resetAt < now) {
+    buckets.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS })
+    return true
+  }
+  if (entry.count >= RATE_MAX) return false
+  entry.count += 1
+  return true
+}
+
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const authCtx = await getAuthContext({ require_role: 'admin' })
+
+  if (!authCtx.user) {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+  if (!authCtx.allowed) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+  if (!authCtx.tenant_id) {
+    return NextResponse.json({ error: 'no-tenant' }, { status: 403 })
+  }
+
+  if (!allow(`admin:users:${authCtx.user.id}`)) {
+    return NextResponse.json(
+      { error: 'rate_limited' },
+      { status: 429, headers: { 'Retry-After': '60' } }
+    )
+  }
+
+  const parsed = QuerySchema.safeParse({
+    page: req.nextUrl.searchParams.get('page') ?? undefined,
+    limit: req.nextUrl.searchParams.get('limit') ?? undefined,
+    role: req.nextUrl.searchParams.get('role') ?? undefined,
+    q: req.nextUrl.searchParams.get('q') ?? undefined,
+  })
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'invalid_query', issues: parsed.error.flatten() },
+      { status: 400 }
+    )
+  }
+
+  const { page, limit, role, q } = parsed.data
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  const supabase = await createClient()
+  let query = supabase
+    .from('user_role_assignments')
+    .select('user_id, email, role, status, created_at', { count: 'exact' })
+    .eq('tenant_id', authCtx.tenant_id) // MANDATORY tenant scoping
+    .order('created_at', { ascending: false })
+    .range(from, to)
+
+  if (role) query = query.eq('role', role)
+  if (q) query = query.ilike('email', `%${q.toLowerCase()}%`)
+
+  const { data, count, error } = await query
+
+  if (error) {
+    console.error('[api/admin/users] query failed', { code: error.code })
+    return NextResponse.json({ error: 'internal' }, { status: 500 })
+  }
+
+  const body: ListResponse = {
+    users: (data as UserRow[]) ?? [],
+    page,
+    limit,
+    total: count ?? 0,
+  }
+
+  return NextResponse.json(body, {
+    status: 200,
+    headers: { 'Cache-Control': 'private, no-store' },
+  })
+}

@@ -1,0 +1,117 @@
+{{#if has_reseller_tier}}
+import 'server-only'
+
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+
+import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth'
+
+// {{product_name_pascal}} — GET /api/partner/sub-users
+//
+// Partner-scoped sub-user listing. Emitted only when `has_reseller_tier`
+// is enabled. Pagination + filter matching admin/users, BUT:
+//   - scoped by partner_tenant_id (not tenant_id) to guarantee a partner
+//     cannot enumerate another partner's customers
+//   - returns MASKED email fields (local part > 2 chars redacted) to
+//     respect sub-user privacy — partners should not be able to cold-scrape
+//     their customers' email addresses for external marketing
+//
+// 403 responses intentionally generic — never distinguish "wrong role"
+// from "missing partner_tenant_id" to the caller.
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+const QuerySchema = z.object({
+  page: z.coerce.number().int().positive().max(10_000).default(1),
+  limit: z.coerce.number().int().positive().max(100).default(50),
+  status: z.enum(['active', 'suspended', 'churned']).optional(),
+  q: z.string().trim().max(120).optional(),
+})
+
+interface SubUserRow {
+  user_id: string
+  email_masked: string
+  plan: string
+  status: string
+  mrr_cents_contribution: number
+  signed_up_at: string
+}
+
+function maskEmail(raw: string | null | undefined): string {
+  if (!raw || !raw.includes('@')) return '***'
+  const [local, domain] = raw.split('@')
+  if (local.length <= 2) return `${local[0] ?? '*'}***@${domain}`
+  return `${local.slice(0, 2)}***@${domain}`
+}
+
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const authCtx = await getAuthContext({ require_role: 'partner' })
+
+  if (!authCtx.user) {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+  if (!authCtx.allowed) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
+  const partnerTenantId = authCtx.partner_tenant_id ?? authCtx.tenant_id
+  if (!partnerTenantId) {
+    // Deliberately same shape as 403 above — don't reveal mis-provisioning to caller
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
+  const parsed = QuerySchema.safeParse({
+    page: req.nextUrl.searchParams.get('page') ?? undefined,
+    limit: req.nextUrl.searchParams.get('limit') ?? undefined,
+    status: req.nextUrl.searchParams.get('status') ?? undefined,
+    q: req.nextUrl.searchParams.get('q') ?? undefined,
+  })
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'invalid_query', issues: parsed.error.flatten() },
+      { status: 400 }
+    )
+  }
+
+  const { page, limit, status, q } = parsed.data
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  const supabase = await createClient()
+  let query = supabase
+    .from('partner_sub_users')
+    .select('user_id, email, plan, status, mrr_cents_contribution, signed_up_at', {
+      count: 'exact',
+    })
+    .eq('partner_tenant_id', partnerTenantId) // MANDATORY partner scoping
+    .order('signed_up_at', { ascending: false })
+    .range(from, to)
+
+  if (status) query = query.eq('status', status)
+  if (q) query = query.ilike('email', `%${q.toLowerCase()}%`)
+
+  const { data, count, error } = await query
+
+  if (error) {
+    console.error('[api/partner/sub-users] query failed', { code: error.code })
+    return NextResponse.json({ error: 'internal' }, { status: 500 })
+  }
+
+  const rows: SubUserRow[] = (data ?? []).map((r: { user_id: string; email: string | null; plan: string; status: string; mrr_cents_contribution: number; signed_up_at: string }) => ({
+    user_id: r.user_id,
+    email_masked: maskEmail(r.email),
+    plan: r.plan,
+    status: r.status,
+    mrr_cents_contribution: r.mrr_cents_contribution,
+    signed_up_at: r.signed_up_at,
+  }))
+
+  return NextResponse.json(
+    { sub_users: rows, page, limit, total: count ?? 0 },
+    { status: 200, headers: { 'Cache-Control': 'private, no-store' } }
+  )
+}
+{{/if}}

@@ -1,0 +1,131 @@
+// {{product_name_pascal}} — Payment provider abstraction
+//
+// Provider-agnostic interface. Every surface (server components, API routes,
+// webhooks) calls these methods; only `stripe.ts` and `iyzico.ts` adapters
+// know provider-specific shape. Swap providers by flipping env var
+// PAYMENT_PROVIDER (stripe|iyzico|both).
+//
+// Contract invariants (enforced by TypeScript types):
+//   - All amounts in cents (stripe.cents or iyzico.kurus); dual-amount
+//     columns on DB carry TRY + USD where relevant (SP-03 focus area).
+//   - FSM states mirrored 1-for-1 across providers: pending → active
+//     → past_due → canceled (or → trialing → active on trial flows).
+//   - Every webhook handler uses verifyWebhook() + processEvent() which
+//     enforces idempotency via processed_webhook_events table.
+//
+// Anti-patterns prevented by construction:
+//   - AP-08: sandbox↔live cutover via pure env (PAYMENT_ENV=sandbox|live)
+//   - AP-10: no inline secret (SDK reads from env only)
+//   - Double-charge: idempotency keys enforced on create-subscription
+//   - Missing signature verify: verifyWebhook() rejects unsigned
+//
+// Usage:
+//   import { getProvider } from "@/lib/payments";
+//   const provider = getProvider(); // dispatches by env
+//   const session = await provider.createCheckoutSession({ ... });
+
+import type { Database } from "@/lib/supabase/database.types";
+
+export type PaymentProvider = "stripe" | "iyzico";
+export type PaymentEnv = "sandbox" | "live";
+
+export type SubscriptionStatus =
+  | "trialing"
+  | "pending"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "incomplete_expired";
+
+export interface CheckoutSessionInput {
+  tenant_id: string;
+  user_id: string;
+  plan_id: string;
+  success_url: string;
+  cancel_url: string;
+  trial_days?: number;
+  metadata?: Record<string, string>;
+}
+
+export interface CheckoutSessionOutput {
+  provider: PaymentProvider;
+  session_id: string;
+  session_url: string;
+  expires_at: Date;
+}
+
+export interface SubscriptionUpdateInput {
+  tenant_id: string;
+  subscription_id: string;
+  new_plan_id?: string;
+  cancel_at_period_end?: boolean;
+}
+
+export interface WebhookResult {
+  acknowledged: boolean;
+  event_id: string;
+  event_type: string;
+  idempotent_skip: boolean;
+  fsm_transition?: {
+    from: SubscriptionStatus;
+    to: SubscriptionStatus;
+    subscription_id: string;
+  };
+}
+
+export interface PaymentProviderInterface {
+  readonly name: PaymentProvider;
+  readonly env: PaymentEnv;
+
+  createCheckoutSession(input: CheckoutSessionInput): Promise<CheckoutSessionOutput>;
+  cancelSubscription(input: SubscriptionUpdateInput): Promise<void>;
+  changePlan(input: SubscriptionUpdateInput): Promise<void>;
+  verifyWebhook(rawBody: string, signatureHeader: string): Promise<unknown>;
+  processWebhook(event: unknown): Promise<WebhookResult>;
+}
+
+/**
+ * Dispatch to the configured provider. Reads `PAYMENT_PROVIDER` env.
+ * For `both`, the primary is selected from `PAYMENT_PRIMARY`;
+ * webhook routes each call their specific provider's `verifyWebhook`
+ * regardless of primary.
+ */
+export async function getProvider(override?: PaymentProvider): Promise<PaymentProviderInterface> {
+  const chosen =
+    override
+    ?? (process.env.PAYMENT_PRIMARY as PaymentProvider | undefined)
+    ?? (process.env.PAYMENT_PROVIDER as PaymentProvider | undefined)
+    ?? "stripe";
+
+  if (chosen === "stripe") {
+    const { StripeProvider } = await import("./stripe");
+    return new StripeProvider();
+  }
+  if (chosen === "iyzico") {
+    const { IyzicoProvider } = await import("./iyzico");
+    return new IyzicoProvider();
+  }
+  throw new Error(`[payments] unsupported provider: ${chosen}`);
+}
+
+/**
+ * Helper: which FSM transitions are legal? Enforced server-side in
+ * processWebhook before writing to subscriptions table. Illegal transitions
+ * are logged to audit_log with `outcome: rejected` and the webhook is ACKed
+ * 200 to avoid provider retry storms (the illegal transition is a bug, not
+ * a transient network issue).
+ */
+export const LEGAL_TRANSITIONS: Record<SubscriptionStatus, SubscriptionStatus[]> = {
+  trialing: ["active", "canceled", "incomplete_expired"],
+  pending: ["active", "canceled", "incomplete_expired"],
+  active: ["past_due", "canceled"],
+  past_due: ["active", "canceled"],
+  canceled: [],  // terminal
+  incomplete_expired: [],  // terminal
+};
+
+export function isLegalTransition(from: SubscriptionStatus, to: SubscriptionStatus): boolean {
+  return LEGAL_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+export type PaymentTables = Database["public"]["Tables"];

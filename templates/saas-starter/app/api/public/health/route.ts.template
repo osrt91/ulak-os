@@ -1,0 +1,106 @@
+import { NextResponse } from 'next/server'
+
+// {{product_name_pascal}} — unauthenticated health probe
+//
+// PURPOSE
+// -------
+// Fast, cheap, dependency-free liveness check. If this route responds 200,
+// the process is up, the Node runtime is serving, and environment-baked
+// metadata is visible. That is ALL it proves.
+//
+// For deeper checks (DB reachability, Supabase auth API, external
+// payment gateway, mail queue, cache) use a separate /api/public/ready
+// endpoint. Mixing liveness + readiness is a well-documented anti-pattern
+// (see docs/runtime/anti-patterns.md — AP-22 "chatty health checks"):
+// every ping would hammer the DB, then every DB hiccup would mark the
+// pod unhealthy and trigger a restart storm.
+//
+// CONSUMERS
+// ---------
+//   - deploy-time readiness probe (Traefik / k8s / railway / fly.io)
+//   - uptime monitors (UptimeRobot, Better Stack, internal synthetics)
+//   - /api/public/status dashboards aggregating multiple services
+//
+// DISCIPLINE
+// ----------
+//   - NEVER gate behind auth (probe MUST succeed with no cookies/headers)
+//   - NEVER hit the database
+//   - NEVER leak env values beyond version + short commit sha +
+//     coarse deploy environment label (production | staging | preview | dev)
+//   - Cache-Control: no-store so every probe sees fresh pod/container state
+//   - CORS: open (Access-Control-Allow-Origin: *) — probes come from
+//     anywhere, the surface is read-only + non-sensitive by design
+//
+// SHAPE STABILITY
+// ---------------
+// Scaffolded projects produced by Ulak OS share this exact JSON shape.
+// Monitoring tooling may rely on the `status`, `version`, and `env` keys.
+
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
+
+interface HealthResponse {
+  status: 'ok'
+  version: string
+  commit: string
+  env: 'production' | 'staging' | 'preview' | 'development'
+  ts: number
+}
+
+function resolveEnv(): HealthResponse['env'] {
+  const nextEnv = process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase()
+  if (nextEnv === 'production' || nextEnv === 'staging' || nextEnv === 'preview' || nextEnv === 'development') {
+    return nextEnv
+  }
+  // Fallback: Vercel / node env mapping
+  if (process.env.VERCEL_ENV === 'production') return 'production'
+  if (process.env.VERCEL_ENV === 'preview') return 'preview'
+  if (process.env.NODE_ENV === 'production') return 'production'
+  return 'development'
+}
+
+export async function GET(): Promise<NextResponse<HealthResponse>> {
+  const body: HealthResponse = {
+    status: 'ok',
+    version: '{{app_version}}',
+    commit: '{{git_sha_short}}',
+    env: resolveEnv(),
+    ts: Date.now(),
+  }
+
+  return NextResponse.json(body, {
+    status: 200,
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Content-Type': 'application/json; charset=utf-8',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      'X-Health-Probe': 'liveness',
+    },
+  })
+}
+
+// HEAD is cheaper for monitors that only need connectivity check
+export async function HEAD(): Promise<Response> {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Access-Control-Allow-Origin': '*',
+      'X-Health-Probe': 'liveness',
+    },
+  })
+}
+
+// OPTIONS for CORS preflight when monitors issue complex requests
+export async function OPTIONS(): Promise<Response> {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
+    },
+  })
+}

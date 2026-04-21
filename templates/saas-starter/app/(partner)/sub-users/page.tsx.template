@@ -1,0 +1,111 @@
+{{#if has_reseller_tier}}
+import 'server-only'
+
+import { redirect } from 'next/navigation'
+
+import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth'
+import { SubUsersTable, type SubUserRow } from './_components/SubUsersTable'
+
+// {{product_name_pascal}} — partner-scoped sub-user management
+//
+// Mirrors the admin/users pattern but scopes every query by
+// partner_tenant_id = authCtx.partner_tenant_id. A partner MUST never see
+// another partner's sub-users; RLS provides defence in depth but we still
+// enforce at the query layer per docs/runtime/anti-patterns.md AP-11.
+
+export const dynamic = 'force-dynamic'
+
+interface PageSearchParams {
+  page?: string
+  q?: string
+  status?: 'active' | 'suspended' | 'all'
+}
+
+interface LoadResult {
+  rows: SubUserRow[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+const PAGE_SIZE = 50
+
+async function loadSubUsers(
+  partnerTenantId: string,
+  params: PageSearchParams
+): Promise<LoadResult> {
+  const supabase = await createClient()
+  const page = Math.max(1, Number(params.page ?? '1') || 1)
+  const from = (page - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
+  let query = supabase
+    .from('partner_sub_users')
+    .select('user_id, email_masked, plan, status, mrr_cents_contribution, signed_up_at', {
+      count: 'exact',
+    })
+    .eq('partner_tenant_id', partnerTenantId)
+    .order('signed_up_at', { ascending: false })
+    .range(from, to)
+
+  if (params.status && params.status !== 'all') {
+    query = query.eq('status', params.status)
+  }
+  if (params.q && params.q.trim().length > 0) {
+    query = query.ilike('email_masked', `%${params.q.trim().toLowerCase()}%`)
+  }
+
+  const { data, count, error } = await query
+  if (error) {
+    // Never leak DB error details to client; log server-side
+    console.error('[partner/sub-users] query failed', { code: error.code })
+    return { rows: [], total: 0, page, pageSize: PAGE_SIZE }
+  }
+
+  return {
+    rows: (data as SubUserRow[]) ?? [],
+    total: count ?? 0,
+    page,
+    pageSize: PAGE_SIZE,
+  }
+}
+
+export default async function PartnerSubUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<PageSearchParams>
+}) {
+  const authCtx = await getAuthContext({ require_role: 'partner' })
+  if (!authCtx.allowed) redirect(authCtx.redirectTo ?? '/login')
+
+  const partnerTenantId = authCtx.partner_tenant_id ?? authCtx.tenant_id
+  if (!partnerTenantId) redirect('/login?reason=missing-partner-tenant')
+
+  const params = await searchParams
+  const { rows, total, page, pageSize } = await loadSubUsers(partnerTenantId, params)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold">Sub-users</h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            {total.toLocaleString('{{locale_primary}}')} total · page {page} of{' '}
+            {Math.max(1, Math.ceil(total / pageSize))}
+          </p>
+        </div>
+      </div>
+
+      <SubUsersTable
+        rows={rows}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        currentQuery={params.q ?? ''}
+        currentStatus={params.status ?? 'all'}
+      />
+    </div>
+  )
+}
+{{/if}}

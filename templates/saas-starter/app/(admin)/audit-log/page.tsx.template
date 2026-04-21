@@ -1,0 +1,200 @@
+// {{product_name_pascal}} — admin audit log viewer (filterable TanStack table + CSV export)
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import {
+  ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel,
+  getPaginationRowModel, getSortedRowModel, SortingState, useReactTable,
+} from "@tanstack/react-table";
+
+import { t } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/i18n/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/shared/empty-state";
+
+interface AuditEntry {
+  id: string;
+  created_at: string;
+  actor_user_id: string | null;
+  actor_email: string | null;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  outcome: "success" | "error" | "denied";
+  details: Record<string, unknown> | null;
+}
+
+const OUTCOME_TONE: Record<AuditEntry["outcome"], "success" | "warning" | "danger"> = { success: "success", error: "danger", denied: "warning" };
+
+export default function AdminAuditLogPage() {
+  const [data, setData] = useState<AuditEntry[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "created_at", desc: true }]);
+  const [actorFilter, setActorFilter] = useState("");
+  const [actionFilter, setActionFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [globalFilter, setGlobalFilter] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const params = new URLSearchParams();
+        if (actorFilter) params.set("actor", actorFilter);
+        if (actionFilter) params.set("action", actionFilter);
+        if (dateFrom) params.set("from", dateFrom);
+        if (dateTo) params.set("to", dateTo);
+        const res = await fetch(`/api/admin/audit-log?${params.toString()}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = (await res.json()) as { entries: AuditEntry[] };
+        if (!cancelled) setData(json.entries);
+      } catch { if (!cancelled) setLoadError(t("admin.audit.load-failed")); }
+    })();
+    return () => { cancelled = true; };
+  }, [actorFilter, actionFilter, dateFrom, dateTo]);
+
+  const columns = useMemo<ColumnDef<AuditEntry>[]>(() => [
+    {
+      accessorKey: "created_at", header: t("admin.audit.col.timestamp"),
+      cell: ({ getValue }) => <time dateTime={getValue<string>()} className="tabular-nums text-xs">{formatDateTime(getValue<string>())}</time>,
+    },
+    {
+      accessorKey: "actor_email", header: t("admin.audit.col.actor"),
+      cell: ({ row }) => row.original.actor_email ?? <span className="text-ink-muted">{t("admin.audit.system-actor")}</span>,
+    },
+    {
+      accessorKey: "action", header: t("admin.audit.col.action"),
+      cell: ({ getValue }) => <code className="text-xs rounded bg-surface-muted px-1.5 py-0.5">{getValue<string>()}</code>,
+    },
+    {
+      accessorKey: "target_type", header: t("admin.audit.col.subject"),
+      cell: ({ row }) => (
+        <div>
+          <p className="text-sm">{row.original.target_type}</p>
+          {row.original.target_id ? <p className="text-xs text-ink-muted truncate max-w-48">{row.original.target_id}</p> : null}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "outcome", header: t("admin.audit.col.outcome"),
+      cell: ({ getValue }) => {
+        const o = getValue<AuditEntry["outcome"]>();
+        return <Badge variant={OUTCOME_TONE[o]}>{t(`admin.audit.outcome.${o}`)}</Badge>;
+      },
+    },
+    {
+      accessorKey: "details", header: t("admin.audit.col.details"),
+      cell: ({ getValue }) => {
+        const d = getValue<AuditEntry["details"]>();
+        if (!d) return <span className="text-ink-muted">—</span>;
+        const full = JSON.stringify(d);
+        return <pre className="text-xs text-ink-muted max-w-xs overflow-hidden truncate">{full.slice(0, 120)}{full.length > 120 ? "…" : ""}</pre>;
+      },
+    },
+  ], []);
+
+  const table = useReactTable({
+    data: data ?? [], columns,
+    state: { sorting, globalFilter },
+    onSortingChange: setSorting, onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 50 } },
+    globalFilterFn: (row, _id, value) => !value || JSON.stringify(row.original).toLowerCase().includes(String(value).toLowerCase()),
+  });
+
+  const exportCsv = () => {
+    const rows = table.getFilteredRowModel().rows.map((r) => r.original);
+    const header = ["timestamp", "actor_email", "actor_user_id", "action", "target_type", "target_id", "outcome", "details"];
+    const csv = [
+      header.join(","),
+      ...rows.map((r) => [r.created_at, csvCell(r.actor_email), csvCell(r.actor_user_id), csvCell(r.action), csvCell(r.target_type), csvCell(r.target_id), r.outcome, csvCell(JSON.stringify(r.details ?? {}))].join(",")),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  if (loadError) return <Alert variant="destructive" role="alert">{loadError}</Alert>;
+  if (data === null) {
+    return (
+      <div className="space-y-4">
+        <div className="h-8 w-48 bg-surface-muted rounded animate-pulse" />
+        <div className="h-96 bg-surface-muted rounded animate-pulse" />
+      </div>
+    );
+  }
+
+  const { pageIndex, pageSize } = table.getState().pagination;
+  const filteredTotal = table.getFilteredRowModel().rows.length;
+
+  return (
+    <div className="space-y-6 max-w-6xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{t("admin.audit.title")}</h1>
+          <p className="text-ink-muted">{t("admin.audit.subtitle")}</p>
+        </div>
+        <Button variant="outline" onClick={exportCsv} disabled={data.length === 0}>{t("admin.audit.export-csv")}</Button>
+      </header>
+      <div className="grid gap-3 md:grid-cols-4">
+        <Input value={actorFilter} onChange={(e) => setActorFilter(e.target.value)} placeholder={t("admin.audit.filter.actor")} aria-label={t("admin.audit.filter.actor")} />
+        <Input value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} placeholder={t("admin.audit.filter.action")} aria-label={t("admin.audit.filter.action")} />
+        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} aria-label={t("admin.audit.filter.date-from")} />
+        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} aria-label={t("admin.audit.filter.date-to")} />
+      </div>
+      <Input value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} placeholder={t("admin.audit.search-placeholder")} aria-label={t("admin.audit.search-label")} />
+
+      {data.length === 0 ? (
+        <EmptyState title={t("admin.audit.empty-title")} body={t("admin.audit.empty-body")} />
+      ) : (
+        <>
+          <div className="rounded-lg border border-surface-strong bg-surface-raised overflow-hidden">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id}>
+                    {hg.headers.map((h) => (
+                      <TableHead key={h.id} onClick={h.column.getToggleSortingHandler()} className="cursor-pointer select-none">
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((c) => <TableCell key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</TableCell>)}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex items-center justify-between text-sm text-ink-muted">
+            <span>{t("admin.audit.pagination", { from: pageIndex * pageSize + 1, to: Math.min((pageIndex + 1) * pageSize, filteredTotal), total: filteredTotal })}</span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>{t("pagination.prev")}</Button>
+              <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>{t("pagination.next")}</Button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function csvCell(value: string | null | undefined): string {
+  if (value === null || value === undefined) return "";
+  const escaped = String(value).replace(/"/g, '""');
+  return /[,"\n]/.test(escaped) ? `"${escaped}"` : escaped;
+}

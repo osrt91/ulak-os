@@ -1,0 +1,103 @@
+// {{product_name_pascal}} — auth shell (login / register / forgot-password)
+import Link from "next/link";
+import { headers } from "next/headers";
+
+import { LocaleSwitcher } from "@/components/shared/locale-switcher";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { t } from "@/lib/i18n";
+
+// Centered, minimal shell. Intentionally does NOT render the marketing nav;
+// auth is a focused task surface. Brand anchor + locale + theme only.
+export default async function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const h = await headers();
+  const pathname = h.get("x-invoke-path") ?? "";
+  const isLogin = pathname.includes("/login");
+  const isRegister = pathname.includes("/register");
+
+  return (
+    <main className="min-h-screen flex flex-col bg-surface text-ink">
+      <header className="border-b border-surface-strong">
+        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+          <Link
+            href="/"
+            className="font-display text-xl font-semibold"
+            aria-label={t("auth.brand-home")}
+          >
+            {{product_name_pascal}}
+          </Link>
+          <div className="flex items-center gap-3">
+            <LocaleSwitcher />
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
+
+      <section className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md">
+          <div className="rounded-xl border border-surface-strong bg-surface-raised p-8 shadow-sm dark:shadow-none">
+            {children}
+          </div>
+
+          {/* Cross-CTA: login <-> register pair, forgot-password gets both */}
+          <p className="mt-6 text-center text-sm text-ink-muted">
+            {isRegister ? (
+              <>
+                {t("auth.already-have-account")}{" "}
+                <Link
+                  href="/login"
+                  className="font-medium text-brand-500 hover:text-brand-600"
+                >
+                  {t("auth.login.cta")}
+                </Link>
+              </>
+            ) : isLogin ? (
+              <>
+                {t("auth.need-account")}{" "}
+                <Link
+                  href="/register"
+                  className="font-medium text-brand-500 hover:text-brand-600"
+                >
+                  {t("auth.register.cta")}
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="font-medium text-brand-500 hover:text-brand-600"
+                >
+                  {t("auth.login.cta")}
+                </Link>
+                <span className="mx-2 text-ink-muted">·</span>
+                <Link
+                  href="/register"
+                  className="font-medium text-brand-500 hover:text-brand-600"
+                >
+                  {t("auth.register.cta")}
+                </Link>
+              </>
+            )}
+          </p>
+        </div>
+      </section>
+
+      <footer className="border-t border-surface-strong">
+        <div className="mx-auto max-w-6xl px-6 py-6 flex items-center justify-between text-xs text-ink-muted">
+          <p>© {{year}} {{product_name_pascal}}</p>
+          <div className="flex gap-4">
+            <Link href="/privacy" className="hover:text-ink">
+              {t("footer.privacy")}
+            </Link>
+            <Link href="/terms" className="hover:text-ink">
+              {t("footer.terms")}
+            </Link>
+          </div>
+        </div>
+      </footer>
+    </main>
+  );
+}

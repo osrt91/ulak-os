@@ -1,0 +1,220 @@
+{
+  "_meta": {
+    "locale": "en",
+    "version": 1,
+    "product": "{{product_name_pascal}}",
+    "generated_by": "Ulak OS scaffolder v1.1+"
+  },
+
+  "brand": {
+    "product-name": "{{product_name_pascal}}",
+    "tagline": "The {{product_tagline_fallback}}"
+  },
+
+  "nav": {
+    "home": "Home",
+    "features": "Features",
+    "pricing": "Pricing",
+    "docs": "Docs",
+    "blog": "Blog",
+    "about": "About",
+    "contact": "Contact",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "billing": "Billing",
+    "team": "Team",
+    "help": "Help",
+    "login": "Log in",
+    "logout": "Log out",
+    "register": "Sign up",
+    "admin": "Admin",
+    "partner": "Partner",
+    "audit-log": "Audit log",
+    "users": "Users"
+  },
+
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Log in to {{product_name_pascal}}",
+      "email-label": "Email",
+      "email-placeholder": "you@example.com",
+      "password-label": "Password",
+      "password-placeholder": "Your password",
+      "submit": "Log in",
+      "forgot-password": "Forgot password?",
+      "no-account": "Don't have an account?",
+      "sign-up-link": "Sign up",
+      "magic-link": "Email me a magic link",
+      "magic-link-sent": "Check your inbox for the login link",
+      "social-google": "Continue with Google",
+      "social-github": "Continue with GitHub",
+      "social-divider": "or",
+      "error-invalid-credentials": "Email or password is incorrect",
+      "error-account-disabled": "This account has been suspended. Contact support.",
+      "error-network": "Could not reach the server. Try again."
+    },
+    "register": {
+      "title": "Create your account",
+      "subtitle": "Get started with {{product_name_pascal}} in 30 seconds",
+      "full-name-label": "Full name",
+      "tenant-name-label": "Workspace name",
+      "tenant-name-hint": "You can rename this later",
+      "terms-agreement": "I agree to the {{terms_link_label}} and {{privacy_link_label}}",
+      "submit": "Create account",
+      "have-account": "Already have an account?",
+      "login-link": "Log in",
+      "error-email-taken": "An account with this email already exists",
+      "error-weak-password": "Password must be at least 8 characters",
+      "error-invalid-email": "Please enter a valid email"
+    },
+    "forgot-password": {
+      "title": "Reset your password",
+      "subtitle": "We'll email you a reset link",
+      "submit": "Send reset link",
+      "sent-title": "Check your inbox",
+      "sent-subtitle": "We sent a reset link to {{email}}. It expires in 1 hour."
+    },
+    "logout": {
+      "confirm": "Sign out?",
+      "success": "You've been signed out"
+    }
+  },
+
+  "customer": {
+    "dashboard": {
+      "welcome": "Welcome back, {{user_name}}",
+      "empty-title": "Start with your first {{primary_entity_singular}}",
+      "empty-description": "Nothing here yet. Create your first {{primary_entity_singular}} to see activity on this screen.",
+      "empty-cta": "Create {{primary_entity_singular}}",
+      "recent-activity": "Recent activity",
+      "no-recent-activity": "No activity yet"
+    },
+    "settings": {
+      "title": "Settings",
+      "tab-profile": "Profile",
+      "tab-account": "Account",
+      "tab-billing": "Billing",
+      "tab-team": "Team",
+      "tab-preferences": "Preferences",
+      "save": "Save changes",
+      "saved": "Saved",
+      "cancel": "Cancel",
+      "delete-account": "Delete account",
+      "delete-account-confirm": "Type {{confirm_phrase}} to confirm",
+      "locale-label": "Language",
+      "theme-label": "Theme",
+      "theme-system": "System",
+      "theme-light": "Light",
+      "theme-dark": "Dark"
+    }
+  },
+
+  "admin": {
+    "dashboard": {
+      "title": "Admin dashboard",
+      "stat-total-users": "Total users",
+      "stat-mrr": "Monthly recurring revenue",
+      "stat-signups": "Signups (7d)",
+      "stat-error-rate": "Error rate",
+      "system-health": "System health"
+    },
+    "users": {
+      "title": "Users",
+      "col-email": "Email",
+      "col-role": "Role",
+      "col-last-login": "Last login",
+      "col-status": "Status",
+      "action-view": "View",
+      "action-edit-role": "Edit role",
+      "action-suspend": "Suspend",
+      "action-delete": "Delete"
+    },
+    "audit-log": {
+      "title": "Audit log",
+      "col-timestamp": "When",
+      "col-actor": "Who",
+      "col-action": "Did what",
+      "col-subject": "To what",
+      "col-outcome": "Result",
+      "filter-actor": "Filter by user",
+      "filter-action": "Filter by action",
+      "filter-date": "Filter by date",
+      "export-csv": "Export to CSV"
+    }
+  },
+
+  "partner": {
+    "dashboard": {
+      "title": "Partner dashboard",
+      "sub-users-count": "Sub-users",
+      "commission-month": "Commission this month",
+      "commission-ytd": "Commission YTD",
+      "payout-next": "Next payout",
+      "invite-sub-user": "Invite sub-user"
+    }
+  },
+
+  "payment": {
+    "plan-free": "Free",
+    "plan-pro": "Pro",
+    "plan-team": "Team",
+    "subscribe": "Subscribe",
+    "change-plan": "Change plan",
+    "cancel-subscription": "Cancel subscription",
+    "cancel-confirm": "Your access continues until the end of the current billing period.",
+    "invoice-history": "Invoice history",
+    "invoice-download": "Download",
+    "billing-address": "Billing address",
+    "update-payment-method": "Update payment method",
+    "error-payment-failed": "Payment failed. Please try again or use a different method.",
+    "error-payment-canceled": "Payment was canceled",
+    "success-payment": "Payment successful",
+    "trial-days-remaining": "{{days}} days left in your trial",
+    "trial-ended": "Your trial has ended"
+  },
+
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Connection lost. Check your internet and try again.",
+    "unauthorized": "You're not signed in. {{login_link}} to continue.",
+    "forbidden": "You don't have access to this resource.",
+    "not-found": "Page not found.",
+    "validation": "Please fix the highlighted fields.",
+    "rate-limit": "Too many requests. Please slow down and try again in a moment.",
+    "server": "Our server is having trouble. We've been notified and are looking into it.",
+    "session-expired": "Your session expired. Please sign in again."
+  },
+
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "export": "Export",
+    "import": "Import",
+    "copy": "Copy",
+    "share": "Share"
+  },
+
+  "time": {
+    "just-now": "just now",
+    "minutes-ago": "{{count}}m ago",
+    "hours-ago": "{{count}}h ago",
+    "days-ago": "{{count}}d ago",
+    "weeks-ago": "{{count}}w ago",
+    "months-ago": "{{count}}mo ago",
+    "years-ago": "{{count}}y ago"
+  }
+}

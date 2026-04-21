@@ -1,0 +1,195 @@
+// {{product_name_pascal}} — customer dashboard (welcome + recent activity + quick actions)
+import Link from "next/link";
+
+import { getAuthContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
+import { formatRelativeTime } from "@/lib/i18n/format";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/empty-state";
+
+export const dynamic = "force-dynamic";
+
+interface ActivityRow {
+  id: string;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  created_at: string;
+  actor_user_id: string | null;
+}
+
+export default async function CustomerDashboardPage() {
+  const authCtx = await getAuthContext({ require_role: "customer" });
+
+  // Layout already gated; this is belt-and-suspenders (AP-11 SSOT discipline)
+  if (!authCtx.allowed || !authCtx.session.user || !authCtx.session.tenantId) {
+    return (
+      <EmptyState
+        title={t("customer.dashboard.session-lost-title")}
+        body={t("customer.dashboard.session-lost-body")}
+        cta={{ href: "/login", label: t("auth.login.cta") }}
+      />
+    );
+  }
+
+  const supabase = await createClient();
+
+  // Belt-and-suspenders tenant isolation: explicit .eq in addition to RLS
+  const { data: activity, error: activityError } = await supabase
+    .from("audit_log")
+    .select("id, action, target_type, target_id, created_at, actor_user_id")
+    .eq("tenant_id", authCtx.session.tenantId)
+    .eq("actor_user_id", authCtx.session.user.id)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const rows: ActivityRow[] = activityError ? [] : (activity ?? []);
+  const hasActivity = rows.length > 0;
+
+  const firstName =
+    (authCtx.session.user.user_metadata?.first_name as string | undefined) ??
+    authCtx.session.user.email?.split("@")[0] ??
+    t("customer.dashboard.friend");
+
+  const quickActions = [
+    {
+      key: "create",
+      href: "/{{primary_entity_singular}}s/new",
+      label: t("customer.dashboard.quick.create"),
+      description: t("customer.dashboard.quick.create-desc"),
+    },
+    {
+      key: "invite",
+      href: "/settings?tab=team",
+      label: t("customer.dashboard.quick.invite"),
+      description: t("customer.dashboard.quick.invite-desc"),
+    },
+    {
+      key: "reports",
+      href: "/reports",
+      label: t("customer.dashboard.quick.reports"),
+      description: t("customer.dashboard.quick.reports-desc"),
+    },
+    {
+      key: "settings",
+      href: "/settings",
+      label: t("customer.dashboard.quick.settings"),
+      description: t("customer.dashboard.quick.settings-desc"),
+    },
+  ];
+
+  return (
+    <div className="space-y-8 max-w-6xl">
+      <section aria-labelledby="welcome-heading" className="space-y-2">
+        <h1
+          id="welcome-heading"
+          className="font-display text-3xl font-semibold tracking-tight"
+        >
+          {t("customer.dashboard.welcome", { name: firstName })}
+        </h1>
+        <p className="text-ink-muted">
+          {t("customer.dashboard.subtitle", { product: "{{product_name_pascal}}" })}
+        </p>
+      </section>
+
+      <section aria-labelledby="quick-actions-heading" className="space-y-3">
+        <h2
+          id="quick-actions-heading"
+          className="text-sm font-medium uppercase tracking-wide text-ink-muted"
+        >
+          {t("customer.dashboard.quick-actions")}
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {quickActions.map((action) => (
+            <Link
+              key={action.key}
+              href={action.href}
+              className="group rounded-lg border border-surface-strong bg-surface-raised p-5 hover:border-brand-500 hover:shadow-sm transition"
+            >
+              <p className="font-medium group-hover:text-brand-600">
+                {action.label}
+              </p>
+              <p className="mt-1 text-sm text-ink-muted">
+                {action.description}
+              </p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="activity-heading" className="space-y-3">
+        <h2
+          id="activity-heading"
+          className="text-sm font-medium uppercase tracking-wide text-ink-muted"
+        >
+          {t("customer.dashboard.recent-activity")}
+        </h2>
+        {hasActivity ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("customer.dashboard.last-five")}</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ul className="divide-y divide-surface-strong">
+                {rows.map((row) => (
+                  <li key={row.id} className="px-6 py-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {t(`audit.actions.${row.action}`, {
+                          fallback: row.action,
+                        })}
+                      </p>
+                      <p className="text-xs text-ink-muted">
+                        {row.target_type}
+                        {row.target_id ? ` · ${row.target_id}` : ""}
+                      </p>
+                    </div>
+                    <time
+                      className="text-xs text-ink-muted tabular-nums"
+                      dateTime={row.created_at}
+                    >
+                      {formatRelativeTime(row.created_at)}
+                    </time>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="py-12">
+              <EmptyState
+                title={t("customer.dashboard.empty-title", {
+                  entity: "{{primary_entity_singular}}",
+                })}
+                body={t("customer.dashboard.empty-body")}
+                cta={{
+                  href: "/{{primary_entity_singular}}s/new",
+                  label: t("customer.dashboard.empty-cta", {
+                    entity: "{{primary_entity_singular}}",
+                  }),
+                }}
+              />
+            </CardContent>
+          </Card>
+        )}
+      </section>
+
+      {activityError ? (
+        <p className="text-xs text-ink-muted">
+          {t("customer.dashboard.activity-error")}
+        </p>
+      ) : null}
+
+      <section>
+        <Button asChild variant="outline">
+          <Link href="/docs/first-steps">
+            {t("customer.dashboard.help-cta")}
+          </Link>
+        </Button>
+      </section>
+    </div>
+  );
+}

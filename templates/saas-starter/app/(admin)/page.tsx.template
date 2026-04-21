@@ -1,0 +1,175 @@
+// {{product_name_pascal}} — admin overview dashboard (tenant-wide stats + system health)
+import Link from "next/link";
+
+import { getAuthContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
+import { formatNumber, formatCurrency } from "@/lib/i18n/format";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { SystemHealthCard } from "@/components/admin/system-health-card";
+import { StatTile } from "@/components/admin/stat-tile";
+
+export const dynamic = "force-dynamic";
+
+interface Stats {
+  totalUsers: number;
+  recentSignups: number;
+  errorRate: number;
+  {{#if payment_provider}}mrr: number;{{/if}}
+}
+
+async function loadStats(tenantId: string): Promise<Stats> {
+  const supabase = await createClient();
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [{ count: totalUsers }, { count: recentSignups }, { count: errorCount }, { count: totalActions }] =
+    await Promise.all([
+      supabase
+        .from("user_role_assignments")
+        .select("user_id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId),
+      supabase
+        .from("user_role_assignments")
+        .select("user_id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .gte("created_at", since),
+      supabase
+        .from("audit_log")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("outcome", "error")
+        .gte("created_at", since),
+      supabase
+        .from("audit_log")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .gte("created_at", since),
+    ]);
+
+  const total = totalActions ?? 0;
+  const errors = errorCount ?? 0;
+  const errorRate = total > 0 ? (errors / total) * 100 : 0;
+
+  return {
+    totalUsers: totalUsers ?? 0,
+    recentSignups: recentSignups ?? 0,
+    errorRate,
+    {{#if payment_provider}}mrr: 0, // wired by billing integration; stub returns 0{{/if}}
+  };
+}
+
+export default async function AdminOverviewPage() {
+  const authCtx = await getAuthContext({
+    require_role: "admin",
+    force_refresh: true,
+  });
+
+  if (!authCtx.allowed || !authCtx.session.tenantId) {
+    // Layout already redirected; this is a type guard
+    return null;
+  }
+
+  const stats = await loadStats(authCtx.session.tenantId);
+
+  const quickLinks = [
+    { href: "/admin/users", label: t("admin.quick.users") },
+    { href: "/admin/audit-log", label: t("admin.quick.audit-log") },
+    { href: "/admin/feature-flags", label: t("admin.quick.feature-flags") },
+    { href: "/admin/system-health", label: t("admin.quick.system-health") },
+  ];
+
+  return (
+    <div className="space-y-8 max-w-6xl">
+      <header className="space-y-1">
+        <div className="flex items-center gap-3">
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            {t("admin.overview.title")}
+          </h1>
+          <Badge variant="admin">{t("admin.overview.badge")}</Badge>
+        </div>
+        <p className="text-ink-muted">
+          {t("admin.overview.subtitle")}
+        </p>
+      </header>
+
+      <section
+        aria-labelledby="stats-heading"
+        className="space-y-3"
+      >
+        <h2
+          id="stats-heading"
+          className="text-sm font-medium uppercase tracking-wide text-ink-muted"
+        >
+          {t("admin.overview.stats-heading")}
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatTile
+            label={t("admin.stat.total-users")}
+            value={formatNumber(stats.totalUsers)}
+          />
+          <StatTile
+            label={t("admin.stat.recent-signups")}
+            value={formatNumber(stats.recentSignups)}
+            hint={t("admin.stat.last-7-days")}
+          />
+          {{#if payment_provider}}
+          <StatTile
+            label={t("admin.stat.mrr")}
+            value={formatCurrency(stats.mrr)}
+          />
+          {{/if}}
+          <StatTile
+            label={t("admin.stat.error-rate")}
+            value={`${stats.errorRate.toFixed(2)}%`}
+            hint={t("admin.stat.last-7-days")}
+            tone={stats.errorRate > 2 ? "warning" : "neutral"}
+          />
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="quick-heading"
+        className="space-y-3"
+      >
+        <h2
+          id="quick-heading"
+          className="text-sm font-medium uppercase tracking-wide text-ink-muted"
+        >
+          {t("admin.overview.quick-heading")}
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+          {quickLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="rounded-lg border border-surface-strong bg-surface-raised p-4 text-sm font-medium hover:border-admin-500 hover:shadow-sm transition"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="health-heading" className="space-y-3">
+        <h2
+          id="health-heading"
+          className="text-sm font-medium uppercase tracking-wide text-ink-muted"
+        >
+          {t("admin.overview.health-heading")}
+        </h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("admin.overview.health-title")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SystemHealthCard
+              tenantId={authCtx.session.tenantId}
+              hasPayment={{{#if payment_provider}}true{{else}}false{{/if}}}
+            />
+          </CardContent>
+        </Card>
+      </section>
+    </div>
+  );
+}

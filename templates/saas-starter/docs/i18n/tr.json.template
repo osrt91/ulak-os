@@ -1,0 +1,220 @@
+{
+  "_meta": {
+    "locale": "tr",
+    "version": 1,
+    "product": "{{product_name_pascal}}",
+    "generated_by": "Ulak OS scaffolder v1.1+"
+  },
+
+  "brand": {
+    "product-name": "{{product_name_pascal}}",
+    "tagline": "{{product_tagline_fallback}}"
+  },
+
+  "nav": {
+    "home": "Ana sayfa",
+    "features": "Özellikler",
+    "pricing": "Fiyatlandırma",
+    "docs": "Dokümanlar",
+    "blog": "Blog",
+    "about": "Hakkında",
+    "contact": "İletişim",
+    "dashboard": "Kontrol paneli",
+    "settings": "Ayarlar",
+    "billing": "Faturalandırma",
+    "team": "Ekip",
+    "help": "Yardım",
+    "login": "Giriş yap",
+    "logout": "Çıkış yap",
+    "register": "Kayıt ol",
+    "admin": "Yönetici",
+    "partner": "İş ortağı",
+    "audit-log": "Denetim kaydı",
+    "users": "Kullanıcılar"
+  },
+
+  "auth": {
+    "login": {
+      "title": "Tekrar hoş geldiniz",
+      "subtitle": "{{product_name_pascal}} hesabınıza giriş yapın",
+      "email-label": "E-posta",
+      "email-placeholder": "siz@ornek.com",
+      "password-label": "Parola",
+      "password-placeholder": "Parolanız",
+      "submit": "Giriş yap",
+      "forgot-password": "Parolamı unuttum",
+      "no-account": "Hesabınız yok mu?",
+      "sign-up-link": "Kayıt olun",
+      "magic-link": "Bana giriş bağlantısı gönder",
+      "magic-link-sent": "Giriş bağlantısı için gelen kutunuzu kontrol edin",
+      "social-google": "Google ile devam et",
+      "social-github": "GitHub ile devam et",
+      "social-divider": "veya",
+      "error-invalid-credentials": "E-posta veya parola yanlış",
+      "error-account-disabled": "Bu hesap askıya alınmış. Destek ile iletişime geçin.",
+      "error-network": "Sunucuya ulaşılamadı. Tekrar deneyin."
+    },
+    "register": {
+      "title": "Hesabınızı oluşturun",
+      "subtitle": "{{product_name_pascal}} ile 30 saniyede başlayın",
+      "full-name-label": "Ad soyad",
+      "tenant-name-label": "Çalışma alanı adı",
+      "tenant-name-hint": "Bunu daha sonra değiştirebilirsiniz",
+      "terms-agreement": "{{terms_link_label}} ve {{privacy_link_label}} şartlarını kabul ediyorum",
+      "submit": "Hesap oluştur",
+      "have-account": "Zaten hesabınız var mı?",
+      "login-link": "Giriş yapın",
+      "error-email-taken": "Bu e-posta adresine sahip bir hesap zaten var",
+      "error-weak-password": "Parola en az 8 karakter olmalı",
+      "error-invalid-email": "Lütfen geçerli bir e-posta girin"
+    },
+    "forgot-password": {
+      "title": "Parolanızı sıfırlayın",
+      "subtitle": "Size sıfırlama bağlantısı göndereceğiz",
+      "submit": "Sıfırlama bağlantısı gönder",
+      "sent-title": "Gelen kutunuzu kontrol edin",
+      "sent-subtitle": "{{email}} adresine bir sıfırlama bağlantısı gönderdik. 1 saat içinde sona eriyor."
+    },
+    "logout": {
+      "confirm": "Çıkış yapmak istediğinize emin misiniz?",
+      "success": "Oturumunuz kapatıldı"
+    }
+  },
+
+  "customer": {
+    "dashboard": {
+      "welcome": "Tekrar hoş geldin, {{user_name}}",
+      "empty-title": "İlk {{primary_entity_singular}} ile başla",
+      "empty-description": "Burada henüz bir şey yok. İlk {{primary_entity_singular}}'nizi oluşturun ve aktiviteyi bu ekranda görmeye başlayın.",
+      "empty-cta": "{{primary_entity_singular}} oluştur",
+      "recent-activity": "Son aktiviteler",
+      "no-recent-activity": "Henüz aktivite yok"
+    },
+    "settings": {
+      "title": "Ayarlar",
+      "tab-profile": "Profil",
+      "tab-account": "Hesap",
+      "tab-billing": "Faturalandırma",
+      "tab-team": "Ekip",
+      "tab-preferences": "Tercihler",
+      "save": "Değişiklikleri kaydet",
+      "saved": "Kaydedildi",
+      "cancel": "İptal",
+      "delete-account": "Hesabı sil",
+      "delete-account-confirm": "Onaylamak için {{confirm_phrase}} yazın",
+      "locale-label": "Dil",
+      "theme-label": "Tema",
+      "theme-system": "Sistem",
+      "theme-light": "Açık",
+      "theme-dark": "Koyu"
+    }
+  },
+
+  "admin": {
+    "dashboard": {
+      "title": "Yönetici paneli",
+      "stat-total-users": "Toplam kullanıcı",
+      "stat-mrr": "Aylık tekrarlayan gelir",
+      "stat-signups": "Kayıtlar (7g)",
+      "stat-error-rate": "Hata oranı",
+      "system-health": "Sistem sağlığı"
+    },
+    "users": {
+      "title": "Kullanıcılar",
+      "col-email": "E-posta",
+      "col-role": "Rol",
+      "col-last-login": "Son giriş",
+      "col-status": "Durum",
+      "action-view": "Görüntüle",
+      "action-edit-role": "Rolü düzenle",
+      "action-suspend": "Askıya al",
+      "action-delete": "Sil"
+    },
+    "audit-log": {
+      "title": "Denetim kaydı",
+      "col-timestamp": "Ne zaman",
+      "col-actor": "Kim",
+      "col-action": "Ne yaptı",
+      "col-subject": "Neye",
+      "col-outcome": "Sonuç",
+      "filter-actor": "Kullanıcıya göre filtrele",
+      "filter-action": "İşleme göre filtrele",
+      "filter-date": "Tarihe göre filtrele",
+      "export-csv": "CSV'ye dışa aktar"
+    }
+  },
+
+  "partner": {
+    "dashboard": {
+      "title": "İş ortağı paneli",
+      "sub-users-count": "Alt kullanıcılar",
+      "commission-month": "Bu ayki komisyon",
+      "commission-ytd": "Yıl başından bugüne komisyon",
+      "payout-next": "Sonraki ödeme",
+      "invite-sub-user": "Alt kullanıcı davet et"
+    }
+  },
+
+  "payment": {
+    "plan-free": "Ücretsiz",
+    "plan-pro": "Pro",
+    "plan-team": "Ekip",
+    "subscribe": "Abone ol",
+    "change-plan": "Planı değiştir",
+    "cancel-subscription": "Aboneliği iptal et",
+    "cancel-confirm": "Mevcut faturalandırma döneminin sonuna kadar erişiminiz devam eder.",
+    "invoice-history": "Fatura geçmişi",
+    "invoice-download": "İndir",
+    "billing-address": "Fatura adresi",
+    "update-payment-method": "Ödeme yöntemini güncelle",
+    "error-payment-failed": "Ödeme başarısız. Lütfen tekrar deneyin veya farklı bir yöntem kullanın.",
+    "error-payment-canceled": "Ödeme iptal edildi",
+    "success-payment": "Ödeme başarılı",
+    "trial-days-remaining": "Deneme süresinizde {{days}} gün kaldı",
+    "trial-ended": "Deneme süreniz sona erdi"
+  },
+
+  "errors": {
+    "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+    "network": "Bağlantı kesildi. İnternetinizi kontrol edip tekrar deneyin.",
+    "unauthorized": "Oturum açmamışsınız. Devam etmek için {{login_link}}.",
+    "forbidden": "Bu kaynağa erişiminiz yok.",
+    "not-found": "Sayfa bulunamadı.",
+    "validation": "Lütfen işaretli alanları düzeltin.",
+    "rate-limit": "Çok fazla istek. Lütfen biraz yavaşlayın ve bir süre sonra tekrar deneyin.",
+    "server": "Sunucumuz sorun yaşıyor. Haberimiz var, inceliyoruz.",
+    "session-expired": "Oturumunuz sona erdi. Lütfen tekrar giriş yapın."
+  },
+
+  "actions": {
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "create": "Oluştur",
+    "update": "Güncelle",
+    "submit": "Gönder",
+    "confirm": "Onayla",
+    "back": "Geri",
+    "next": "İleri",
+    "previous": "Önceki",
+    "close": "Kapat",
+    "search": "Ara",
+    "filter": "Filtrele",
+    "sort": "Sırala",
+    "export": "Dışa aktar",
+    "import": "İçe aktar",
+    "copy": "Kopyala",
+    "share": "Paylaş"
+  },
+
+  "time": {
+    "just-now": "az önce",
+    "minutes-ago": "{{count}} dk önce",
+    "hours-ago": "{{count}} sa önce",
+    "days-ago": "{{count}} gün önce",
+    "weeks-ago": "{{count}} hf önce",
+    "months-ago": "{{count}} ay önce",
+    "years-ago": "{{count}} yıl önce"
+  }
+}

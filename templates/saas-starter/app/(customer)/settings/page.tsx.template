@@ -1,0 +1,170 @@
+// {{product_name_pascal}} — customer settings hub (profile / account / billing / team / preferences)
+import { redirect } from "next/navigation";
+
+import { getAuthContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProfileSettingsForm } from "@/components/customer/settings/profile-form";
+import { AccountSettingsForm } from "@/components/customer/settings/account-form";
+import { PreferencesForm } from "@/components/customer/settings/preferences-form";
+{{#if payment_provider}}
+import { BillingPanel } from "@/components/customer/settings/billing-panel";
+{{/if}}
+import { TeamPanel } from "@/components/customer/settings/team-panel";
+
+export const dynamic = "force-dynamic";
+
+interface Props {
+  searchParams: Promise<{ tab?: string }>;
+}
+
+const VALID_TABS = [
+  "profile",
+  "account",
+  {{#if payment_provider}}"billing",{{/if}}
+  "team",
+  "preferences",
+] as const;
+type TabKey = (typeof VALID_TABS)[number];
+
+export default async function SettingsPage({ searchParams }: Props) {
+  const authCtx = await getAuthContext({ require_role: "customer" });
+  if (!authCtx.allowed || !authCtx.session.user || !authCtx.session.tenantId) {
+    redirect("/login?next=/settings");
+  }
+
+  const { tab } = await searchParams;
+  const activeTab: TabKey = (VALID_TABS as readonly string[]).includes(
+    tab ?? "",
+  )
+    ? (tab as TabKey)
+    : "profile";
+
+  const supabase = await createClient();
+
+  // Team membership count — drives whether Team tab shows invite-only vs. list.
+  // Tenant-scoped explicitly even though RLS also filters.
+  const { count: teamCount } = await supabase
+    .from("user_role_assignments")
+    .select("user_id", { count: "exact", head: true })
+    .eq("tenant_id", authCtx.session.tenantId);
+
+  const showTeamList = (teamCount ?? 0) > 1;
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+      <header className="space-y-1">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          {t("customer.settings.title")}
+        </h1>
+        <p className="text-ink-muted">
+          {t("customer.settings.subtitle")}
+        </p>
+      </header>
+
+      <Tabs defaultValue={activeTab} className="space-y-6">
+        <TabsList
+          aria-label={t("customer.settings.tabs-label")}
+          className="flex flex-wrap"
+        >
+          <TabsTrigger value="profile">
+            {t("customer.settings.tab.profile")}
+          </TabsTrigger>
+          <TabsTrigger value="account">
+            {t("customer.settings.tab.account")}
+          </TabsTrigger>
+          {{#if payment_provider}}
+          <TabsTrigger value="billing">
+            {t("customer.settings.tab.billing")}
+          </TabsTrigger>
+          {{/if}}
+          <TabsTrigger value="team">
+            {t("customer.settings.tab.team")}
+          </TabsTrigger>
+          <TabsTrigger value="preferences">
+            {t("customer.settings.tab.preferences")}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("customer.settings.profile.title")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProfileSettingsForm
+                userId={authCtx.session.user.id}
+                initialEmail={authCtx.session.user.email ?? ""}
+                initialName={
+                  (authCtx.session.user.user_metadata?.full_name as string | undefined) ?? ""
+                }
+                avatarUrl={
+                  (authCtx.session.user.user_metadata?.avatar_url as string | undefined) ?? null
+                }
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="account">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("customer.settings.account.title")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AccountSettingsForm userId={authCtx.session.user.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {{#if payment_provider}}
+        <TabsContent value="billing">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("customer.settings.billing.title")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <BillingPanel
+                tenantId={authCtx.session.tenantId}
+                provider="{{payment_provider}}"
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        {{/if}}
+
+        <TabsContent value="team">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("customer.settings.team.title")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TeamPanel
+                tenantId={authCtx.session.tenantId}
+                currentUserId={authCtx.session.user.id}
+                canManage={authCtx.session.role === "admin"}
+                showList={showTeamList}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="preferences">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("customer.settings.preferences.title")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PreferencesForm
+                userId={authCtx.session.user.id}
+                supportedLocales={{{locales_supported_json}}}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

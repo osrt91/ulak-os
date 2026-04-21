@@ -1,0 +1,185 @@
+{{#if payment_provider_iyzico}}
+import 'server-only'
+
+import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'node:crypto'
+
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// {{product_name_pascal}} — Iyzico webhook handler (Turkey-specific)
+//
+// Iyzico signature scheme (per https://docs.iyzico.com — Notification API):
+//   expected = base64( sha1( iyziEventType + iyziPaymentId + eventTime + secretKey ) )
+//   received in header: X-IYZ-SIGNATURE (some integrations: X-IYZ-SIGNATURE-V3)
+//
+// Versioning: newer V3 signing uses HMAC-SHA256 over the raw body + random
+// key header; this template implements the classic SHA1 scheme and leaves a
+// hook for V3. Confirm which scheme your merchant account uses BEFORE flipping
+// to production — mismatched schemes cause 100% silent failure.
+//
+// Mirrors the Stripe handler's contract:
+//   1. Read raw body (same discipline — don't JSON.parse before verify)
+//   2. Verify signature → silent 200 ACK on failure (no retry storms)
+//   3. Idempotency claim via processed_webhook_events table
+//   4. FSM dispatch for known event types (payment success/fail, sub lifecycle)
+//   5. Dead-letter unknown event types with 200 ACK
+//   6. 500 only on genuine internal errors (triggers Iyzico retry)
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+type HandledEvent =
+  | 'PAYMENT_SUCCESS'
+  | 'PAYMENT_FAILURE'
+  | 'SUBSCRIPTION_ACTIVATED'
+  | 'SUBSCRIPTION_RENEWED'
+  | 'SUBSCRIPTION_CANCELLED'
+  | 'REFUND_SUCCESS'
+
+const HANDLED: ReadonlySet<HandledEvent> = new Set([
+  'PAYMENT_SUCCESS',
+  'PAYMENT_FAILURE',
+  'SUBSCRIPTION_ACTIVATED',
+  'SUBSCRIPTION_RENEWED',
+  'SUBSCRIPTION_CANCELLED',
+  'REFUND_SUCCESS',
+])
+
+interface IyzicoNotification {
+  iyziEventType: string
+  iyziPaymentId?: string
+  iyziReferenceCode?: string
+  eventTime: string
+  status?: string
+  paymentStatus?: string
+  subscriptionReferenceCode?: string
+  [key: string]: unknown
+}
+
+function verifyClassicSignature(
+  body: IyzicoNotification,
+  received: string,
+  secretKey: string
+): boolean {
+  const canonical =
+    String(body.iyziEventType ?? '') +
+    String(body.iyziPaymentId ?? '') +
+    String(body.eventTime ?? '') +
+    secretKey
+
+  const expected = createHash('sha1').update(canonical, 'utf8').digest('base64')
+  // Constant-time compare would be ideal, but lengths are already bounded +
+  // the attacker-controlled surface is small (event type + payment id)
+  return expected === received
+}
+
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  const signature =
+    req.headers.get('x-iyz-signature') ?? req.headers.get('x-iyz-signature-v3')
+
+  if (!signature) {
+    return NextResponse.json({ error: 'missing_signature' }, { status: 400 })
+  }
+
+  const rawBody = await req.text()
+  const secretKey = process.env.IYZICO_WEBHOOK_SECRET
+  if (!secretKey) {
+    console.error('[iyzico webhook] IYZICO_WEBHOOK_SECRET not configured')
+    return NextResponse.json({ error: 'not_configured' }, { status: 500 })
+  }
+
+  let notification: IyzicoNotification
+  try {
+    notification = JSON.parse(rawBody) as IyzicoNotification
+  } catch {
+    return NextResponse.json({ received: true }, { status: 200 })
+  }
+
+  if (!verifyClassicSignature(notification, signature, secretKey)) {
+    // Silent ACK — no retries, no details leaked
+    console.warn('[iyzico webhook] signature verification failed')
+    return NextResponse.json({ received: true }, { status: 200 })
+  }
+
+  // Use event type + payment id + eventTime as synthetic event id
+  const syntheticEventId =
+    notification.iyziPaymentId ??
+    notification.iyziReferenceCode ??
+    `${notification.iyziEventType}:${notification.eventTime}`
+
+  const admin = createAdminClient()
+
+  const { error: claimError } = await admin
+    .from('processed_webhook_events')
+    .insert({
+      event_id: syntheticEventId,
+      provider: 'iyzico',
+      event_type: notification.iyziEventType,
+      received_at: new Date().toISOString(),
+    })
+
+  if (claimError) {
+    if ((claimError as { code?: string }).code === '23505') {
+      return NextResponse.json({ received: true, duplicate: true }, { status: 200 })
+    }
+    console.error('[iyzico webhook] idempotency claim failed', { code: claimError.code })
+    return NextResponse.json({ error: 'internal' }, { status: 500 })
+  }
+
+  if (!HANDLED.has(notification.iyziEventType as HandledEvent)) {
+    await admin.from('dead_letter_webhooks').insert({
+      event_id: syntheticEventId,
+      provider: 'iyzico',
+      event_type: notification.iyziEventType,
+      payload: notification as unknown as Record<string, unknown>,
+      reason: 'unhandled_event_type',
+    })
+    return NextResponse.json({ received: true, handled: false }, { status: 200 })
+  }
+
+  try {
+    await dispatchFsm(admin, notification)
+    return NextResponse.json({ received: true, handled: true }, { status: 200 })
+  } catch (err) {
+    await admin.from('processed_webhook_events').delete().eq('event_id', syntheticEventId)
+    console.error('[iyzico webhook] FSM dispatch failed', {
+      event_type: notification.iyziEventType,
+    })
+    return NextResponse.json({ error: 'processing_failed' }, { status: 500 })
+  }
+}
+
+async function dispatchFsm(
+  admin: ReturnType<typeof createAdminClient>,
+  n: IyzicoNotification
+): Promise<void> {
+  switch (n.iyziEventType as HandledEvent) {
+    case 'PAYMENT_SUCCESS':
+    case 'PAYMENT_FAILURE':
+      await admin.rpc('fsm_iyzico_payment_status', {
+        p_payment_id: n.iyziPaymentId ?? null,
+        p_status: n.iyziEventType === 'PAYMENT_SUCCESS' ? 'paid' : 'failed',
+      })
+      return
+    case 'SUBSCRIPTION_ACTIVATED':
+    case 'SUBSCRIPTION_RENEWED':
+    case 'SUBSCRIPTION_CANCELLED':
+      await admin
+        .from('subscriptions')
+        .upsert({
+          iyzico_subscription_ref: n.subscriptionReferenceCode ?? null,
+          status:
+            n.iyziEventType === 'SUBSCRIPTION_CANCELLED'
+              ? 'canceled'
+              : 'active',
+          updated_at: new Date().toISOString(),
+        })
+      return
+    case 'REFUND_SUCCESS':
+      await admin.rpc('fsm_iyzico_refund', {
+        p_payment_id: n.iyziPaymentId ?? null,
+      })
+      return
+  }
+}
+{{/if}}

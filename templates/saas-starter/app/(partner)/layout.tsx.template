@@ -1,0 +1,119 @@
+{{#if has_reseller_tier}}
+import 'server-only'
+
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import type { ReactNode } from 'react'
+
+import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth'
+
+// {{product_name_pascal}} — partner surface shell
+//
+// Gated by operator opt-in: `has_reseller_tier` scaffolder flag.
+// When reseller tier is disabled this entire route tree is not emitted.
+//
+// Authz contract (see docs/governance/product-surface-split.md):
+//   - requires session
+//   - requires role = 'partner'
+//   - requires plan capability = 'partner_dashboard'
+//   - enforces partner_tenant_id scoping for all downstream queries
+//
+// Branding:
+// Partner-specific logo + brand color pulled from `partner_branding` table
+// keyed by the partner's tenant_id. Never hardcode brand assets here —
+// that would leak one partner's identity to another.
+
+export const dynamic = 'force-dynamic'
+
+interface PartnerBranding {
+  display_name: string
+  logo_url: string | null
+  brand_color: string | null
+}
+
+async function loadPartnerBranding(partnerTenantId: string): Promise<PartnerBranding> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('partner_branding')
+    .select('display_name, logo_url, brand_color')
+    .eq('partner_tenant_id', partnerTenantId)
+    .maybeSingle()
+
+  return {
+    display_name: (data?.display_name as string | null) ?? '{{product_name_pascal}} Partner',
+    logo_url: (data?.logo_url as string | null) ?? null,
+    brand_color: (data?.brand_color as string | null) ?? null,
+  }
+}
+
+export default async function PartnerLayout({ children }: { children: ReactNode }) {
+  const authCtx = await getAuthContext({ require_role: 'partner' })
+
+  if (!authCtx.allowed) {
+    redirect(authCtx.redirectTo ?? '/login')
+  }
+
+  const partnerTenantId = authCtx.partner_tenant_id ?? authCtx.tenant_id
+  if (!partnerTenantId) {
+    redirect('/login?reason=missing-partner-tenant')
+  }
+
+  const branding = await loadPartnerBranding(partnerTenantId)
+  const brandStyle = branding.brand_color
+    ? ({ ['--brand-accent' as string]: branding.brand_color } as React.CSSProperties)
+    : undefined
+
+  return (
+    <div className="min-h-screen flex flex-col" style={brandStyle}>
+      <header className="border-b border-surface-strong bg-surface">
+        <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
+          <Link href="/partner" className="flex items-center gap-3">
+            {branding.logo_url ? (
+              // Partner-owned image served over HTTPS, cache-controlled by CDN
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={branding.logo_url}
+                alt={branding.display_name}
+                className="h-8 w-auto"
+              />
+            ) : (
+              <span className="font-display text-lg font-semibold">
+                {branding.display_name}
+              </span>
+            )}
+          </Link>
+
+          <nav aria-label="Partner navigation" className="flex items-center gap-6 text-sm">
+            <Link href="/partner" className="text-ink-muted hover:text-ink">
+              Dashboard
+            </Link>
+            <Link href="/partner/sub-users" className="text-ink-muted hover:text-ink">
+              Sub-users
+            </Link>
+            <Link href="/partner/commissions" className="text-ink-muted hover:text-ink">
+              Commissions
+            </Link>
+            <Link href="/partner/payouts" className="text-ink-muted hover:text-ink">
+              Payouts
+            </Link>
+            <Link href="/partner/settings" className="text-ink-muted hover:text-ink">
+              Settings
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      <main className="flex-1">
+        <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
+      </main>
+
+      <footer className="border-t border-surface-strong">
+        <div className="mx-auto max-w-7xl px-6 py-4 text-xs text-ink-muted">
+          {branding.display_name} · Powered by {{product_name_pascal}}
+        </div>
+      </footer>
+    </div>
+  )
+}
+{{/if}}

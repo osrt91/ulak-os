@@ -1,0 +1,162 @@
+{{#if has_reseller_tier}}
+import 'server-only'
+
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+
+import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth'
+import { PartnerCharts } from './_components/PartnerCharts'
+
+// {{product_name_pascal}} — partner dashboard (server component)
+//
+// Surface: partner (gated by has_reseller_tier scaffolder flag)
+// All queries MUST be scoped to authCtx.partner_tenant_id to prevent
+// cross-partner data leakage (see docs/runtime/cross-tenant-rls-verification.md).
+
+export const dynamic = 'force-dynamic'
+
+interface DashboardData {
+  subUserCount: number
+  subUserCountPrev: number
+  commissionMonth: number
+  commissionYTD: number
+  nextPayoutDate: string | null
+  nextPayoutAmount: number
+  recentSignups: Array<{ email_masked: string; plan: string; signed_up_at: string }>
+  growth: Array<{ month: string; count: number }>
+  commissionTrend: Array<{ month: string; amount: number }>
+}
+
+async function loadDashboard(partnerTenantId: string): Promise<DashboardData> {
+  const supabase = await createClient()
+
+  // Concurrent scoped queries — every .eq('partner_tenant_id', …) is mandatory
+  const [subUsers, commissions, payouts, signups, growth, trend] = await Promise.all([
+    supabase.rpc('partner_sub_user_counts', { p_partner_tenant_id: partnerTenantId }),
+    supabase.rpc('partner_commission_summary', { p_partner_tenant_id: partnerTenantId }),
+    supabase
+      .from('partner_payouts')
+      .select('scheduled_at, amount_cents')
+      .eq('partner_tenant_id', partnerTenantId)
+      .eq('status', 'scheduled')
+      .order('scheduled_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('partner_sub_users')
+      .select('email_masked, plan, signed_up_at')
+      .eq('partner_tenant_id', partnerTenantId)
+      .order('signed_up_at', { ascending: false })
+      .limit(10),
+    supabase.rpc('partner_sub_user_growth_12m', { p_partner_tenant_id: partnerTenantId }),
+    supabase.rpc('partner_commission_trend_12m', { p_partner_tenant_id: partnerTenantId }),
+  ])
+
+  return {
+    subUserCount: subUsers.data?.current ?? 0,
+    subUserCountPrev: subUsers.data?.previous ?? 0,
+    commissionMonth: commissions.data?.month_cents ?? 0,
+    commissionYTD: commissions.data?.ytd_cents ?? 0,
+    nextPayoutDate: payouts.data?.scheduled_at ?? null,
+    nextPayoutAmount: payouts.data?.amount_cents ?? 0,
+    recentSignups: (signups.data as DashboardData['recentSignups']) ?? [],
+    growth: (growth.data as DashboardData['growth']) ?? [],
+    commissionTrend: (trend.data as DashboardData['commissionTrend']) ?? [],
+  }
+}
+
+function formatMoney(cents: number): string {
+  return new Intl.NumberFormat('{{locale_primary}}', {
+    style: 'currency',
+    currency: '{{currency_primary}}',
+  }).format(cents / 100)
+}
+
+export default async function PartnerDashboardPage() {
+  const authCtx = await getAuthContext({ require_role: 'partner' })
+  if (!authCtx.allowed) redirect(authCtx.redirectTo ?? '/login')
+
+  const partnerTenantId = authCtx.partner_tenant_id ?? authCtx.tenant_id
+  if (!partnerTenantId) redirect('/login?reason=missing-partner-tenant')
+
+  const data = await loadDashboard(partnerTenantId)
+  const delta = data.subUserCount - data.subUserCountPrev
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-3xl font-semibold">Partner Dashboard</h1>
+        <Link
+          href="/partner/sub-users/invite"
+          className="rounded-md bg-brand-500 px-4 py-2 text-sm text-ink-inverse hover:bg-brand-600"
+        >
+          Invite sub-user
+        </Link>
+      </div>
+
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Kpi label="Sub-users" value={String(data.subUserCount)} delta={delta} />
+        <Kpi label="Commission (month)" value={formatMoney(data.commissionMonth)} />
+        <Kpi label="Commission (YTD)" value={formatMoney(data.commissionYTD)} />
+        <Kpi
+          label="Next payout"
+          value={data.nextPayoutDate ? formatMoney(data.nextPayoutAmount) : '—'}
+          subLabel={data.nextPayoutDate ?? 'not scheduled'}
+        />
+      </section>
+
+      <PartnerCharts growth={data.growth} commissionTrend={data.commissionTrend} />
+
+      <section>
+        <h2 className="mb-4 text-lg font-semibold">Recent sub-user signups</h2>
+        <div className="overflow-hidden rounded-lg border border-surface-strong">
+          <table className="w-full text-sm">
+            <thead className="bg-surface-muted text-left">
+              <tr>
+                <th className="px-4 py-2">Email</th>
+                <th className="px-4 py-2">Plan</th>
+                <th className="px-4 py-2">Signed up</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.recentSignups.map((row, i) => (
+                <tr key={i} className="border-t border-surface-strong">
+                  <td className="px-4 py-2 font-mono text-xs">{row.email_masked}</td>
+                  <td className="px-4 py-2">{row.plan}</td>
+                  <td className="px-4 py-2 text-ink-muted">
+                    {new Date(row.signed_up_at).toLocaleDateString('{{locale_primary}}')}
+                  </td>
+                </tr>
+              ))}
+              {data.recentSignups.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-4 py-8 text-center text-ink-muted">
+                    No sub-users yet. Invite your first to get started.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function Kpi({ label, value, delta, subLabel }: { label: string; value: string; delta?: number; subLabel?: string }) {
+  return (
+    <div className="rounded-lg border border-surface-strong bg-surface p-4">
+      <div className="text-xs uppercase tracking-wide text-ink-muted">{label}</div>
+      <div className="mt-2 font-display text-2xl font-semibold">{value}</div>
+      {typeof delta === 'number' && (
+        <div className={`mt-1 text-xs ${delta >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+          {delta >= 0 ? '+' : ''}
+          {delta} this month
+        </div>
+      )}
+      {subLabel && <div className="mt-1 text-xs text-ink-muted">{subLabel}</div>}
+    </div>
+  )
+}
+{{/if}}

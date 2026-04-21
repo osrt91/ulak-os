@@ -1,0 +1,222 @@
+// {{product_name_pascal}} — Stripe payment provider adapter
+//
+// Implements PaymentProviderInterface against the official Stripe Node SDK.
+// Server-only (never bundle to client; uses STRIPE_SECRET_KEY).
+//
+// Conformance:
+//   - Webhook signature verify via `stripe.webhooks.constructEvent()` with STRIPE_WEBHOOK_SECRET
+//   - Idempotency: stores event.id in processed_webhook_events BEFORE processing; same event.id returned 200 no-op
+//   - Dead-letter: unknown event types logged + ACKed 200 (Stripe never retries)
+//   - FSM guard: rejects illegal transitions via isLegalTransition()
+//
+// ENV required:
+//   STRIPE_SECRET_KEY        sk_live_... or sk_test_...
+//   STRIPE_WEBHOOK_SECRET    whsec_...
+//   STRIPE_PRICE_ID_PRO      price_...
+//   STRIPE_PRICE_ID_TEAM     price_...
+
+import Stripe from "stripe";
+import "server-only";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  PaymentProviderInterface,
+  PaymentEnv,
+  PaymentProvider,
+  CheckoutSessionInput,
+  CheckoutSessionOutput,
+  SubscriptionUpdateInput,
+  WebhookResult,
+  SubscriptionStatus,
+  isLegalTransition,
+} from "./index";
+
+function envRequired(name: string): string {
+  const val = process.env[name];
+  if (!val) throw new Error(`[payments:stripe] missing env ${name}`);
+  return val;
+}
+
+const PLAN_TO_PRICE: Record<string, string | undefined> = {
+  pro: process.env.STRIPE_PRICE_ID_PRO,
+  team: process.env.STRIPE_PRICE_ID_TEAM,
+};
+
+function stripeEventToStatus(stripeStatus: string): SubscriptionStatus {
+  switch (stripeStatus) {
+    case "trialing": return "trialing";
+    case "active": return "active";
+    case "past_due": return "past_due";
+    case "canceled": return "canceled";
+    case "incomplete": case "incomplete_expired": return "incomplete_expired";
+    default: return "pending";
+  }
+}
+
+export class StripeProvider implements PaymentProviderInterface {
+  readonly name: PaymentProvider = "stripe";
+  readonly env: PaymentEnv;
+  private sdk: Stripe;
+  private webhookSecret: string;
+
+  constructor() {
+    const key = envRequired("STRIPE_SECRET_KEY");
+    this.env = key.startsWith("sk_live_") ? "live" : "sandbox";
+    this.sdk = new Stripe(key, { apiVersion: "2024-12-18.acacia" });
+    this.webhookSecret = envRequired("STRIPE_WEBHOOK_SECRET");
+  }
+
+  async createCheckoutSession(input: CheckoutSessionInput): Promise<CheckoutSessionOutput> {
+    const price = PLAN_TO_PRICE[input.plan_id];
+    if (!price) throw new Error(`[payments:stripe] unknown plan_id ${input.plan_id}`);
+
+    const session = await this.sdk.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price, quantity: 1 }],
+      success_url: input.success_url,
+      cancel_url: input.cancel_url,
+      client_reference_id: input.tenant_id,
+      metadata: {
+        tenant_id: input.tenant_id,
+        user_id: input.user_id,
+        ...input.metadata,
+      },
+      subscription_data: {
+        trial_period_days: input.trial_days,
+        metadata: { tenant_id: input.tenant_id },
+      },
+      // Idempotency: same tenant_id + plan_id within 24h returns same session
+      // (Stripe handles via the Idempotency-Key header when we add it; for
+      // now the Stripe-side `client_reference_id` keeps duplicate webhooks aligned)
+    });
+
+    if (!session.url) throw new Error("[payments:stripe] checkout session has no url");
+    return {
+      provider: "stripe",
+      session_id: session.id,
+      session_url: session.url,
+      expires_at: new Date(session.expires_at * 1000),
+    };
+  }
+
+  async cancelSubscription(input: SubscriptionUpdateInput): Promise<void> {
+    await this.sdk.subscriptions.update(input.subscription_id, {
+      cancel_at_period_end: input.cancel_at_period_end ?? true,
+    });
+  }
+
+  async changePlan(input: SubscriptionUpdateInput): Promise<void> {
+    if (!input.new_plan_id) throw new Error("[payments:stripe] new_plan_id required");
+    const price = PLAN_TO_PRICE[input.new_plan_id];
+    if (!price) throw new Error(`[payments:stripe] unknown plan_id ${input.new_plan_id}`);
+
+    const sub = await this.sdk.subscriptions.retrieve(input.subscription_id);
+    await this.sdk.subscriptions.update(input.subscription_id, {
+      items: [{ id: sub.items.data[0].id, price }],
+      proration_behavior: "create_prorations",
+    });
+  }
+
+  async verifyWebhook(rawBody: string, signatureHeader: string): Promise<Stripe.Event> {
+    return this.sdk.webhooks.constructEvent(rawBody, signatureHeader, this.webhookSecret);
+  }
+
+  async processWebhook(event: unknown): Promise<WebhookResult> {
+    const ev = event as Stripe.Event;
+    const admin = createAdminClient();
+
+    // Idempotency check — store event.id, return early if already processed
+    const { data: existing } = await admin
+      .from("processed_webhook_events")
+      .select("event_id")
+      .eq("provider", "stripe")
+      .eq("event_id", ev.id)
+      .maybeSingle();
+
+    if (existing) {
+      return {
+        acknowledged: true,
+        event_id: ev.id,
+        event_type: ev.type,
+        idempotent_skip: true,
+      };
+    }
+
+    await admin.from("processed_webhook_events").insert({
+      provider: "stripe",
+      event_id: ev.id,
+      event_type: ev.type,
+      raw_payload: ev as any,
+    });
+
+    let fsm: WebhookResult["fsm_transition"] | undefined;
+
+    switch (ev.type) {
+      case "checkout.session.completed": {
+        const session = ev.data.object as Stripe.Checkout.Session;
+        const tenant_id = session.client_reference_id || session.metadata?.tenant_id;
+        if (!tenant_id) break;
+        await admin.from("subscriptions").upsert({
+          tenant_id,
+          provider: "stripe",
+          provider_subscription_id: session.subscription as string,
+          status: "active",
+          plan_id: session.metadata?.plan_id || "unknown",
+        });
+        break;
+      }
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted": {
+        const sub = ev.data.object as Stripe.Subscription;
+        const newStatus = stripeEventToStatus(sub.status);
+        const { data: existing } = await admin
+          .from("subscriptions")
+          .select("status")
+          .eq("provider_subscription_id", sub.id)
+          .maybeSingle();
+        const fromStatus = (existing?.status as SubscriptionStatus) ?? "pending";
+        if (!isLegalTransition(fromStatus, newStatus)) {
+          // Log + ACK 200; don't retry-loop for bad transitions
+          await admin.from("audit_log").insert({
+            action: "payment.webhook.illegal_transition",
+            details: { from: fromStatus, to: newStatus, event_id: ev.id },
+            outcome: "rejected",
+          });
+          break;
+        }
+        await admin.from("subscriptions")
+          .update({ status: newStatus })
+          .eq("provider_subscription_id", sub.id);
+        fsm = { from: fromStatus, to: newStatus, subscription_id: sub.id };
+        break;
+      }
+      case "invoice.payment_succeeded":
+      case "invoice.payment_failed": {
+        const inv = ev.data.object as Stripe.Invoice;
+        await admin.from("payment_events").insert({
+          provider: "stripe",
+          kind: ev.type,
+          amount_cents: inv.amount_paid,
+          currency: inv.currency,
+          external_id: inv.id,
+          subscription_id: (inv as any).subscription,
+        });
+        break;
+      }
+      default:
+        // Unknown event type — dead-letter (log + ACK 200)
+        await admin.from("audit_log").insert({
+          action: "payment.webhook.unknown_event",
+          details: { event_type: ev.type, event_id: ev.id },
+          outcome: "acknowledged",
+        });
+    }
+
+    return {
+      acknowledged: true,
+      event_id: ev.id,
+      event_type: ev.type,
+      idempotent_skip: false,
+      fsm_transition: fsm,
+    };
+  }
+}

@@ -1,0 +1,196 @@
+// {{product_name_pascal}} — admin user management (TanStack table + row actions)
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import {
+  ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel,
+  getPaginationRowModel, getSortedRowModel, SortingState, useReactTable,
+} from "@tanstack/react-table";
+
+import { t } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/i18n/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+
+interface AdminUserRow {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  role: "customer" | "admin" | "partner" | "support";
+  last_login_at: string | null;
+  status: "active" | "suspended" | "invited";
+  deleted_at: string | null;
+}
+
+type ActionType = "view" | "edit-role" | "suspend" | "delete";
+type RowAction = { type: ActionType; user: AdminUserRow };
+
+export default function AdminUsersPage() {
+  const [data, setData] = useState<AdminUserRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "last_login_at", desc: true }]);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [pendingAction, setPendingAction] = useState<RowAction | null>(null);
+
+  // Tenant-scoped via RLS + server-side getAuthContext() in the route handler
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/users", { cache: "no-store" });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = (await res.json()) as { users: AdminUserRow[] };
+        if (!cancelled) setData(json.users);
+      } catch { if (!cancelled) setLoadError(t("admin.users.load-failed")); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const columns = useMemo<ColumnDef<AdminUserRow>[]>(() => [
+    {
+      accessorKey: "email", header: t("admin.users.col.email"),
+      cell: ({ row }) => (
+        <div>
+          <p className="font-medium">{row.original.email}</p>
+          {row.original.full_name ? <p className="text-xs text-ink-muted">{row.original.full_name}</p> : null}
+        </div>
+      ),
+    },
+    { accessorKey: "role", header: t("admin.users.col.role"), cell: ({ getValue }) => <Badge>{getValue<string>()}</Badge> },
+    {
+      accessorKey: "last_login_at", header: t("admin.users.col.last-login"),
+      cell: ({ getValue }) => getValue<string | null>() ? formatDateTime(getValue<string>()) : <span className="text-ink-muted">—</span>,
+    },
+    {
+      accessorKey: "status", header: t("admin.users.col.status"),
+      cell: ({ getValue }) => {
+        const s = getValue<AdminUserRow["status"]>();
+        const variant = s === "active" ? "success" : s === "invited" ? "neutral" : "warning";
+        return <Badge variant={variant}>{t(`admin.users.status.${s}`)}</Badge>;
+      },
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">{t("admin.users.col.actions")}</span>,
+      cell: ({ row }) => {
+        const u = row.original;
+        const go = (type: ActionType) => setPendingAction({ type, user: u });
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button variant="ghost" size="sm">{t("admin.users.actions")}</Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => go("view")}>{t("admin.users.action.view")}</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => go("edit-role")}>{t("admin.users.action.edit-role")}</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => go("suspend")}>{u.status === "suspended" ? t("admin.users.action.unsuspend") : t("admin.users.action.suspend")}</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => go("delete")} className="text-danger-600">{t("admin.users.action.delete")}</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ], []);
+
+  const table = useReactTable({
+    data: data ?? [], columns,
+    state: { sorting, globalFilter },
+    onSortingChange: setSorting, onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 25 } },
+  });
+
+  const onConfirm = async () => {
+    if (!pendingAction) return;
+    const { type, user } = pendingAction;
+    const res = await fetch(`/api/admin/users/${user.user_id}`, {
+      method: type === "delete" ? "DELETE" : "PATCH",
+      headers: { "content-type": "application/json" },
+      body: type === "delete" ? undefined : JSON.stringify({ action: type }),
+    });
+    setPendingAction(null);
+    if (!res.ok || !data) return;
+    setData(data.map((row) => {
+      if (row.user_id !== user.user_id) return row;
+      if (type === "suspend") return { ...row, status: row.status === "suspended" ? "active" : "suspended" };
+      if (type === "delete") return { ...row, deleted_at: new Date().toISOString() };
+      return row;
+    }).filter((r) => !r.deleted_at));
+  };
+
+  if (loadError) return <Alert variant="destructive" role="alert">{loadError}</Alert>;
+  if (data === null) {
+    return (
+      <div className="space-y-4">
+        <div className="h-8 w-48 bg-surface-muted rounded animate-pulse" />
+        <div className="h-64 bg-surface-muted rounded animate-pulse" />
+      </div>
+    );
+  }
+
+  const { pageIndex, pageSize } = table.getState().pagination;
+  const filteredTotal = table.getFilteredRowModel().rows.length;
+
+  return (
+    <div className="space-y-6 max-w-6xl">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{t("admin.users.title")}</h1>
+          <p className="text-ink-muted">{t("admin.users.subtitle")}</p>
+        </div>
+        <Input value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} placeholder={t("admin.users.search-placeholder")} className="w-64" aria-label={t("admin.users.search-label")} />
+      </header>
+
+      {data.length === 0 ? (
+        <EmptyState title={t("admin.users.empty-title")} body={t("admin.users.empty-body")} />
+      ) : (
+        <>
+          <div className="rounded-lg border border-surface-strong bg-surface-raised overflow-hidden">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id}>
+                    {hg.headers.map((h) => (
+                      <TableHead key={h.id} onClick={h.column.getToggleSortingHandler()} className="cursor-pointer select-none">
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((c) => <TableCell key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</TableCell>)}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex items-center justify-between text-sm text-ink-muted">
+            <span>{t("admin.users.pagination", { from: pageIndex * pageSize + 1, to: Math.min((pageIndex + 1) * pageSize, filteredTotal), total: filteredTotal })}</span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>{t("pagination.prev")}</Button>
+              <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>{t("pagination.next")}</Button>
+            </div>
+          </div>
+        </>
+      )}
+
+      <ConfirmDialog
+        open={pendingAction !== null}
+        onOpenChange={(v) => !v && setPendingAction(null)}
+        title={t(`admin.users.confirm.${pendingAction?.type ?? "view"}.title`)}
+        body={t(`admin.users.confirm.${pendingAction?.type ?? "view"}.body`, { email: pendingAction?.user.email ?? "" })}
+        confirmLabel={t(`admin.users.confirm.${pendingAction?.type ?? "view"}.confirm`)}
+        destructive={pendingAction?.type === "delete"}
+        onConfirm={onConfirm}
+      />
+    </div>
+  );
+}

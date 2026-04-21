@@ -1,0 +1,174 @@
+{{#if payment_provider_stripe}}
+import 'server-only'
+
+import { NextRequest, NextResponse } from 'next/server'
+import Stripe from 'stripe'
+
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// {{product_name_pascal}} — Stripe webhook handler
+//
+// CONTRACT (docs/governance/webhook-idempotency.md):
+//   1. Read RAW body (never JSON.parse before signature verify — Stripe
+//      verifies against the exact bytes received)
+//   2. Verify signature via stripe.webhooks.constructEvent
+//   3. Idempotency: INSERT event.id into processed_webhook_events BEFORE
+//      any FSM mutation; if row already exists, return 200 no-op
+//   4. Dispatch to FSM handler for known event types
+//   5. Unknown event types: ACK 200 (don't provoke Stripe retries); log
+//      to dead_letter_webhooks for human review
+//   6. FSM handler failure: rollback idempotency row + return 500 so
+//      Stripe retries with exponential backoff
+//
+// RESPONSE DISCIPLINE:
+//   - 200 on signature failure AND on unknown event type (silent ACK) —
+//     avoids retry storms; intrusion attempts get 200 + nothing happens
+//   - 400 on missing signature header (malformed client request)
+//   - 500 only on genuine internal errors we WANT Stripe to retry
+
+export const runtime = 'nodejs' // Stripe SDK needs Node runtime
+export const dynamic = 'force-dynamic'
+
+// Disable built-in body parsing so we can read raw bytes
+export const preferredRegion = 'auto'
+
+const STRIPE_API_VERSION = '2024-12-18.acacia'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
+  apiVersion: STRIPE_API_VERSION,
+})
+
+type HandledEvent =
+  | 'checkout.session.completed'
+  | 'customer.subscription.created'
+  | 'customer.subscription.updated'
+  | 'customer.subscription.deleted'
+  | 'invoice.payment_succeeded'
+  | 'invoice.payment_failed'
+
+const HANDLED: ReadonlySet<HandledEvent> = new Set([
+  'checkout.session.completed',
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+  'invoice.payment_succeeded',
+  'invoice.payment_failed',
+])
+
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  const signature = req.headers.get('stripe-signature')
+  if (!signature) {
+    // Malformed request — not worth retrying
+    return NextResponse.json({ error: 'missing_signature' }, { status: 400 })
+  }
+
+  const rawBody = await req.text()
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!endpointSecret) {
+    console.error('[stripe webhook] STRIPE_WEBHOOK_SECRET not configured')
+    return NextResponse.json({ error: 'not_configured' }, { status: 500 })
+  }
+
+  let event: Stripe.Event
+  try {
+    event = stripe.webhooks.constructEvent(rawBody, signature, endpointSecret)
+  } catch (err) {
+    // Silent ACK — never reveal verification details, never trigger retries
+    console.warn('[stripe webhook] signature verification failed')
+    return NextResponse.json({ received: true }, { status: 200 })
+  }
+
+  const admin = createAdminClient()
+
+  // Idempotency claim — insert BEFORE any FSM mutation
+  const { error: claimError } = await admin
+    .from('processed_webhook_events')
+    .insert({
+      event_id: event.id,
+      provider: 'stripe',
+      event_type: event.type,
+      received_at: new Date().toISOString(),
+    })
+
+  if (claimError) {
+    // 23505 = unique_violation → already processed, ACK no-op
+    if ((claimError as { code?: string }).code === '23505') {
+      return NextResponse.json({ received: true, duplicate: true }, { status: 200 })
+    }
+    console.error('[stripe webhook] idempotency claim failed', { code: claimError.code })
+    return NextResponse.json({ error: 'internal' }, { status: 500 })
+  }
+
+  if (!HANDLED.has(event.type as HandledEvent)) {
+    // Dead-letter: log unknown type but ACK 200 (no Stripe retries for unknowns)
+    await admin.from('dead_letter_webhooks').insert({
+      event_id: event.id,
+      provider: 'stripe',
+      event_type: event.type,
+      payload: event as unknown as Record<string, unknown>,
+      reason: 'unhandled_event_type',
+    })
+    return NextResponse.json({ received: true, handled: false }, { status: 200 })
+  }
+
+  try {
+    await dispatchFsm(admin, event)
+    return NextResponse.json({ received: true, handled: true }, { status: 200 })
+  } catch (err) {
+    // Roll back idempotency claim so Stripe's retry will re-enter the handler
+    await admin.from('processed_webhook_events').delete().eq('event_id', event.id)
+    console.error('[stripe webhook] FSM dispatch failed', {
+      event_type: event.type,
+      event_id: event.id,
+    })
+    return NextResponse.json({ error: 'processing_failed' }, { status: 500 })
+  }
+}
+
+async function dispatchFsm(
+  admin: ReturnType<typeof createAdminClient>,
+  event: Stripe.Event
+): Promise<void> {
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const session = event.data.object as Stripe.Checkout.Session
+      await admin.rpc('fsm_checkout_completed', {
+        p_customer_id: session.customer as string,
+        p_subscription_id: (session.subscription as string) ?? null,
+        p_amount_total: session.amount_total ?? 0,
+      })
+      return
+    }
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+    case 'customer.subscription.deleted': {
+      const sub = event.data.object as Stripe.Subscription
+      await admin
+        .from('subscriptions')
+        .upsert({
+          stripe_subscription_id: sub.id,
+          stripe_customer_id: sub.customer as string,
+          status: sub.status,
+          current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          cancel_at_period_end: sub.cancel_at_period_end,
+          updated_at: new Date().toISOString(),
+        })
+      return
+    }
+    case 'invoice.payment_succeeded':
+    case 'invoice.payment_failed': {
+      const invoice = event.data.object as Stripe.Invoice
+      await admin.rpc('fsm_invoice_status', {
+        p_invoice_id: invoice.id,
+        p_customer_id: invoice.customer as string,
+        p_status: event.type === 'invoice.payment_succeeded' ? 'paid' : 'failed',
+        p_amount_due: invoice.amount_due,
+      })
+      return
+    }
+    default:
+      // Exhaustiveness — HANDLED set kept in sync at compile time
+      throw new Error(`unhandled in dispatchFsm: ${event.type}`)
+  }
+}
+{{/if}}

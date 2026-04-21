@@ -1,0 +1,107 @@
+// {{product_name_pascal}} — Iyzico payment adapter unit tests
+// Run: pnpm test lib/payments/iyzico
+//
+// Mocks fetch + crypto HMAC. Does NOT contact Iyzico sandbox.
+
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+      insert: vi.fn().mockResolvedValue({ data: { inserted: true } }),
+      update: vi.fn().mockReturnThis(),
+    })),
+  }),
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  process.env.IYZICO_API_KEY = "iyzwskey_dummy";
+  process.env.IYZICO_SECRET_KEY = "iyzsk_dummy";
+  process.env.IYZICO_BASE_URL = "https://sandbox-api.iyzipay.com";
+  process.env.IYZICO_WEBHOOK_SECRET = "webhook_secret_dummy";
+  process.env.IYZICO_PRODUCT_ID_PRO = "pp_pro_dummy";
+  process.env.IYZICO_PRODUCT_ID_TEAM = "pp_team_dummy";
+});
+
+describe("IyzicoProvider", () => {
+  it("detects sandbox from base_url", async () => {
+    const { IyzicoProvider } = await import("@/lib/payments/iyzico");
+    const p = new IyzicoProvider();
+    expect(p.env).toBe("sandbox");
+    expect(p.name).toBe("iyzico");
+  });
+
+  it("detects live from production base_url", async () => {
+    process.env.IYZICO_BASE_URL = "https://api.iyzipay.com";
+    const { IyzicoProvider } = await import("@/lib/payments/iyzico");
+    const p = new IyzicoProvider();
+    expect(p.env).toBe("live");
+  });
+
+  it("throws if IYZICO_API_KEY is missing", async () => {
+    delete process.env.IYZICO_API_KEY;
+    const { IyzicoProvider } = await import("@/lib/payments/iyzico");
+    expect(() => new IyzicoProvider()).toThrow(/missing env IYZICO_API_KEY/);
+  });
+
+  it("verifyWebhook rejects signature mismatch", async () => {
+    const { IyzicoProvider } = await import("@/lib/payments/iyzico");
+    const p = new IyzicoProvider();
+    await expect(p.verifyWebhook('{"t":"test"}', "wrong-signature"))
+      .rejects.toThrow(/invalid webhook signature/);
+  });
+
+  it("verifyWebhook accepts valid signature", async () => {
+    const crypto = await import("node:crypto");
+    const rawBody = '{"iyziEventType":"SUBSCRIPTION_ORDER_SUCCESS","token":"tok1"}';
+    const sig = crypto.createHmac("sha256", "webhook_secret_dummy").update(rawBody).digest("base64");
+    const { IyzicoProvider } = await import("@/lib/payments/iyzico");
+    const p = new IyzicoProvider();
+    const parsed = await p.verifyWebhook(rawBody, sig);
+    expect((parsed as any).iyziEventType).toBe("SUBSCRIPTION_ORDER_SUCCESS");
+  });
+
+  it("processWebhook inserts payment_event for SUBSCRIPTION_ORDER_SUCCESS", async () => {
+    const { IyzicoProvider } = await import("@/lib/payments/iyzico");
+    const p = new IyzicoProvider();
+    const result = await p.processWebhook({
+      iyziEventType: "SUBSCRIPTION_ORDER_SUCCESS",
+      iyziEventTime: Date.now(),
+      token: "tok_unique",
+      subscriptionReferenceCode: "sub_ref_1",
+      status: "ACTIVE",
+      price: 99.99,
+      currency: "TRY",
+    });
+    expect(result.acknowledged).toBe(true);
+    expect(result.event_id).toBe("tok_unique");
+    expect(result.event_type).toBe("SUBSCRIPTION_ORDER_SUCCESS");
+  });
+
+  it("processWebhook dead-letters unknown event types", async () => {
+    const { IyzicoProvider } = await import("@/lib/payments/iyzico");
+    const p = new IyzicoProvider();
+    const result = await p.processWebhook({
+      iyziEventType: "SOME_UNKNOWN_EVENT",
+      iyziEventTime: Date.now(),
+      token: "tok_unknown",
+    });
+    expect(result.acknowledged).toBe(true);
+    expect(result.idempotent_skip).toBe(false);
+    expect(result.fsm_transition).toBeUndefined();
+  });
+
+  it("changePlan is not yet implemented", async () => {
+    const { IyzicoProvider } = await import("@/lib/payments/iyzico");
+    const p = new IyzicoProvider();
+    await expect(p.changePlan({
+      tenant_id: "t1",
+      subscription_id: "sub_1",
+      new_plan_id: "team",
+    })).rejects.toThrow(/not yet implemented/);
+  });
+});

@@ -1,0 +1,95 @@
+// {{product_name_pascal}} — authenticated customer shell (sidebar + topbar)
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import Link from "next/link";
+
+import { getAuthContext } from "@/lib/auth";
+import { t } from "@/lib/i18n";
+import { CustomerSidebar } from "@/components/customer/sidebar";
+import { CustomerTopBar } from "@/components/customer/top-bar";
+import { MobileSidebarTrigger } from "@/components/customer/mobile-sidebar-trigger";
+
+// AP-11 prevention: every authenticated tree calls getAuthContext() at the
+// top. Middleware alone is never trusted. If no session, redirect to /login
+// with `next` param preserved so the user returns to the intended page.
+export default async function CustomerLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const h = await headers();
+  const pathname = h.get("x-invoke-path") ?? "/dashboard";
+
+  const authCtx = await getAuthContext({ require_role: "customer" });
+
+  if (!authCtx.allowed) {
+    const next = encodeURIComponent(pathname);
+    redirect(`/login?next=${next}`);
+  }
+
+  const navItems = [
+    {
+      key: "home",
+      href: "/dashboard",
+      label: t("customer.nav.home"),
+      icon: "home" as const,
+    },
+    {
+      key: "settings",
+      href: "/settings",
+      label: t("customer.nav.settings"),
+      icon: "settings" as const,
+    },
+    {{#if payment_provider}}
+    {
+      key: "billing",
+      href: "/settings?tab=billing",
+      label: t("customer.nav.billing"),
+      icon: "credit-card" as const,
+    },
+    {{/if}}
+  ];
+
+  return (
+    <div className="min-h-screen flex bg-surface text-ink">
+      {/* Desktop sidebar (collapsible md+) */}
+      <aside
+        aria-label={t("customer.nav.primary")}
+        className="hidden md:flex md:w-64 md:flex-col border-e border-surface-strong bg-surface-raised"
+      >
+        <div className="flex h-16 items-center px-6 border-b border-surface-strong">
+          <Link
+            href="/dashboard"
+            className="font-display text-lg font-semibold"
+          >
+            {{product_name_pascal}}
+          </Link>
+        </div>
+        <CustomerSidebar
+          items={navItems}
+          activePath={pathname}
+          className="flex-1 overflow-y-auto py-4"
+        />
+        <div className="border-t border-surface-strong p-4 text-xs text-ink-muted">
+          {authCtx.session.user?.email}
+        </div>
+      </aside>
+
+      {/* Mobile drawer (portal-rendered by component) */}
+      <MobileSidebarTrigger items={navItems} activePath={pathname} />
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <CustomerTopBar
+          user={authCtx.session.user}
+          role={authCtx.session.role}
+        />
+        <main
+          role="main"
+          className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8"
+        >
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}

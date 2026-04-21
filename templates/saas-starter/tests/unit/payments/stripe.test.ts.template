@@ -1,0 +1,192 @@
+// {{product_name_pascal}} — Stripe payment adapter unit tests
+// Run: pnpm test lib/payments/stripe
+//
+// These tests exercise the provider's behavior with Stripe SDK mocked. They
+// do NOT contact real Stripe. Integration tests (hitting sandbox) live in
+// tests/e2e/ with the `@requires-network` tag.
+
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { Mock } from "vitest";
+
+// Mock createAdminClient before importing the adapter
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    from: vi.fn((table: string) => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+      insert: vi.fn().mockResolvedValue({ data: { inserted: true } }),
+      update: vi.fn().mockReturnThis(),
+      upsert: vi.fn().mockResolvedValue({ data: { upserted: true } }),
+    })),
+  }),
+}));
+
+vi.mock("stripe", () => {
+  class MockStripe {
+    webhooks = {
+      constructEvent: vi.fn((body: string, sig: string, secret: string) => {
+        if (sig === "invalid") throw new Error("Invalid signature");
+        return JSON.parse(body);
+      }),
+    };
+    checkout = {
+      sessions: {
+        create: vi.fn().mockResolvedValue({
+          id: "cs_test_123",
+          url: "https://checkout.stripe.com/cs_test_123",
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+        }),
+      },
+    };
+    subscriptions = {
+      update: vi.fn().mockResolvedValue({ id: "sub_test" }),
+      retrieve: vi.fn().mockResolvedValue({
+        id: "sub_test",
+        items: { data: [{ id: "si_test" }] },
+      }),
+    };
+  }
+  return { default: MockStripe };
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  process.env.STRIPE_SECRET_KEY = "sk_test_dummy";
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_dummy";
+  process.env.STRIPE_PRICE_ID_PRO = "price_pro_dummy";
+  process.env.STRIPE_PRICE_ID_TEAM = "price_team_dummy";
+});
+
+describe("StripeProvider", () => {
+  it("detects sandbox mode from sk_test_ prefix", async () => {
+    const { StripeProvider } = await import("@/lib/payments/stripe");
+    const p = new StripeProvider();
+    expect(p.env).toBe("sandbox");
+    expect(p.name).toBe("stripe");
+  });
+
+  it("detects live mode from sk_live_ prefix", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_live_real";
+    const { StripeProvider } = await import("@/lib/payments/stripe");
+    const p = new StripeProvider();
+    expect(p.env).toBe("live");
+  });
+
+  it("throws if STRIPE_SECRET_KEY is missing", async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    const { StripeProvider } = await import("@/lib/payments/stripe");
+    expect(() => new StripeProvider()).toThrow(/missing env STRIPE_SECRET_KEY/);
+  });
+
+  it("createCheckoutSession maps plan_id → price_id", async () => {
+    const { StripeProvider } = await import("@/lib/payments/stripe");
+    const p = new StripeProvider();
+    const out = await p.createCheckoutSession({
+      tenant_id: "tenant-1",
+      user_id: "user-1",
+      plan_id: "pro",
+      success_url: "https://example.com/success",
+      cancel_url: "https://example.com/cancel",
+    });
+    expect(out.provider).toBe("stripe");
+    expect(out.session_id).toBe("cs_test_123");
+    expect(out.session_url).toContain("checkout.stripe.com");
+  });
+
+  it("createCheckoutSession rejects unknown plan_id", async () => {
+    const { StripeProvider } = await import("@/lib/payments/stripe");
+    const p = new StripeProvider();
+    await expect(p.createCheckoutSession({
+      tenant_id: "tenant-1",
+      user_id: "user-1",
+      plan_id: "unknown",
+      success_url: "",
+      cancel_url: "",
+    })).rejects.toThrow(/unknown plan_id/);
+  });
+
+  it("verifyWebhook rejects invalid signature", async () => {
+    const { StripeProvider } = await import("@/lib/payments/stripe");
+    const p = new StripeProvider();
+    await expect(p.verifyWebhook("{}", "invalid")).rejects.toThrow(/Invalid signature/);
+  });
+
+  it("processWebhook returns idempotent_skip for duplicate event", async () => {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    (createAdminClient as Mock).mockImplementationOnce(() => ({
+      from: vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { event_id: "evt_duplicate" } }),
+      })),
+    }));
+    const { StripeProvider } = await import("@/lib/payments/stripe");
+    const p = new StripeProvider();
+    const result = await p.processWebhook({
+      id: "evt_duplicate",
+      type: "customer.subscription.updated",
+      data: { object: { id: "sub_x", status: "active" } },
+    });
+    expect(result.idempotent_skip).toBe(true);
+    expect(result.acknowledged).toBe(true);
+  });
+
+  it("processWebhook handles checkout.session.completed", async () => {
+    const { StripeProvider } = await import("@/lib/payments/stripe");
+    const p = new StripeProvider();
+    const result = await p.processWebhook({
+      id: "evt_checkout",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          client_reference_id: "tenant-1",
+          subscription: "sub_new",
+          metadata: { plan_id: "pro" },
+        },
+      },
+    });
+    expect(result.acknowledged).toBe(true);
+    expect(result.event_type).toBe("checkout.session.completed");
+    expect(result.idempotent_skip).toBe(false);
+  });
+
+  it("processWebhook rejects illegal FSM transition without mutation", async () => {
+    // Setup: existing subscription in `canceled` terminal state
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    (createAdminClient as Mock).mockImplementation(() => ({
+      from: vi.fn((table: string) => {
+        if (table === "processed_webhook_events") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+            insert: vi.fn().mockResolvedValue({ data: { inserted: true } }),
+          };
+        }
+        if (table === "subscriptions") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: { status: "canceled" } }),
+            update: vi.fn().mockReturnThis(),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          insert: vi.fn().mockResolvedValue({ data: { inserted: true } }),
+        };
+      }),
+    }));
+    const { StripeProvider } = await import("@/lib/payments/stripe");
+    const p = new StripeProvider();
+    const result = await p.processWebhook({
+      id: "evt_illegal",
+      type: "customer.subscription.updated",
+      data: { object: { id: "sub_canceled", status: "active" } },
+    });
+    expect(result.acknowledged).toBe(true);
+    expect(result.fsm_transition).toBeUndefined();  // not transitioned
+  });
+});
