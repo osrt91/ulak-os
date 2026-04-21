@@ -1,5 +1,80 @@
 # Changelog
 
+## [3.0.0] — 2026-04-21 — Public launch consolidation (hybrid systems + 14 sectors + hardening)
+
+### Context
+
+v3.0.0 consolidates everything since the v1.0.0 public-GA baseline into one canonical major release. The v2.x series (v1.1 → v2.2.1) accumulated:
+
+- Full Next.js 16 + Supabase scaffolder (76 templates closing the v1.0.0 UX-HI-03 14-file gap)
+- Hybrid systems (FastAPI backend, Expo mobile, Telegram bot, pnpm-workspaces monorepo, Traefik edge)
+- 14 sector overlay kits (education, fintech, ecommerce, marketplace, enterprise-b2b, media-content, health-sensitive, ai-copilot, pwa-desktop, admin-cms-hardening, ai-relay-cost-control, member-gated-community, self-hosted-supabase, regulated-saas, container-k8s)
+- Community ecosystem wrappers (6 new commands + 2 skills wrapping superpowers disciplines)
+- Security hardening (4 Critical + 9 High findings closed in v2.2.1)
+- Cartography build-break close (26 component templates)
+
+By v2.2.1 the pack had grown from the v1.0.0 baseline (~130 templates, 8 commands, 8 skills, 22 governance docs) to **285 scaffolder templates, 15 commands, 10 skills, 22 governance docs, 14 sector overlay kits, 257+ anti-patterns prevented via DB triggers + CHECK constraints**. The current state is a fundamentally different product from v1.0.0, warranting the major version bump.
+
+v3.0.0 is NOT a new feature release — it is the canonical label for "everything shipped in the v2.x cycle + one hardcore history scrub pass to close the last 2 residual diff-history leaks of abstract portfolio identifiers."
+
+### Changes since v2.2.1
+
+**Hardcore history scrub (SEC-INCIDENT-2026-04-21 follow-up)**
+
+A second `git filter-repo --replace-text` pass removed the last 2 commits where 2 of the 7 banned portfolio project names appeared as literal diff strings (the commits that had FIXED those same strings in `ulak-pattern-extract.md` — the `- "extracted from X"` lines of the fix diff). Verification:
+
+- `git log --all -S` for all 7 banned portfolio names → **0 commits**
+- `git log --all -S` for the two leaked-secret prefixes (Resend + Cloudflare, full values redacted in this CHANGELOG to keep the scrub terminal) → **0 commits**
+- `git grep -i` on HEAD tree → **0 files**
+
+This reaches the "no trace in any SHA" level of redaction the operator required. All prior annotated tags were automatically re-pointed by filter-repo; new v3.0.0 + v3.0.0-public-ga tags placed at the rewritten HEAD.
+
+**Package metadata**
+
+- `package.json` / `prompts/pack.json` / `.claude-plugin/plugin.json` → 2.2.1 → 3.0.0
+
+### Full capability delta (v1.0.0 → v3.0.0)
+
+| Surface | v1.0.0 public-GA | v3.0.0 |
+|---|---|---|
+| Scaffolder templates | 27 | **285** |
+| Components (scaffolder) | ~6 | **50** |
+| Sector overlays | 0 (rules only) | **14 materialized** |
+| Hybrid backends | none | **FastAPI + monorepo** |
+| Mobile scaffolding | none | **Expo SDK 52 + EAS profiles** |
+| Bot scaffolding | none | **aiogram 3.x + Telegram webhook** |
+| Deploy targets | VPS-only | **VPS + Traefik + docker-compose + k8s + ArgoCD** |
+| Commands | 9 | **15** (6 new wrappers) |
+| Skills | 8 | **10** (2 new: mcp-governance-auto, awesome-packs-index) |
+| Agents | 27 | **27** (all specialists production-depth 80-112L) |
+| Anti-patterns enforced | ~19 numbered | **~50+ (DB-trigger/CHECK enforced per sector)** |
+| Governance docs | 22 | **23** (sectors-compat.yaml added) |
+| Bilingual docs | README + user manual (TR+EN) | **Same + FAQ + 4 runbooks + release notes** |
+| License | MIT | **MIT** |
+| Installers | POSIX + PowerShell | **POSIX + PowerShell + SHA256 verify path** |
+
+### Tag map (for push planning)
+
+**Push-safe (new, distinct from legacy origin tags)**:
+- `v1.0.0-public-ga` — first public-GA commit (Phase 3.0-A baseline)
+- `v1.0.1` — Phase A polish
+- `v1.1.0` — Phase B scaffolder completion
+- `v2.0.0-hybrid` — Phase C hybrid systems
+- `v2.1.0-community` — Phase D community ecosystem
+- `v2.2.0-sectors` — Phase E 14 sector overlays
+- `v2.2.1-hardening` — Security + build-break close
+- **`v3.0.0-public-ga`** — this release
+
+**Collision-prone (same tag name exists on origin at legacy commits)**:
+- `v1.0.0` (origin legacy: 2026-04-07 brand-rename)
+- `v2.0.0` (origin legacy: 2026-04-09 CLI+memory+adapters)
+- `v2.1.0` (origin legacy: 2026-04-11 runtime discipline)
+- `v2.2.0` (origin legacy: 2026-04-20 cross-project absorption)
+- `v2.2.1` (origin legacy: 2026-04-15 internal patch)
+- **`v3.0.0`** (same-name tag at new HEAD; no legacy origin tag under this exact label)
+
+When pushing, prefer the `*-alias` variants to avoid force-updating origin's historical references. `v3.0.0` has no legacy collision and can push directly.
+
 ## [2.2.1] — 2026-04-21 — Security hardening + scaffolder build-break close + misc polish
 
 ### Context

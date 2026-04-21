@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "ulak-os",
   "displayName": "Ulak OS — Prompt Operating System",
-  "version": "2.2.1",
+  "version": "3.0.0",
   "description": "Vendor-neutral prompt operating system for Claude Code / Codex / Gemini. Structured Phase 0→5 director protocol: environment lock → deep inventory → parallel specialist evidence → did-you-know discovery → synthesis → manager verdict. Audit, govern, and scaffold full-stack SaaS with 24 sector packs, 8 rule packs, ~100 anti-pattern bullets (19 numbered AP-NN), 22 governance docs, 27 specialist agents, 9 slash-commands, 8 skills, 33 runtime rules, 27 scaffolder templates. Deep-inventory discipline rejects folder dumps; parallel specialist dispatch rejects single-agent evidence; validation gate rejects unverified signoff.",
   "short_description": "Phase 0→5 prompt OS: deep inventory, parallel specialist evidence, did-you-know discovery, validation gate, full-stack SaaS scaffolder.",
   "author": {
