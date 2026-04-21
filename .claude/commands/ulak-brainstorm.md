@@ -1,0 +1,91 @@
+---
+name: ulak-brainstorm
+description: Pre-implementation ideation for a new feature / product / surface. Enforces the "explore intent + requirements + alternatives BEFORE touching code" discipline. Wraps the superpowers:brainstorming skill with Ulak OS governance (records outcome in docs/superpowers/specs/<date>-<topic>.md so future runs can reference the decision). Use when starting any non-trivial feature, adding a new user-facing capability, or making a design decision that will outlive this session.
+agent: autonomous-program-director
+allowed-tools: Read, Grep, Glob, Write
+---
+
+# /ulak-brainstorm — structured ideation before implementation
+
+## When to use
+
+- Starting a new feature where the shape is not yet fixed
+- Adding a capability that involves UX, schema, and API changes together
+- Choosing between alternatives where the trade-off matters (e.g., payment provider, auth strategy, deployment topology)
+- Before calling `/director komple` when the operator is not sure what the target state should be
+
+## When NOT to use
+
+- Pure bug fixes (use `/triage-build` instead)
+- Small, well-scoped refactors (skip the ceremony)
+- When the answer is obvious — ideation is not procrastination
+
+## Dispatch protocol
+
+Invokes `superpowers:brainstorming` skill with a required output contract:
+
+1. **Capture intent** — what is the operator trying to achieve (not the feature, the outcome)
+2. **Explore constraints** — budget, timeline, team capacity, existing-tech, regulatory
+3. **Enumerate alternatives** — at least 3 distinct shapes, not 3 variations of the same shape
+4. **Pros/cons per alternative** — concrete, project-specific, not generic
+5. **Pick one + say why** — the chosen alternative with justification
+6. **Document risks + unknowns** — what could still go wrong
+7. **Write outcome to disk** — `docs/superpowers/specs/<YYYY-MM-DD>-<topic>.md`
+
+The written spec becomes a referenceable design doc that future `/director komple` runs can read as T4 (operator-provided artefact) evidence.
+
+## Output shape
+
+`docs/superpowers/specs/2026-NN-NN-<topic>.md`:
+
+```markdown
+# Brainstorm — <Topic>
+
+**Date**: 2026-NN-NN
+**Operator**: <handle>
+**Outcome**: <one-line decision>
+
+## Intent
+<what we're trying to achieve>
+
+## Constraints
+<budget + time + team + tech + regulatory>
+
+## Alternatives considered
+### A. <name>
+Pros: ...
+Cons: ...
+
+### B. <name>
+...
+
+### C. <name>
+...
+
+## Decision
+<chosen alternative + why>
+
+## Risks
+- <risk>
+- <risk>
+
+## Follow-up
+- [ ] Run `/director komple` to validate
+- [ ] Update roadmap
+- [ ] <other>
+```
+
+## Integration
+
+- `superpowers:brainstorming` — the underlying skill
+- `docs/superpowers/specs/` — canonical spec storage
+- `docs/governance/artefact-write-authorization.md` — specs are an authorized write target
+- `.claude/commands/director.md` — reads the latest spec if present
+
+## Example
+
+```
+/ulak-brainstorm topic="payment provider selection for Turkish market"
+```
+
+Produces a spec comparing Stripe / Iyzico / both / neither with the trade-offs specific to the project + Turkish tax + TRY-only-vs-dual-currency concerns.
