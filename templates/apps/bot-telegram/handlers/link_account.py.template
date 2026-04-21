@@ -1,0 +1,117 @@
+"""
+/link handler — FSM flow to bind a Telegram user to a {{product_name_pascal}} account.
+
+Steps:
+  1. ask email
+  2. send magic-code via API
+  3. verify code (user types it)
+  4. call API POST /api/telegram/link to persist { tg_user_id, product_user_id }
+"""
+from __future__ import annotations
+
+import logging
+import re
+
+from aiogram import F, Router
+from aiogram.filters import Command, StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
+
+from config import Settings
+from keyboards.inline import confirm_cancel
+from services.api_client import ApiClient, ApiError
+from services.i18n import t
+from states.user_states import AccountLinking
+
+router = Router(name="link_account")
+logger = logging.getLogger(__name__)
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+CODE_RE = re.compile(r"^\d{6}$")
+
+
+@router.message(Command("link"))
+async def cmd_link(message: Message, state: FSMContext) -> None:
+    try:
+        await state.clear()
+        await state.set_state(AccountLinking.waiting_email)
+        await message.answer(t("bot.link.ask_email", default_locale="{{default_locale}}"))
+    except Exception:
+        logger.exception("cmd_link failed")
+        await message.answer(t("bot.errors.generic", default_locale="{{default_locale}}"))
+
+
+@router.message(StateFilter(AccountLinking.waiting_email))
+async def on_email(message: Message, state: FSMContext, settings: Settings) -> None:
+    email = (message.text or "").strip().lower()
+    if not EMAIL_RE.match(email):
+        await message.answer(t("bot.link.invalid_email", default_locale="{{default_locale}}"))
+        return
+    try:
+        async with ApiClient(settings) as api:
+            await api.request_magic_code(email=email, tg_user_id=message.from_user.id)
+        await state.update_data(email=email)
+        await state.set_state(AccountLinking.waiting_code)
+        await message.answer(t("bot.link.ask_code", default_locale="{{default_locale}}"))
+    except ApiError as exc:
+        logger.warning("request_magic_code failed: %s", exc)
+        await message.answer(t("bot.link.api_error", default_locale="{{default_locale}}"))
+    except Exception:
+        logger.exception("on_email unexpected")
+        await message.answer(t("bot.errors.generic", default_locale="{{default_locale}}"))
+
+
+@router.message(StateFilter(AccountLinking.waiting_code))
+async def on_code(message: Message, state: FSMContext, settings: Settings) -> None:
+    code = (message.text or "").strip()
+    if not CODE_RE.match(code):
+        await message.answer(t("bot.link.invalid_code", default_locale="{{default_locale}}"))
+        return
+    data = await state.get_data()
+    email = data.get("email")
+    if not email:
+        await state.clear()
+        await message.answer(t("bot.link.session_expired", default_locale="{{default_locale}}"))
+        return
+    try:
+        async with ApiClient(settings) as api:
+            result = await api.link_telegram_account(
+                email=email,
+                code=code,
+                tg_user_id=message.from_user.id,
+                tg_username=message.from_user.username or "",
+            )
+        await state.update_data(product_user_id=result.get("user_id"))
+        await state.set_state(AccountLinking.confirmed)
+        await message.answer(
+            t("bot.link.confirm", default_locale="{{default_locale}}"),
+            reply_markup=confirm_cancel(confirm_cb="link:confirm", cancel_cb="link:cancel"),
+        )
+    except ApiError as exc:
+        logger.warning("link_telegram_account failed: %s", exc)
+        await message.answer(t("bot.link.code_rejected", default_locale="{{default_locale}}"))
+    except Exception:
+        logger.exception("on_code unexpected")
+        await message.answer(t("bot.errors.generic", default_locale="{{default_locale}}"))
+
+
+@router.callback_query(StateFilter(AccountLinking.confirmed), F.data == "link:confirm")
+async def cb_link_confirm(callback: CallbackQuery, state: FSMContext) -> None:
+    try:
+        await state.clear()
+        await callback.message.answer(t("bot.link.success", default_locale="{{default_locale}}"))
+        await callback.answer()
+    except Exception:
+        logger.exception("cb_link_confirm failed")
+        await callback.answer(t("bot.errors.generic", default_locale="{{default_locale}}"), show_alert=True)
+
+
+@router.callback_query(F.data == "link:cancel")
+async def cb_link_cancel(callback: CallbackQuery, state: FSMContext) -> None:
+    try:
+        await state.clear()
+        await callback.message.answer(t("bot.link.cancelled", default_locale="{{default_locale}}"))
+        await callback.answer()
+    except Exception:
+        logger.exception("cb_link_cancel failed")
+        await callback.answer(t("bot.errors.generic", default_locale="{{default_locale}}"), show_alert=True)

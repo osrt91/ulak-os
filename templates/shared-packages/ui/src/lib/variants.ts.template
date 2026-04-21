@@ -1,0 +1,20 @@
+// @{{product_name}}/ui/lib/variants — shared variant names
+//
+// Canonical variant labels used by Button, Badge, Alert, Toast. Consumers
+// pick the label + map it to their platform-specific styling (Tailwind on
+// web, StyleSheet on mobile).
+
+export type Variant = "default" | "secondary" | "success" | "warning" | "destructive" | "info" | "outline" | "ghost";
+
+export type Size = "sm" | "md" | "lg" | "icon";
+
+export const VARIANT_SEMANTICS: Record<Variant, "neutral" | "success" | "warning" | "error" | "info"> = {
+  default: "neutral",
+  secondary: "neutral",
+  outline: "neutral",
+  ghost: "neutral",
+  success: "success",
+  warning: "warning",
+  destructive: "error",
+  info: "info",
+} as const;

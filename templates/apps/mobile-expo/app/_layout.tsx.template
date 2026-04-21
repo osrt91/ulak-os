@@ -1,0 +1,87 @@
+import { useEffect, useState } from 'react';
+import { Slot, useRouter, useSegments } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import * as SplashScreen from 'expo-splash-screen';
+import { View, Text, useColorScheme } from 'react-native';
+import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../lib/auth';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },
+    mutations: { retry: 0 },
+  },
+});
+
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const segments = useSegments();
+  const router = useRouter();
+  const { session, setSession, hydrated, setHydrated } = useAuthStore();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setHydrated(true);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [setSession, setHydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const inAuthGroup = segments[0] === '(auth)';
+    if (!session && !inAuthGroup) router.replace('/(auth)/login');
+    else if (session && inAuthGroup) router.replace('/(tabs)');
+  }, [session, segments, hydrated, router]);
+
+  return <>{children}</>;
+}
+
+class RootErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Text accessibilityRole="header" style={{ fontSize: 18, fontWeight: '600' }}>Something went wrong</Text>
+          <Text style={{ marginTop: 8, opacity: 0.7 }}>Please restart the app.</Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+import React from 'react';
+
+export default function RootLayout() {
+  const scheme = useColorScheme();
+  const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
+
+  useEffect(() => { if (fontsLoaded) SplashScreen.hideAsync().catch(() => {}); }, [fontsLoaded]);
+  if (!fontsLoaded) return null;
+
+  return (
+    <RootErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <QueryClientProvider client={queryClient}>
+            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+            <AuthGate>
+              <Slot />
+            </AuthGate>
+          </QueryClientProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </RootErrorBoundary>
+  );
+}

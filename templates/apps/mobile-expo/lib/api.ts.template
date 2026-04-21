@@ -1,0 +1,72 @@
+import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
+import { supabase } from './supabase';
+
+/**
+ * TanStack Query hooks for {{product_name_pascal}} FastAPI backend.
+ * JWT from Supabase session is auto-injected.
+ */
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '{{api_url}}';
+
+const UserSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  name: z.string().nullable().transform((v) => v ?? ''),
+});
+export type ApiUser = z.infer<typeof UserSchema>;
+
+const ActivityItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  timestamp: z.string(),
+});
+export type ActivityItem = z.infer<typeof ActivityItemSchema>;
+
+const NotificationSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  body: z.string(),
+  read: z.boolean(),
+  created_at: z.string(),
+});
+export type Notification = z.infer<typeof NotificationSchema>;
+
+async function authHeaders(): Promise<HeadersInit> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+async function apiFetch<T>(path: string, schema: z.ZodType<T>, init?: RequestInit): Promise<T> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_URL}${path}`, { ...init, headers: { ...headers, ...(init?.headers ?? {}) } });
+  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+  const json = await res.json();
+  return schema.parse(json);
+}
+
+export function useCurrentUser() {
+  return useQuery({
+    queryKey: ['current-user'],
+    queryFn: () => apiFetch('/api/customer/me', UserSchema),
+    staleTime: 60_000,
+  });
+}
+
+export function useRecentActivity() {
+  return useQuery({
+    queryKey: ['recent-activity'],
+    queryFn: () => apiFetch('/api/customer/recent-activity', z.array(ActivityItemSchema)),
+  });
+}
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => apiFetch('/api/customer/notifications', z.array(NotificationSchema)),
+  });
+}

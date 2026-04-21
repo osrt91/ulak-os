@@ -1,0 +1,50 @@
+"""Pydantic settings for {{product_name_pascal}} Telegram bot."""
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # Telegram
+    bot_token: SecretStr = Field(..., description="Telegram BotFather token")
+    bot_username: str = Field(default="{{bot_username}}")
+    bot_mode: Literal["polling", "webhook"] = Field(default="polling")
+
+    # Backend API
+    api_url: str = Field(default="{{api_url}}", description="FastAPI base URL")
+    api_service_token: SecretStr = Field(..., description="HMAC service-to-service token")
+
+    # FSM storage
+    bot_storage: Literal["memory", "redis"] = Field(default="memory")
+    redis_url: str = Field(default="redis://localhost:6379/0")
+
+    # Webhook mode
+    webhook_url: str = Field(default="")
+    webhook_path: str = Field(default="/webhook/telegram")
+    webhook_secret: str = Field(default="")
+
+    # Governance
+    allowed_users: str = Field(default="", description="CSV of TG user IDs (dev allowlist)")
+    default_locale: str = Field(default="{{default_locale}}")
+    sentry_dsn: str = Field(default="")
+
+    @field_validator("allowed_users")
+    @classmethod
+    def _trim_allowlist(cls, v: str) -> str:
+        return ",".join(p.strip() for p in v.split(",") if p.strip())
+
+    @property
+    def allowed_user_ids(self) -> set[int]:
+        if not self.allowed_users:
+            return set()
+        return {int(x) for x in self.allowed_users.split(",") if x.isdigit()}

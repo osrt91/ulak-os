@@ -1,0 +1,19 @@
+"""aiogram FSM state groups for the {{product_name_pascal}} bot."""
+from __future__ import annotations
+
+from aiogram.fsm.state import State, StatesGroup
+
+
+class AccountLinking(StatesGroup):
+    """Flow for binding a Telegram user to a {{product_name_pascal}} account."""
+
+    waiting_email = State()
+    waiting_code = State()
+    confirmed = State()
+
+
+class SettingsFlow(StatesGroup):
+    """Flow for preference changes."""
+
+    picking_locale = State()
+    picking_notifications = State()

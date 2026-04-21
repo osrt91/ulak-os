@@ -1,0 +1,39 @@
+// @{{product_name}}/ui/lib/tokens — shared design tokens (web + mobile)
+//
+// Single source of truth for design primitives. Web reads via Tailwind CSS
+// vars; mobile reads via nativewind (which resolves the same Tailwind tokens)
+// + direct consumption of this TS object for charts or non-Tailwind surfaces.
+
+export const tokens = {
+  spacing: {
+    "0": 0, "1": 4, "2": 8, "3": 12, "4": 16,
+    "6": 24, "8": 32, "12": 48, "16": 64, "24": 96,
+  },
+  radius: {
+    none: 0, sm: 4, md: 8, lg: 12, xl: 16, "2xl": 24, full: 9999,
+  },
+  typography: {
+    xs:   { size: 12, lineHeight: 16 },
+    sm:   { size: 14, lineHeight: 20 },
+    base: { size: 16, lineHeight: 24 },
+    lg:   { size: 18, lineHeight: 28 },
+    xl:   { size: 20, lineHeight: 30 },
+    "2xl":{ size: 24, lineHeight: 32 },
+    "3xl":{ size: 32, lineHeight: 40 },
+    "4xl":{ size: 40, lineHeight: 48 },
+  },
+  motion: {
+    duration: { fast: 150, normal: 250, slow: 400 },
+    easing: {
+      out: "cubic-bezier(0.33, 1, 0.68, 1)",
+      inOut: "cubic-bezier(0.65, 0, 0.35, 1)",
+      spring: "cubic-bezier(0.5, 1.25, 0.75, 1.25)",
+    },
+  },
+  zIndex: {
+    base: 0, dropdown: 100, sticky: 200, modal: 300,
+    popover: 400, tooltip: 500, toast: 600,
+  },
+} as const;
+
+export type DesignTokens = typeof tokens;

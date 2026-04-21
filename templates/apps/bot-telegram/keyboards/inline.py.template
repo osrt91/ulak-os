@@ -1,0 +1,52 @@
+"""Reusable inline keyboard builders for the {{product_name_pascal}} bot."""
+from __future__ import annotations
+
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+from services.i18n import t
+
+_LOCALE = "{{default_locale}}"
+
+
+def main_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=t("bot.menu.connect", default_locale=_LOCALE), callback_data="menu:connect")],
+            [
+                InlineKeyboardButton(text=t("bot.menu.help", default_locale=_LOCALE), callback_data="menu:help"),
+                InlineKeyboardButton(text=t("bot.menu.settings", default_locale=_LOCALE), callback_data="menu:settings"),
+            ],
+        ]
+    )
+
+
+def settings_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=t("bot.settings.locale", default_locale=_LOCALE), callback_data="settings:locale")],
+            [InlineKeyboardButton(text=t("bot.settings.notifications", default_locale=_LOCALE), callback_data="settings:notifications")],
+            [InlineKeyboardButton(text=t("bot.common.back", default_locale=_LOCALE), callback_data="menu:back")],
+        ]
+    )
+
+
+def locale_picker() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Türkçe", callback_data="locale:tr"),
+                InlineKeyboardButton(text="English", callback_data="locale:en"),
+            ]
+        ]
+    )
+
+
+def confirm_cancel(*, confirm_cb: str, cancel_cb: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=t("bot.common.confirm", default_locale=_LOCALE), callback_data=confirm_cb),
+                InlineKeyboardButton(text=t("bot.common.cancel", default_locale=_LOCALE), callback_data=cancel_cb),
+            ]
+        ]
+    )

@@ -1,0 +1,111 @@
+// @{{product_name}}/shared/schemas — Zod schemas
+//
+// Single source of truth for cross-app request/response validation.
+// Web uses via react-hook-form; api uses via fastapi request parsing
+// (through a TypeScript → Pydantic bridge or duplicated Python models);
+// mobile uses via the same react-hook-form path.
+
+import { z } from "zod";
+
+// =============================================================================
+// Core enums mirroring types.ts
+// =============================================================================
+export const RoleSchema = z.enum(["customer", "admin", "partner", "support"]);
+export const SurfaceSchema = z.enum(["public", "customer", "admin", "partner"]);
+export const SubscriptionStatusSchema = z.enum([
+  "trialing",
+  "pending",
+  "active",
+  "past_due",
+  "canceled",
+  "incomplete_expired",
+]);
+export const PaymentProviderSchema = z.enum(["stripe", "iyzico"]);
+export const LocaleSchema = z.enum(["tr", "en"]);
+
+// =============================================================================
+// Auth
+// =============================================================================
+export const LoginPayload = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+export const RegisterPayload = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  name: z.string().min(1).max(120),
+  tenant_name: z.string().min(1).max(120),
+  terms_accepted: z.literal(true),
+});
+
+export const ForgotPasswordPayload = z.object({
+  email: z.string().email(),
+});
+
+// =============================================================================
+// Profile + settings
+// =============================================================================
+export const UpdateProfilePayload = z.object({
+  name: z.string().min(1).max(120).optional(),
+  avatar_url: z.string().url().optional(),
+  locale: LocaleSchema.optional(),
+});
+
+export const PreferencesPayload = z.object({
+  locale: LocaleSchema,
+  theme: z.enum(["system", "light", "dark"]),
+  notifications: z.object({
+    email: z.boolean(),
+    push: z.boolean(),
+    telegram: z.boolean(),
+  }),
+});
+
+// =============================================================================
+// Admin
+// =============================================================================
+export const AdminListUsersQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  role: RoleSchema.optional(),
+  q: z.string().max(200).optional(),
+});
+
+export const AdminUpdateUserRolePayload = z.object({
+  role: RoleSchema,
+});
+
+// =============================================================================
+// Payment
+// =============================================================================
+export const CreateCheckoutPayload = z.object({
+  plan_id: z.enum(["pro", "team"]),
+  trial_days: z.number().int().min(0).max(60).optional(),
+});
+
+// =============================================================================
+// Notifications
+// =============================================================================
+export const MarkNotificationReadPayload = z.object({
+  notification_ids: z.array(z.string().uuid()),
+});
+
+// =============================================================================
+// Pagination + error envelopes
+// =============================================================================
+export function PaginatedSchema<T extends z.ZodTypeAny>(itemSchema: T) {
+  return z.object({
+    items: z.array(itemSchema),
+    page: z.number().int(),
+    limit: z.number().int(),
+    total: z.number().int(),
+    has_more: z.boolean(),
+  });
+}
+
+export const ApiErrorSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  details: z.record(z.unknown()).optional(),
+});

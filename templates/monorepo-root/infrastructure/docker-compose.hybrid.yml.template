@@ -1,0 +1,144 @@
+# {{product_name_pascal}} — hybrid dev docker-compose
+# Includes web + api + bot + postgres + redis + mailhog + traefik edge.
+# Usage: docker compose -f infrastructure/docker-compose.hybrid.yml up
+
+name: {{product_name}}
+
+networks:
+  {{product_name}}-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  traefik_acme:
+
+services:
+  traefik:
+    image: traefik:v3.2
+    command:
+      - "--api.insecure=true"  # DEV ONLY — disable in prod (see prod override)
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.filename=/etc/traefik/dynamic.yml"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard (dev only)
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/traefik.yml:/etc/traefik/traefik.yml:ro"
+      - "./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro"
+      - "traefik_acme:/letsencrypt"
+    networks: [{{product_name}}-net]
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SITE_URL=http://{{product_domain_fqdn}}.localhost
+      - NEXT_PUBLIC_API_URL=http://api.{{product_domain_fqdn}}.localhost
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web.rule=Host(`{{product_domain_fqdn}}.localhost`)"
+      - "traefik.http.routers.web.entrypoints=web"
+      - "traefik.http.services.web.loadbalancer.server.port=3000"
+    depends_on:
+      - api
+    networks: [{{product_name}}-net]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/public/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://{{db_user}}:{{db_password}}@postgres:5432/{{db_name}}
+      - REDIS_URL=redis://redis:6379/0
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET:-}
+      - ALLOWED_ORIGINS=http://{{product_domain_fqdn}}.localhost
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.{{product_domain_fqdn}}.localhost`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [{{product_name}}-net]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    build:
+      context: ../apps/bot
+      dockerfile: Dockerfile
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN:-}
+      - API_URL=http://api:8000
+      - API_SERVICE_TOKEN=${API_SERVICE_TOKEN:-}
+      - REDIS_URL=redis://redis:6379/1
+      - BOT_STORAGE=redis
+      - BOT_MODE=${BOT_MODE:-polling}
+    depends_on:
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [{{product_name}}-net]
+    profiles: ["bot"]  # enable via `docker compose --profile bot up`
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER={{db_user}}
+      - POSTGRES_PASSWORD={{db_password}}
+      - POSTGRES_DB={{db_name}}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [{{product_name}}-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{db_user}} -d {{db_name}}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks: [{{product_name}}-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"  # UI
+    networks: [{{product_name}}-net]
+    profiles: ["dev"]

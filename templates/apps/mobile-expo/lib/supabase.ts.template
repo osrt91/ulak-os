@@ -1,0 +1,40 @@
+import 'react-native-url-polyfill/auto';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
+
+/**
+ * Supabase client for {{product_name_pascal}} mobile.
+ * Session persisted via AsyncStorage.
+ *
+ * Env (both shapes supported — expo-constants extra OR EXPO_PUBLIC_*):
+ *   SUPABASE_URL              — from app config `extra.supabaseUrl`
+ *   SUPABASE_ANON_KEY         — from app config `extra.supabaseAnonKey`
+ *   EXPO_PUBLIC_SUPABASE_URL  — process.env fallback
+ *   EXPO_PUBLIC_SUPABASE_ANON_KEY — process.env fallback
+ */
+const extra = (Constants.expoConfig?.extra ?? {}) as {
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
+};
+
+const supabaseUrl = extra.supabaseUrl ?? process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = extra.supabaseAnonKey ?? process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    '[supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY. ' +
+    'Set them in app.json extra or .env (never commit real values).'
+  );
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
+
+export type SupabaseClient = typeof supabase;

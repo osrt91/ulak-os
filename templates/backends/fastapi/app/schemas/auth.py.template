@@ -1,0 +1,41 @@
+# {{product_name_pascal}} — auth-related Pydantic schemas
+from __future__ import annotations
+
+from typing import List, Literal
+
+from pydantic import BaseModel, EmailStr, Field
+
+Role = Literal["customer", "admin", "partner", "support"]
+
+
+class AuthContext(BaseModel):
+    """Resolved authentication context attached to every protected request.
+
+    Parity with Next.js `SessionContext` in lib/auth/index.ts.
+    """
+
+    user_id: str
+    email: str
+    role: Role
+    tenant_id: str | None = None
+    plan_capabilities: List[str] = Field(default_factory=list)
+
+
+class LoginPayload(BaseModel):
+    """Defined for API completeness — login actually happens in the web
+    surface via Supabase auth. Kept here so OpenAPI clients get a typed
+    shape if they choose to implement password flows out-of-band.
+    """
+
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=256)
+
+
+class UserProfile(BaseModel):
+    user_id: str
+    email: str
+    role: Role
+    tenant_id: str | None
+    plan_capabilities: List[str]
+    created_at: str | None = None
+    updated_at: str | None = None

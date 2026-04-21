@@ -1,0 +1,104 @@
+# {{product_name_pascal}} — customer-facing routes
+#
+# All endpoints gated by require_role("customer") and tenant-scoped.
+from __future__ import annotations
+
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth import get_auth_context, require_role
+from app.db import get_db
+from app.models.schemas import Subscription, UserRoleAssignment
+from app.schemas.auth import AuthContext, UserProfile
+
+router = APIRouter(dependencies=[Depends(require_role("customer", "admin", "partner", "support"))])
+
+
+class SubscriptionView(BaseModel):
+    id: str
+    plan_id: str
+    status: str
+    provider: str
+    current_period_end: str | None
+
+
+class SubscriptionListResponse(BaseModel):
+    items: List[SubscriptionView]
+    total: int
+
+
+class ProfileUpdatePayload(BaseModel):
+    email: EmailStr | None = None
+    # Extension point — extend in product-specific migrations; never trust client
+    # role/tenant fields here.
+    metadata: dict[str, str] = Field(default_factory=dict)
+
+
+@router.get("/me", response_model=UserProfile)
+async def get_me(
+    auth: AuthContext = Depends(get_auth_context),
+    db: AsyncSession = Depends(get_db),
+) -> UserProfile:
+    stmt = select(UserRoleAssignment).where(UserRoleAssignment.user_id == auth.user_id)
+    assignment = (await db.execute(stmt)).scalar_one_or_none()
+    if assignment is None:
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "profile not found"})
+    return UserProfile(
+        user_id=auth.user_id,
+        email=auth.email,
+        role=auth.role,
+        tenant_id=auth.tenant_id,
+        plan_capabilities=auth.plan_capabilities,
+        created_at=assignment.created_at.isoformat() if assignment.created_at else None,
+        updated_at=assignment.updated_at.isoformat() if assignment.updated_at else None,
+    )
+
+
+@router.get("/subscriptions", response_model=SubscriptionListResponse)
+async def list_subscriptions(
+    auth: AuthContext = Depends(get_auth_context),
+    db: AsyncSession = Depends(get_db),
+) -> SubscriptionListResponse:
+    if not auth.tenant_id:
+        raise HTTPException(status_code=403, detail={"code": "no_tenant", "message": "user is not bound to a tenant"})
+    stmt = select(Subscription).where(Subscription.tenant_id == auth.tenant_id)
+    rows = (await db.execute(stmt)).scalars().all()
+    items = [
+        SubscriptionView(
+            id=str(r.id),
+            plan_id=r.plan_id,
+            status=r.status,
+            provider=r.provider,
+            current_period_end=r.current_period_end.isoformat() if r.current_period_end else None,
+        )
+        for r in rows
+    ]
+    return SubscriptionListResponse(items=items, total=len(items))
+
+
+@router.patch("/me", response_model=UserProfile, status_code=status.HTTP_200_OK)
+async def update_me(
+    payload: ProfileUpdatePayload,
+    auth: AuthContext = Depends(get_auth_context),
+    db: AsyncSession = Depends(get_db),
+) -> UserProfile:
+    # Profile mutation is cooperatively owned by the Next.js side (which owns
+    # the Supabase auth.users table). This endpoint exists so mobile / third-
+    # party clients can trigger the same update path — it is intentionally a
+    # thin wrapper that only touches tenant-owned columns, never role.
+    if payload.email and payload.email != auth.email:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "email_change_unsupported", "message": "email changes go through Supabase auth"},
+        )
+    return UserProfile(
+        user_id=auth.user_id,
+        email=auth.email,
+        role=auth.role,
+        tenant_id=auth.tenant_id,
+        plan_capabilities=auth.plan_capabilities,
+    )

@@ -1,0 +1,90 @@
+// @{{product_name}}/shared/constants — cross-app constants
+//
+// Canonical role list, surface list, plan capability names, feature flags.
+// Any app needing these imports from here; never hard-codes.
+
+import type { Role, Surface, SubscriptionStatus, PaymentProvider, Locale } from "./types";
+
+// =============================================================================
+// Roles + surfaces
+// =============================================================================
+export const ROLES: readonly Role[] = ["customer", "admin", "partner", "support"] as const;
+export const SURFACES: readonly Surface[] = ["public", "customer", "admin", "partner"] as const;
+
+// =============================================================================
+// Subscription FSM legal transitions (mirrors lib/payments/index.ts on web+api)
+// =============================================================================
+export const LEGAL_TRANSITIONS: Record<SubscriptionStatus, readonly SubscriptionStatus[]> = {
+  trialing: ["active", "canceled", "incomplete_expired"],
+  pending: ["active", "canceled", "incomplete_expired"],
+  active: ["past_due", "canceled"],
+  past_due: ["active", "canceled"],
+  canceled: [],
+  incomplete_expired: [],
+} as const;
+
+export function isLegalTransition(from: SubscriptionStatus, to: SubscriptionStatus): boolean {
+  return LEGAL_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+// =============================================================================
+// Plan capabilities — keys that `getAuthContext({ require_plan_capability })` checks
+// =============================================================================
+export const PLAN_CAPABILITIES = {
+  PARTNER_DASHBOARD: "partner_dashboard",
+  ADMIN_IMPERSONATION: "admin_impersonation",
+  AUDIT_LOG_EXPORT: "audit_log_export",
+  API_ACCESS: "api_access",
+  CUSTOM_BRANDING: "custom_branding",
+  PRIORITY_SUPPORT: "priority_support",
+} as const;
+
+export type PlanCapability = (typeof PLAN_CAPABILITIES)[keyof typeof PLAN_CAPABILITIES];
+
+// =============================================================================
+// Supported locales + primary locale per app
+// =============================================================================
+export const SUPPORTED_LOCALES: readonly Locale[] = ["tr", "en"] as const;
+export const PRIMARY_LOCALE: Locale = "{{locale_primary}}" as Locale;
+
+// =============================================================================
+// Provider-specific constants
+// =============================================================================
+export const PAYMENT_PROVIDERS: readonly PaymentProvider[] = ["stripe", "iyzico"] as const;
+
+export const CURRENCY_BY_PROVIDER: Record<PaymentProvider, readonly string[]> = {
+  stripe: ["USD", "EUR", "GBP"],
+  iyzico: ["TRY"],
+} as const;
+
+// =============================================================================
+// API paths — keep in sync with apps/api routes + apps/web app/api routes
+// =============================================================================
+export const API_PATHS = {
+  HEALTH: "/api/public/health",
+  AUTH_LOGIN: "/api/auth/login",
+  AUTH_REGISTER: "/api/auth/register",
+  CUSTOMER_ME: "/api/customer/me",
+  ADMIN_USERS: "/api/admin/users",
+  ADMIN_AUDIT_LOG: "/api/admin/audit-log",
+  PARTNER_SUB_USERS: "/api/partner/sub-users",
+  WEBHOOK_STRIPE: "/api/webhooks/stripe",
+  WEBHOOK_IYZICO: "/api/webhooks/iyzico",
+} as const;
+
+// =============================================================================
+// Pagination defaults
+// =============================================================================
+export const PAGINATION = {
+  DEFAULT_LIMIT: 50,
+  MAX_LIMIT: 100,
+} as const;
+
+// =============================================================================
+// Rate limits (for client-side backoff hinting; server is authoritative)
+// =============================================================================
+export const RATE_LIMITS = {
+  API_DEFAULT: { requests: 100, window_seconds: 60 },
+  AUTH: { requests: 10, window_seconds: 60 },
+  WEBHOOK: { requests: 1000, window_seconds: 60 },
+} as const;

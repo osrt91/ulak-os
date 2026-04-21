@@ -1,0 +1,48 @@
+import { Link, Stack } from 'expo-router';
+import { View, Text, Pressable, useColorScheme } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Compass } from 'lucide-react-native';
+
+/**
+ * 404 fallback for {{product_name_pascal}}.
+ */
+export default function NotFoundScreen() {
+  const scheme = useColorScheme();
+  const isDark = scheme === 'dark';
+
+  return (
+    <>
+      <Stack.Screen options={{ title: 'Not found' }} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0f172a' : '#ffffff' }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <View
+            style={{
+              width: 96, height: 96, borderRadius: 48,
+              backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+              alignItems: 'center', justifyContent: 'center', marginBottom: 24,
+            }}
+            accessibilityElementsHidden
+          >
+            <Compass color={isDark ? '#60a5fa' : '#2563eb'} size={48} />
+          </View>
+          <Text accessibilityRole="header" style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: isDark ? '#f8fafc' : '#0f172a' }}>
+            Page not found
+          </Text>
+          <Text style={{ marginTop: 8, textAlign: 'center', color: isDark ? '#94a3b8' : '#64748b', fontFamily: 'Inter_400Regular' }}>
+            The screen you were looking for does not exist.
+          </Text>
+          <Link href="/" asChild>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go to home screen"
+              accessibilityHint="Navigates back to the home tab"
+              style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: isDark ? '#60a5fa' : '#2563eb' }}
+            >
+              <Text style={{ color: '#ffffff', fontFamily: 'Inter_600SemiBold' }}>Go home</Text>
+            </Pressable>
+          </Link>
+        </View>
+      </SafeAreaView>
+    </>
+  );
+}

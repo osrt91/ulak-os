@@ -1,0 +1,52 @@
+# {{product_name_pascal}} — Traefik dynamic config
+# Middlewares: HTTPS redirect, security headers, rate limit, compression.
+# Services reference these by label in docker-compose.
+
+http:
+  middlewares:
+    security-headers:
+      headers:
+        sslRedirect: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 63072000  # 2 years
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        permissionsPolicy: "accelerometer=(), camera=(), geolocation=(), microphone=(), payment=(), usb=()"
+        contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://{{supabase_host}} wss://{{supabase_host}} https://api.{{product_domain_fqdn}}; frame-ancestors 'none';"
+
+    rate-limit-api:
+      rateLimit:
+        average: 100
+        period: 1m
+        burst: 50
+        sourceCriterion:
+          ipStrategy: {}
+
+    rate-limit-auth:
+      # Stricter rate limit on auth endpoints to slow credential-stuffing
+      rateLimit:
+        average: 10
+        period: 1m
+        burst: 5
+
+    compress:
+      compress: {}
+
+    dashboard-auth:
+      # Basic-auth for Traefik dashboard. Override via env or replace with
+      # forward-auth to Supabase-gated route in production.
+      basicAuth:
+        usersFile: /etc/traefik/dashboard-users  # htpasswd format; mount from secret
+
+  routers:
+    dashboard:
+      rule: "Host(`traefik.{{product_domain_fqdn}}`)"
+      entryPoints: [websecure]
+      service: api@internal
+      tls:
+        certResolver: letsencrypt
+      middlewares: [dashboard-auth]

@@ -1,0 +1,70 @@
+import { useEffect } from 'react';
+import { create } from 'zustand';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from './supabase';
+
+/**
+ * Mobile auth helpers for {{product_name_pascal}}.
+ * Zustand-backed session store + convenience hooks.
+ */
+
+type AuthState = {
+  session: Session | null;
+  hydrated: boolean;
+  setSession: (session: Session | null) => void;
+  setHydrated: (hydrated: boolean) => void;
+};
+
+export const useAuthStore = create<AuthState>((set) => ({
+  session: null,
+  hydrated: false,
+  setSession: (session) => set({ session }),
+  setHydrated: (hydrated) => set({ hydrated }),
+}));
+
+/**
+ * Hook: current session + hydration flag.
+ * `hydrated` indicates that the initial getSession() call has completed.
+ */
+export function useSession() {
+  const session = useAuthStore((s) => s.session);
+  const hydrated = useAuthStore((s) => s.hydrated);
+  return { session, user: session?.user ?? null, hydrated };
+}
+
+/**
+ * Subscribe to Supabase auth state changes and mirror into the Zustand store.
+ * Call inside a root-level effect (root layout already does this).
+ */
+export function useAuthListener() {
+  const setSession = useAuthStore((s) => s.setSession);
+  const setHydrated = useAuthStore((s) => s.setHydrated);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setHydrated(true);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [setSession, setHydrated]);
+}
+
+export async function signInWithPassword(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+}
+
+export async function signOut() {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+}
+
+export function onAuthStateChange(
+  cb: (event: string, session: Session | null) => void,
+) {
+  const { data } = supabase.auth.onAuthStateChange(cb);
+  return () => data.subscription.unsubscribe();
+}

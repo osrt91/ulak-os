@@ -1,0 +1,9 @@
+// @{{product_name}}/shared — public surface
+//
+// Single entry for types + schemas + constants consumed across apps/*.
+// Keep this tight; large additions go into their own submodule and are
+// re-exported here selectively.
+
+export * from "./types";
+export * from "./constants";
+export * from "./schemas";

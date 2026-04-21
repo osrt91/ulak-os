@@ -1,0 +1,30 @@
+"""HMAC helpers for service-to-service auth between bot and FastAPI backend."""
+from __future__ import annotations
+
+import hashlib
+import hmac
+
+
+def sign_request(secret: str, method: str, path: str, body: bytes) -> str:
+    """
+    Sign an outbound request: HMAC-SHA256 over method|path|body.
+
+    Mirrors the verifier on the FastAPI side.
+    """
+    mac = hmac.new(secret.encode("utf-8"), digestmod=hashlib.sha256)
+    mac.update(method.upper().encode("utf-8"))
+    mac.update(b"|")
+    mac.update(path.encode("utf-8"))
+    mac.update(b"|")
+    mac.update(body)
+    return mac.hexdigest()
+
+
+def verify_inbound(secret: str, method: str, path: str, body: bytes, signature: str) -> bool:
+    """
+    Verify an inbound webhook (e.g. FastAPI -> /webhook/notify).
+
+    Uses constant-time comparison to avoid timing leaks.
+    """
+    expected = sign_request(secret, method, path, body)
+    return hmac.compare_digest(expected, signature or "")

@@ -1,0 +1,79 @@
+{
+  "expo": {
+    "name": "{{product_name_pascal}}",
+    "slug": "{{product_name}}",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "{{app_scheme}}",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "bundleIdentifier": "{{app_bundle_id}}",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow {{product_name_pascal}} to access your camera to capture photos.",
+        "NSPhotoLibraryUsageDescription": "Allow {{product_name_pascal}} to access your photos to upload images.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "{{app_package}}",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#2563eb"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow {{product_name_pascal}} to access your photos.",
+          "cameraPermission": "Allow {{product_name_pascal}} to use the camera."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "supabaseUrl": "$EXPO_PUBLIC_SUPABASE_URL",
+      "supabaseAnonKey": "$EXPO_PUBLIC_SUPABASE_ANON_KEY",
+      "apiUrl": "$EXPO_PUBLIC_API_URL",
+      "eas": {
+        "projectId": "$EAS_PROJECT_ID"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/$EAS_PROJECT_ID"
+    }
+  }
+}

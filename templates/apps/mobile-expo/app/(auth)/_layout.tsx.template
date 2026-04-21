@@ -1,0 +1,44 @@
+import { Stack } from 'expo-router';
+import { useColorScheme } from 'react-native';
+
+/**
+ * Auth stack layout for {{product_name_pascal}}.
+ *
+ * Routing:
+ *   - /login            — primary entry, no header
+ *   - /register         — shows "Create account" header
+ *   - /forgot-password  — shows "Reset password" header
+ *
+ * Visual: transparent headers, no tab bar, slide-from-right animation.
+ * Dark mode follows system `useColorScheme()` so tint + background flip automatically.
+ */
+export default function AuthLayout() {
+  const scheme = useColorScheme();
+  const isDark = scheme === 'dark';
+
+  return (
+    <Stack
+      screenOptions={{
+        headerTransparent: true,
+        headerTitle: '',
+        headerBackTitle: '',
+        headerTintColor: isDark ? '#f8fafc' : '#0f172a',
+        contentStyle: { backgroundColor: isDark ? '#0f172a' : '#ffffff' },
+        animation: 'slide_from_right',
+      }}
+    >
+      <Stack.Screen
+        name="login"
+        options={{ title: 'Sign in', headerShown: false }}
+      />
+      <Stack.Screen
+        name="register"
+        options={{ title: 'Create account', headerShown: true }}
+      />
+      <Stack.Screen
+        name="forgot-password"
+        options={{ title: 'Reset password', headerShown: true }}
+      />
+    </Stack>
+  );
+}

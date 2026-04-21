@@ -1,0 +1,92 @@
+# {{product_name_pascal}}
+
+> Hybrid monorepo scaffolded by [Ulak OS](https://github.com/osrt91/ulak-os). Single-repo, multi-service stack with shared types + UI + config.
+
+## Structure
+
+```
+{{product_name}}/
+├── apps/
+│   ├── web/         # Next.js 16 — customer/admin/partner surfaces
+│   ├── api/         # FastAPI 0.115+ — business logic + heavy compute
+│   ├── mobile/      # Expo SDK 52+ — iOS + Android app
+│   └── bot/         # aiogram 3.x — Telegram bot
+├── packages/
+│   ├── shared/      # types + Zod schemas + constants (consumed by web + mobile)
+│   ├── ui/          # RN + web shared components (nativewind)
+│   └── config/      # tsconfig presets + eslint + tailwind + prettier
+├── infrastructure/
+│   ├── docker-compose.yml      # dev stack
+│   ├── docker-compose.prod.yml # prod overrides
+│   ├── traefik/                # edge proxy
+│   └── acme.json.sh            # Let's Encrypt bootstrap
+├── scripts/
+├── CLAUDE.md                    # Ulak OS governance entry
+├── pnpm-workspace.yaml
+├── turbo.json
+└── package.json
+```
+
+## Getting started
+
+```bash
+# Install all workspace deps
+pnpm install
+
+# Start every service in parallel (watch mode)
+pnpm dev
+
+# Or start one at a time
+pnpm dev:web
+pnpm dev:api
+pnpm dev:mobile   # launches Expo dev server
+pnpm dev:bot      # polls Telegram
+
+# Full-stack dev with docker-compose (postgres + redis + mailhog)
+pnpm compose:up
+
+# Production-parity stack (Traefik + Let's Encrypt)
+pnpm compose:prod
+```
+
+## Shared packages
+
+Every app can import from shared packages via `workspace:*`:
+
+```ts
+// apps/web/app/(customer)/dashboard/page.tsx
+import type { UserProfile } from "@{{product_name}}/shared";
+import { Button } from "@{{product_name}}/ui";
+
+// apps/mobile/app/(tabs)/profile.tsx
+import type { UserProfile } from "@{{product_name}}/shared";
+import { Avatar } from "@{{product_name}}/ui";
+```
+
+Changes to `packages/*` auto-rebuild during `pnpm dev` via Turborepo's dependency graph.
+
+## Governance
+
+This repo was scaffolded with Ulak OS governance pre-wired. See:
+
+- `CLAUDE.md` — imports Ulak OS core contract + runtime rules
+- `.claude/settings.json` — permission allowlist (hardened per SEC-B-04, v1.0.0)
+- `docs/runtime/anti-patterns.md` — Ulak OS anti-pattern catalog (applies to every app)
+
+Run `/director komple` in Claude Code to audit the current state. Run `/pack-gap-audit` to see which additional Ulak packs you should activate for your domain.
+
+## Deploy
+
+- Dev: `pnpm compose:up` (localhost)
+- Staging: `pnpm compose:prod` on a single VPS with Traefik + Let's Encrypt
+- Production: multi-VPS via `.github/workflows/deploy.yml` (webhook-triggered; signed payload)
+
+See `infrastructure/README.md` for the full topology.
+
+## License
+
+UNLICENSED — change in `package.json` if you intend to open-source.
+
+## Attribution
+
+Scaffolded with **Ulak OS v1.1** — https://github.com/osrt91/ulak-os

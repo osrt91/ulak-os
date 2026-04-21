@@ -1,0 +1,88 @@
+# {{product_name_pascal}} — monorepo .gitignore
+# Follows Ulak OS AP-16 (.env.local never tracked) + AP-19 (per-app .env files)
+
+# Dependencies
+node_modules/
+.pnp.*
+.yarn/install-state.gz
+
+# Build output
+**/dist/
+**/build/
+**/.next/
+**/.turbo/
+**/out/
+**/.expo/
+**/.expo-shared/
+**/ios/build/
+**/android/build/
+**/android/app/build/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+**/htmlcov/
+**/.coverage
+**/coverage/
+
+# Environment files — NEVER committed (AP-16)
+.env
+.env.*
+!.env.example
+!.env.example.*
+apps/*/.env
+apps/*/.env.*
+!apps/*/.env.example
+!apps/*/.env.example.*
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.keystore
+**/acme.json
+
+# IDE
+.vscode/
+!.vscode/settings.json.shared
+!.vscode/extensions.json
+.idea/
+*.iml
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Test artifacts
+**/playwright-report/
+**/test-results/
+**/.playwright/
+
+# Database dumps (redacted before commit if needed)
+*.sql.bak
+*.db
+*.sqlite
+*.sqlite3
+
+# Claude Code (operator scope)
+.claude/settings.local.json
+.claude/logs/
+
+# Reports (director artefacts; per-run, not commit-worthy)
+reports/current/*
+!reports/current/.gitkeep
+reports/sessions/
+
+# Vendored upstream (Ulak OS pattern)
+vendor/

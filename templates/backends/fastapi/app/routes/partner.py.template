@@ -1,0 +1,85 @@
+# {{product_name_pascal}} — partner-facing routes
+#
+# Gated by role='partner' AND plan_capability='partner_dashboard' — same
+# contract as Next.js `/partner` surface.
+from __future__ import annotations
+
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth import get_auth_context, require_role
+from app.db import get_db
+from app.models.schemas import PaymentEvent, UserRoleAssignment
+from app.schemas.auth import AuthContext
+
+router = APIRouter(dependencies=[Depends(require_role("partner", plan_capability="partner_dashboard"))])
+
+
+class SubUserRow(BaseModel):
+    user_id: str
+    role: str
+    plan_capabilities: List[str]
+
+
+class SubUsersResponse(BaseModel):
+    items: List[SubUserRow]
+    total: int
+
+
+class CommissionSummary(BaseModel):
+    tenant_id: str
+    currency: str
+    total_cents: int
+    total_kurus: int
+    event_count: int
+
+
+@router.get("/sub-users", response_model=SubUsersResponse)
+async def list_sub_users(
+    limit: int = Query(default=50, ge=1, le=100),
+    auth: AuthContext = Depends(get_auth_context),
+    db: AsyncSession = Depends(get_db),
+) -> SubUsersResponse:
+    if not auth.tenant_id:
+        raise HTTPException(status_code=403, detail={"code": "no_tenant", "message": "partner has no tenant binding"})
+    stmt = (
+        select(UserRoleAssignment)
+        .where(UserRoleAssignment.tenant_id == auth.tenant_id)
+        .where(UserRoleAssignment.role == "customer")
+        .limit(limit)
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+    return SubUsersResponse(
+        items=[
+            SubUserRow(user_id=str(r.user_id), role=r.role, plan_capabilities=list(r.plan_capabilities or []))
+            for r in rows
+        ],
+        total=len(rows),
+    )
+
+
+@router.get("/commission", response_model=CommissionSummary)
+async def commission(
+    currency: str = Query(default="USD", pattern="^(USD|TRY|EUR)$"),
+    auth: AuthContext = Depends(get_auth_context),
+    db: AsyncSession = Depends(get_db),
+) -> CommissionSummary:
+    if not auth.tenant_id:
+        raise HTTPException(status_code=403, detail={"code": "no_tenant", "message": "partner has no tenant binding"})
+    stmt = select(
+        func.coalesce(func.sum(PaymentEvent.amount_cents), 0),
+        func.coalesce(func.sum(PaymentEvent.amount_kurus), 0),
+        func.count(PaymentEvent.id),
+    ).where(PaymentEvent.tenant_id == auth.tenant_id, PaymentEvent.currency == currency)
+    cents, kurus, count = (await db.execute(stmt)).one()
+    return CommissionSummary(
+        tenant_id=auth.tenant_id,
+        currency=currency,
+        total_cents=int(cents or 0),
+        total_kurus=int(kurus or 0),
+        event_count=int(count or 0),
+    )

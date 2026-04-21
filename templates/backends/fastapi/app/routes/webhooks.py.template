@@ -1,0 +1,86 @@
+# {{product_name_pascal}} — internal service-to-service webhooks
+#
+# These are NOT the payment-provider webhooks (those live on the Next.js side
+# because that's where the provider secrets live). These are second-hop
+# internal callbacks — e.g. an email bounce notification from the mail
+# provider forwarded by an internal gateway, or a secondary payment mirror.
+#
+# Discipline:
+#   - HMAC-SHA256 signature verification on raw body (constant-time compare)
+#   - Idempotency via processed_webhook_events (same table as Next.js; this is
+#     the canonical cross-service dedupe surface)
+#   - No auth context — these run unauthenticated from the user's perspective.
+from __future__ import annotations
+
+import hashlib
+import hmac
+import os
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db import get_db
+from app.models.schemas import ProcessedWebhookEvent
+
+router = APIRouter()
+
+
+class WebhookAck(BaseModel):
+    ok: bool
+    deduped: bool
+
+
+def _verify_signature(body: bytes, signature: str, secret: str) -> bool:
+    expected = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature or "")
+
+
+async def _dedupe(db: AsyncSession, provider: str, event_id: str, event_type: str, raw: dict) -> bool:
+    stmt = (
+        pg_insert(ProcessedWebhookEvent)
+        .values(provider=provider, event_id=event_id, event_type=event_type, raw_payload=raw)
+        .on_conflict_do_nothing(index_elements=["provider", "event_id"])
+        .returning(ProcessedWebhookEvent.id)
+    )
+    result = await db.execute(stmt)
+    inserted = result.scalar_one_or_none()
+    await db.commit()
+    return inserted is None  # True means duplicate
+
+
+@router.post("/internal/{source}", response_model=WebhookAck, status_code=status.HTTP_200_OK)
+async def internal_webhook(
+    source: str,
+    request: Request,
+    x_signature: str = Header(default="", alias="X-Signature"),
+    x_event_id: str = Header(default="", alias="X-Event-Id"),
+    x_event_type: str = Header(default="", alias="X-Event-Type"),
+    db: AsyncSession = Depends(get_db),
+) -> WebhookAck:
+    if source not in {"email_bounce", "payment_mirror", "provider_callback"}:
+        raise HTTPException(status_code=404, detail={"code": "unknown_source", "message": "unsupported webhook source"})
+
+    secret = os.getenv(f"INTERNAL_WEBHOOK_SECRET_{source.upper()}", "")
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "secret_not_configured", "message": "webhook secret missing"},
+        )
+
+    raw = await request.body()
+    if not _verify_signature(raw, x_signature, secret):
+        raise HTTPException(status_code=401, detail={"code": "bad_signature", "message": "HMAC verification failed"})
+
+    if not x_event_id:
+        raise HTTPException(status_code=400, detail={"code": "missing_event_id", "message": "X-Event-Id required"})
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    deduped = await _dedupe(db, provider=source, event_id=x_event_id, event_type=x_event_type or "unknown", raw=payload)
+    return WebhookAck(ok=True, deduped=deduped)

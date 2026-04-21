@@ -1,0 +1,49 @@
+# {{product_name_pascal}} — SQLAlchemy async engine + session factory
+#
+# Discipline:
+#   - no module-level `async with` — every request uses get_db() via Depends
+#   - DSN normalized to `postgresql+asyncpg://` so asyncpg driver is picked
+#   - `expire_on_commit=False` so ORM objects remain usable after commit
+#     (standard pattern for FastAPI + SQLAlchemy 2.0 async)
+from __future__ import annotations
+
+from typing import AsyncIterator
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from app.config import get_settings
+
+
+def _to_async_dsn(dsn: str) -> str:
+    if dsn.startswith("postgresql+asyncpg://"):
+        return dsn
+    if dsn.startswith("postgresql://"):
+        return "postgresql+asyncpg://" + dsn[len("postgresql://") :]
+    return dsn
+
+
+_settings = get_settings()
+
+engine = create_async_engine(
+    _to_async_dsn(_settings.database_url),
+    pool_pre_ping=True,
+    pool_size=10,
+    max_overflow=5,
+    echo=False,
+)
+
+SessionFactory: async_sessionmaker[AsyncSession] = async_sessionmaker(
+    bind=engine,
+    expire_on_commit=False,
+    autoflush=False,
+)
+
+
+async def get_db() -> AsyncIterator[AsyncSession]:
+    """FastAPI dependency — yields a session, guarantees close."""
+    async with SessionFactory() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise

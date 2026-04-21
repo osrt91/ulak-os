@@ -1,0 +1,158 @@
+# {{product_name_pascal}} — JWT verify + role/tenant resolve
+#
+# Same auth pool as the Next.js frontend. The frontend owns login UI + the
+# Supabase session cookie; any client (web or mobile) that wants to hit the
+# FastAPI surface sends `Authorization: Bearer <access_token>`.
+#
+# Flow:
+#   1. Extract Bearer token
+#   2. Verify signature via Supabase JWKS (RS256), cached 1h
+#   3. Check claims: aud ('authenticated'), iss ({SUPABASE_URL}/auth/v1), exp
+#   4. Load role + tenant_id + plan_capabilities from `user_role_assignments`
+#      (AP-06: never trust JWT `role` claim — it's user_metadata-forgeable)
+#
+# Dependency shape mirrors Next.js `getAuthContext()`:
+#   async def route(auth: AuthContext = Depends(require_role("admin"))): ...
+from __future__ import annotations
+
+import time
+from typing import Any, Callable
+
+import httpx
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import jwt
+from jose.exceptions import JWTError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import Settings, get_settings
+from app.db import get_db
+from app.models.schemas import UserRoleAssignment
+from app.schemas.auth import AuthContext
+
+_bearer = HTTPBearer(auto_error=False)
+
+# JWKS cache: { kid: jwk_dict }
+_jwks_cache: dict[str, Any] = {"keys": {}, "fetched_at": 0.0}
+_JWKS_TTL_SECONDS = 3600
+
+
+def _unauthorized(code: str, message: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail={"code": code, "message": message},
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def _forbidden(code: str, message: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={"code": code, "message": message},
+    )
+
+
+async def _fetch_jwks(settings: Settings) -> dict[str, Any]:
+    now = time.time()
+    if _jwks_cache["keys"] and (now - _jwks_cache["fetched_at"]) < _JWKS_TTL_SECONDS:
+        return _jwks_cache["keys"]
+    url = f"{settings.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        payload = resp.json()
+    keys = {k["kid"]: k for k in payload.get("keys", [])}
+    _jwks_cache["keys"] = keys
+    _jwks_cache["fetched_at"] = now
+    return keys
+
+
+async def _verify_jwt(token: str, settings: Settings) -> dict[str, Any]:
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+    except JWTError as err:
+        raise _unauthorized("jwt_malformed", "could not parse JWT header") from err
+
+    kid = unverified_header.get("kid")
+    alg = unverified_header.get("alg", "RS256")
+    expected_iss = f"{settings.supabase_url.rstrip('/')}/auth/v1"
+
+    try:
+        if alg.startswith("HS") and settings.supabase_jwt_secret:
+            claims = jwt.decode(
+                token,
+                settings.supabase_jwt_secret,
+                algorithms=[alg],
+                audience="authenticated",
+                issuer=expected_iss,
+            )
+        else:
+            keys = await _fetch_jwks(settings)
+            key = keys.get(kid)
+            if not key:
+                # refresh once in case of key rotation
+                _jwks_cache["fetched_at"] = 0.0
+                keys = await _fetch_jwks(settings)
+                key = keys.get(kid)
+            if not key:
+                raise _unauthorized("jwt_kid_unknown", "signing key not found")
+            claims = jwt.decode(
+                token,
+                key,
+                algorithms=[alg],
+                audience="authenticated",
+                issuer=expected_iss,
+            )
+    except JWTError as err:
+        raise _unauthorized("jwt_invalid", "token verification failed") from err
+
+    if not claims.get("sub"):
+        raise _unauthorized("jwt_missing_sub", "subject claim missing")
+    return claims
+
+
+async def get_auth_context(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AuthContext:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise _unauthorized("no_bearer", "Authorization header missing or malformed")
+
+    claims = await _verify_jwt(credentials.credentials, settings)
+    user_id = claims["sub"]
+    email = claims.get("email", "")
+
+    stmt = select(UserRoleAssignment).where(UserRoleAssignment.user_id == user_id)
+    result = await db.execute(stmt)
+    assignment = result.scalar_one_or_none()
+    if assignment is None:
+        raise _forbidden("no_role_assignment", "user has no role in this tenant pool")
+
+    return AuthContext(
+        user_id=str(user_id),
+        email=email,
+        role=assignment.role,
+        tenant_id=str(assignment.tenant_id) if assignment.tenant_id else None,
+        plan_capabilities=list(assignment.plan_capabilities or []),
+    )
+
+
+def require_role(*allowed: str, plan_capability: str | None = None) -> Callable[..., Any]:
+    """Factory that returns a FastAPI dependency enforcing role + optional plan cap.
+
+    Usage:
+        @router.get("/users", dependencies=[Depends(require_role("admin"))])
+        async def list_users(auth: AuthContext = Depends(get_auth_context)): ...
+    """
+
+    async def _dep(auth: AuthContext = Depends(get_auth_context)) -> AuthContext:
+        if auth.role not in allowed:
+            raise _forbidden("wrong_role", f"requires one of: {', '.join(allowed)}")
+        if plan_capability and plan_capability not in auth.plan_capabilities:
+            raise _forbidden("plan_capability_missing", f"requires plan capability: {plan_capability}")
+        return auth
+
+    return _dep

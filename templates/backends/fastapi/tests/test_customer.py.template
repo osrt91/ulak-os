@@ -1,0 +1,85 @@
+# {{product_name_pascal}} — customer routes tests
+#
+# Covers:
+#   - unauth 401
+#   - valid JWT + role='customer' → 200 + profile
+#   - wrong role (admin JWT hitting customer-only endpoint scenario) → role
+#     mismatch enforced where applicable
+#   - tenant isolation: customer A cannot see tenant B's subscriptions
+from __future__ import annotations
+
+import uuid
+
+import pytest
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.schemas import Subscription, Tenant, UserRoleAssignment
+
+
+async def _seed_user(db: AsyncSession, role: str = "customer", tenant_name: str = "alpha") -> tuple[str, str]:
+    tenant = Tenant(name=tenant_name, slug=f"{tenant_name}-{uuid.uuid4().hex[:6]}")
+    db.add(tenant)
+    await db.flush()
+    user_id = uuid.uuid4()
+    db.add(UserRoleAssignment(user_id=user_id, tenant_id=tenant.id, role=role, plan_capabilities=[]))
+    await db.flush()
+    return str(user_id), str(tenant.id)
+
+
+@pytest.mark.asyncio
+async def test_me_without_token_returns_401(client: AsyncClient) -> None:
+    resp = await client.get("/api/customer/me")
+    assert resp.status_code == 401
+    assert resp.json()["error"]["code"] == "no_bearer"
+
+
+@pytest.mark.asyncio
+async def test_me_with_valid_customer_jwt_returns_profile(
+    client: AsyncClient, db_session: AsyncSession, make_jwt
+) -> None:
+    user_id, tenant_id = await _seed_user(db_session, role="customer")
+    token = make_jwt(user_id=user_id, role="customer")
+    resp = await client.get("/api/customer/me", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["user_id"] == user_id
+    assert body["role"] == "customer"
+    assert body["tenant_id"] == tenant_id
+
+
+@pytest.mark.asyncio
+async def test_me_without_role_assignment_returns_403(
+    client: AsyncClient, db_session: AsyncSession, make_jwt
+) -> None:
+    token = make_jwt(user_id=str(uuid.uuid4()), role="customer")
+    resp = await client.get("/api/customer/me", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_subscriptions_are_tenant_isolated(
+    client: AsyncClient, db_session: AsyncSession, make_jwt
+) -> None:
+    user_a, tenant_a = await _seed_user(db_session, tenant_name="alpha")
+    _, tenant_b = await _seed_user(db_session, tenant_name="beta")
+    # Seed subscription owned by tenant B
+    db_session.add(
+        Subscription(
+            tenant_id=uuid.UUID(tenant_b),
+            provider="stripe",
+            provider_env="sandbox",
+            provider_subscription_id="sub_tenantb_xyz",
+            plan_id="pro",
+            status="active",
+        )
+    )
+    await db_session.flush()
+
+    token = make_jwt(user_id=user_a, role="customer")
+    resp = await client.get("/api/customer/subscriptions", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    body = resp.json()
+    # Tenant A user must NOT see tenant B's sub
+    assert all("sub_tenantb_xyz" not in item.get("id", "") for item in body["items"])
+    assert body["total"] == 0

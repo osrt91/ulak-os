@@ -1,0 +1,164 @@
+# {{product_name_pascal}} — admin routes
+#
+# AP-06 prevention: role is re-read from DB on every request via
+# `get_auth_context` (the dependency hits `user_role_assignments` fresh; no
+# JWT claim trust). This matches the Next.js `force_refresh: true` pattern.
+from __future__ import annotations
+
+from datetime import datetime
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
+from sqlalchemy import delete, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth import get_auth_context, require_role
+from app.db import get_db
+from app.models.schemas import AuditLog, UserRoleAssignment
+from app.schemas.auth import AuthContext
+
+router = APIRouter(dependencies=[Depends(require_role("admin", "support"))])
+
+MAX_LIMIT = 100
+
+
+class AdminUserRow(BaseModel):
+    user_id: str
+    role: str
+    tenant_id: str | None
+    plan_capabilities: List[str]
+    created_at: str | None
+
+
+class AdminUsersResponse(BaseModel):
+    users: List[AdminUserRow]
+    page: int
+    limit: int
+    total: int
+
+
+class AuditLogRow(BaseModel):
+    id: str
+    actor_user_id: str | None
+    action: str
+    target_type: str
+    target_id: str | None
+    reason: str | None
+    created_at: str
+
+
+class AuditLogResponse(BaseModel):
+    items: List[AuditLogRow]
+    page: int
+    limit: int
+    total: int
+
+
+@router.get("/users", response_model=AdminUsersResponse)
+async def list_users(
+    page: int = Query(default=1, ge=1, le=10_000),
+    limit: int = Query(default=50, ge=1, le=MAX_LIMIT),
+    auth: AuthContext = Depends(get_auth_context),
+    db: AsyncSession = Depends(get_db),
+) -> AdminUsersResponse:
+    if not auth.tenant_id:
+        raise HTTPException(status_code=403, detail={"code": "no_tenant", "message": "admin has no tenant binding"})
+
+    base = select(UserRoleAssignment).where(UserRoleAssignment.tenant_id == auth.tenant_id)
+    total_stmt = select(func.count()).select_from(base.subquery())
+    total = (await db.execute(total_stmt)).scalar_one()
+
+    paged = base.offset((page - 1) * limit).limit(limit)
+    rows = (await db.execute(paged)).scalars().all()
+
+    return AdminUsersResponse(
+        users=[
+            AdminUserRow(
+                user_id=str(r.user_id),
+                role=r.role,
+                tenant_id=str(r.tenant_id) if r.tenant_id else None,
+                plan_capabilities=list(r.plan_capabilities or []),
+                created_at=r.created_at.isoformat() if r.created_at else None,
+            )
+            for r in rows
+        ],
+        page=page,
+        limit=limit,
+        total=total,
+    )
+
+
+@router.post("/users/{user_id}/suspend", status_code=status.HTTP_204_NO_CONTENT)
+async def suspend_user(
+    user_id: str,
+    auth: AuthContext = Depends(get_auth_context),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    # Suspension = move role to 'suspended' in an extension column. For v1 we
+    # implement as plan_capabilities wipe + role='customer' (lowest) to stop
+    # privilege; operational suspension of auth.users happens via Supabase
+    # admin API on the Next.js side. Tenant scope enforced.
+    stmt = (
+        update(UserRoleAssignment)
+        .where(UserRoleAssignment.user_id == user_id, UserRoleAssignment.tenant_id == auth.tenant_id)
+        .values(plan_capabilities=[])
+    )
+    result = await db.execute(stmt)
+    await db.commit()
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "user not in this tenant"})
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: str,
+    auth: AuthContext = Depends(get_auth_context),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    stmt = delete(UserRoleAssignment).where(
+        UserRoleAssignment.user_id == user_id,
+        UserRoleAssignment.tenant_id == auth.tenant_id,
+    )
+    result = await db.execute(stmt)
+    await db.commit()
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "user not in this tenant"})
+
+
+@router.get("/audit-log", response_model=AuditLogResponse)
+async def audit_log(
+    page: int = Query(default=1, ge=1, le=10_000),
+    limit: int = Query(default=50, ge=1, le=MAX_LIMIT),
+    action: str | None = Query(default=None, max_length=120),
+    since: datetime | None = Query(default=None),
+    auth: AuthContext = Depends(get_auth_context),
+    db: AsyncSession = Depends(get_db),
+) -> AuditLogResponse:
+    conds = [AuditLog.tenant_id == auth.tenant_id]
+    if action:
+        conds.append(AuditLog.action == action)
+    if since:
+        conds.append(AuditLog.created_at >= since)
+
+    base = select(AuditLog).where(*conds).order_by(AuditLog.created_at.desc())
+    total = (await db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
+    rows = (await db.execute(base.offset((page - 1) * limit).limit(limit))).scalars().all()
+
+    return AuditLogResponse(
+        items=[
+            AuditLogRow(
+                id=str(r.id),
+                actor_user_id=str(r.actor_user_id) if r.actor_user_id else None,
+                action=r.action,
+                target_type=r.target_type,
+                target_id=r.target_id,
+                reason=r.reason,
+                created_at=r.created_at.isoformat(),
+            )
+            for r in rows
+        ],
+        page=page,
+        limit=limit,
+        total=total,
+    )

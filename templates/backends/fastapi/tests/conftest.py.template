@@ -1,0 +1,82 @@
+# {{product_name_pascal}} — pytest fixtures
+#
+# Contract:
+#   - Each test runs against a fresh AsyncSession and rolls back on teardown
+#   - `client` fixture uses httpx.AsyncClient pinned to the ASGI app via
+#     httpx's ASGITransport — no real network
+#   - `make_jwt` produces an HS256 JWT signed with the SAME secret the app
+#     verifies against in test mode (SUPABASE_JWT_SECRET env var)
+from __future__ import annotations
+
+import os
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import AsyncIterator, Callable
+
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from jose import jwt
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from app.config import get_settings
+from app.db import get_db
+from app.main import app
+
+TEST_DB_URL = os.getenv("TEST_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/test_{{product_name}}")
+TEST_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "test-secret-do-not-use-in-prod")
+
+
+@pytest_asyncio.fixture(scope="session")
+async def engine():
+    eng = create_async_engine(TEST_DB_URL, pool_pre_ping=True)
+    yield eng
+    await eng.dispose()
+
+
+@pytest_asyncio.fixture
+async def db_session(engine) -> AsyncIterator[AsyncSession]:
+    factory = async_sessionmaker(bind=engine, expire_on_commit=False)
+    async with engine.connect() as conn:
+        trans = await conn.begin()
+        async with factory(bind=conn) as session:
+            yield session
+        await trans.rollback()
+
+
+@pytest_asyncio.fixture
+async def client(db_session: AsyncSession) -> AsyncIterator[AsyncClient]:
+    async def _override() -> AsyncIterator[AsyncSession]:
+        yield db_session
+
+    app.dependency_overrides[get_db] = _override
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def make_jwt() -> Callable[..., str]:
+    settings = get_settings()
+    issuer = f"{settings.supabase_url.rstrip('/')}/auth/v1"
+
+    def _build(
+        user_id: str | None = None,
+        email: str = "test@example.com",
+        role: str = "customer",
+        ttl_seconds: int = 3600,
+    ) -> str:
+        now = datetime.now(tz=timezone.utc)
+        claims = {
+            "sub": user_id or str(uuid.uuid4()),
+            "email": email,
+            "aud": "authenticated",
+            "iss": issuer,
+            "role": role,
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(seconds=ttl_seconds)).timestamp()),
+        }
+        return jwt.encode(claims, TEST_JWT_SECRET, algorithm="HS256")
+
+    return _build

@@ -1,0 +1,106 @@
+import { useState } from 'react';
+import {
+  View, Text, TextInput, Pressable, Alert, KeyboardAvoidingView,
+  Platform, ScrollView, ActivityIndicator, useColorScheme,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link } from 'expo-router';
+import { Mail, Lock, User as UserIcon, UserPlus } from 'lucide-react-native';
+import { z } from 'zod';
+import { supabase } from '../../lib/supabase';
+
+const SignupSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+/**
+ * Registration screen for {{product_name_pascal}}.
+ */
+export default function RegisterScreen() {
+  const scheme = useColorScheme();
+  const isDark = scheme === 'dark';
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const bg = isDark ? '#0f172a' : '#ffffff';
+  const text = isDark ? '#f8fafc' : '#0f172a';
+  const muted = isDark ? '#94a3b8' : '#64748b';
+  const inputBg = isDark ? '#1e293b' : '#f8fafc';
+  const border = isDark ? '#334155' : '#e2e8f0';
+  const brand = isDark ? '#60a5fa' : '#2563eb';
+
+  async function handleSignUp() {
+    const parsed = SignupSchema.safeParse({ name: name.trim(), email: email.trim(), password });
+    if (!parsed.success) { Alert.alert('Invalid input', parsed.error.issues[0]?.message ?? 'Please check your input.'); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: parsed.data.email,
+      password: parsed.data.password,
+      options: { data: { name: parsed.data.name }, emailRedirectTo: '{{app_scheme}}://auth/callback' },
+    });
+    setLoading(false);
+    if (error) Alert.alert('Sign up failed', error.message);
+    else Alert.alert('Check your inbox', 'We sent you a confirmation link.');
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={{ padding: 24, flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
+          <Text accessibilityRole="header" style={{ fontSize: 28, fontFamily: 'Inter_700Bold', color: text }}>Create your account</Text>
+          <Text style={{ marginTop: 6, color: muted, fontFamily: 'Inter_400Regular' }}>Join {{product_name_pascal}}</Text>
+
+          <View style={{ marginTop: 24, gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderColor: border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12 }}>
+              <UserIcon color={muted} size={18} />
+              <TextInput
+                value={name} onChangeText={setName} placeholder="Full name" placeholderTextColor={muted}
+                autoCapitalize="words" accessibilityLabel="Full name"
+                style={{ flex: 1, paddingVertical: 14, paddingHorizontal: 10, color: text, fontFamily: 'Inter_400Regular' }}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderColor: border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12 }}>
+              <Mail color={muted} size={18} />
+              <TextInput
+                value={email} onChangeText={setEmail} placeholder="Email" placeholderTextColor={muted}
+                keyboardType="email-address" autoCapitalize="none" autoComplete="email" accessibilityLabel="Email address"
+                style={{ flex: 1, paddingVertical: 14, paddingHorizontal: 10, color: text, fontFamily: 'Inter_400Regular' }}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderColor: border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12 }}>
+              <Lock color={muted} size={18} />
+              <TextInput
+                value={password} onChangeText={setPassword} placeholder="Password (min 8 characters)" placeholderTextColor={muted}
+                secureTextEntry autoComplete="new-password" accessibilityLabel="Password"
+                style={{ flex: 1, paddingVertical: 14, paddingHorizontal: 10, color: text, fontFamily: 'Inter_400Regular' }}
+              />
+            </View>
+          </View>
+
+          <Pressable
+            onPress={handleSignUp} disabled={loading}
+            accessibilityRole="button" accessibilityLabel="Create account" accessibilityHint="Submits your registration"
+            style={{ marginTop: 20, backgroundColor: brand, borderRadius: 12, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, opacity: loading ? 0.6 : 1 }}
+          >
+            {loading ? <ActivityIndicator color="#fff" /> : <UserPlus color="#fff" size={18} />}
+            <Text style={{ color: '#fff', fontFamily: 'Inter_600SemiBold' }}>Create account</Text>
+          </Pressable>
+
+          <Text style={{ marginTop: 16, color: muted, fontFamily: 'Inter_400Regular', fontSize: 12, textAlign: 'center' }}>
+            By signing up you agree to the Terms of Service and Privacy Policy.
+          </Text>
+
+          <View style={{ marginTop: 24, alignItems: 'center' }}>
+            <Link href="/(auth)/login" accessibilityLabel="Back to sign in">
+              <Text style={{ color: muted, fontFamily: 'Inter_400Regular' }}>Already have an account? <Text style={{ color: brand }}>Sign in</Text></Text>
+            </Link>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}

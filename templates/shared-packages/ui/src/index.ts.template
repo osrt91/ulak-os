@@ -1,0 +1,11 @@
+// @{{product_name}}/ui — shared UI primitives + utilities
+//
+// This package holds the design-system primitives that work across web + mobile.
+// Web-only components live in `apps/web/components/ui/*`. Mobile-only live in
+// `apps/mobile/components/*`. Shared primitives (formatters, token hooks,
+// platform-detection helpers) live here.
+
+export { cn } from "./lib/cn";
+export { formatCurrency, formatDate, formatRelativeTime } from "./lib/format";
+export { tokens, type DesignTokens } from "./lib/tokens";
+export type { Variant, Size } from "./lib/variants";

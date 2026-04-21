@@ -1,0 +1,53 @@
+# {{product_name_pascal}} — runtime settings
+#
+# Reads from environment (.env for local dev). Never inline secrets — they
+# live in the deployment secret store (Supabase vault / Traefik env / GH
+# Actions secrets). This file is the single source of truth for which env
+# variables the API consumes.
+from __future__ import annotations
+
+from functools import lru_cache
+from typing import List
+
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    # Supabase — same project the Next.js side talks to
+    supabase_url: str = Field(..., alias="SUPABASE_URL")
+    supabase_anon_key: str = Field(..., alias="SUPABASE_ANON_KEY")
+    supabase_service_role_key: str = Field(..., alias="SUPABASE_SERVICE_ROLE_KEY")
+    # JWT secret used only if we fall back to HS256 verify. Default path is JWKS (RS256).
+    supabase_jwt_secret: str | None = Field(default=None, alias="SUPABASE_JWT_SECRET")
+
+    # Direct postgres connection for SQLAlchemy (read-mostly on this side)
+    database_url: str = Field(..., alias="DATABASE_URL")
+
+    # Rate limit / cache backing store
+    redis_url: str | None = Field(default=None, alias="REDIS_URL")
+
+    # CORS allowlist — no "*" in production. Comma-separated list in env.
+    allowed_origins_raw: str = Field(default="{{frontend_url}}", alias="ALLOWED_ORIGINS")
+
+    sentry_dsn: str | None = Field(default=None, alias="SENTRY_DSN")
+
+    environment: str = Field(default="development", alias="ENVIRONMENT")
+
+    @property
+    def allowed_origins(self) -> List[str]:
+        return [o.strip() for o in self.allowed_origins_raw.split(",") if o.strip()]
+
+    @field_validator("database_url")
+    @classmethod
+    def _must_be_postgres(cls, v: str) -> str:
+        if not (v.startswith("postgresql://") or v.startswith("postgresql+asyncpg://")):
+            raise ValueError("DATABASE_URL must be a postgres DSN")
+        return v
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    return Settings()  # type: ignore[call-arg]

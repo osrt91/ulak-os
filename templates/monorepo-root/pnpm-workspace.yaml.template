@@ -1,0 +1,12 @@
+# {{product_name_pascal}} — pnpm workspace config
+#
+# `apps/*` — deployable services (web, api, mobile, bot)
+# `packages/*` — shared libraries (shared types, ui components, config presets)
+#
+# Every workspace package can reference siblings via `workspace:*` in its
+# `package.json` dependencies. Installs are hoisted to root `node_modules`
+# unless a package pins its own via `.npmrc shamefully-hoist=false`.
+
+packages:
+  - "apps/*"
+  - "packages/*"

@@ -1,0 +1,104 @@
+import { useCallback } from 'react';
+import {
+  View, Text, ScrollView, Pressable, RefreshControl,
+  ActivityIndicator, useColorScheme,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { Plus, Search, Bell, Settings as SettingsIcon, Clock } from 'lucide-react-native';
+import { useCurrentUser, useRecentActivity } from '../../lib/api';
+
+/**
+ * Home tab for {{product_name_pascal}}.
+ */
+export default function HomeScreen() {
+  const scheme = useColorScheme();
+  const isDark = scheme === 'dark';
+  const router = useRouter();
+  const { data: user } = useCurrentUser();
+  const { data: activity, isLoading, refetch, isRefetching } = useRecentActivity();
+
+  const bg = isDark ? '#0f172a' : '#f8fafc';
+  const card = isDark ? '#1e293b' : '#ffffff';
+  const text = isDark ? '#f8fafc' : '#0f172a';
+  const muted = isDark ? '#94a3b8' : '#64748b';
+  const border = isDark ? '#334155' : '#e2e8f0';
+
+  const onRefresh = useCallback(() => { refetch(); }, [refetch]);
+
+  const quickActions: { key: string; label: string; icon: React.ReactNode; href: string }[] = [
+    { key: 'new', label: 'New', icon: <Plus size={20} color="#fff" />, href: '/(tabs)/explore' },
+    { key: 'search', label: 'Search', icon: <Search size={20} color="#fff" />, href: '/(tabs)/explore' },
+    { key: 'alerts', label: 'Alerts', icon: <Bell size={20} color="#fff" />, href: '/(tabs)/notifications' },
+    { key: 'settings', label: 'Settings', icon: <SettingsIcon size={20} color="#fff" />, href: '/(tabs)/profile' },
+  ];
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['left', 'right']}>
+      <ScrollView
+        contentContainerStyle={{ padding: 16, gap: 16 }}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={muted} />}
+      >
+        <LinearGradient
+          colors={isDark ? ['#1e3a8a', '#1e293b'] : ['#2563eb', '#60a5fa']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={{ borderRadius: 16, padding: 20 }}
+        >
+          <Text accessibilityRole="header" style={{ color: '#e0f2fe', fontFamily: 'Inter_400Regular' }}>Welcome back,</Text>
+          <Text style={{ color: '#ffffff', fontFamily: 'Inter_700Bold', fontSize: 22, marginTop: 2 }}>
+            {user?.name ?? 'there'}
+          </Text>
+          <Text style={{ color: '#dbeafe', fontFamily: 'Inter_400Regular', marginTop: 8 }}>
+            Here is your {{product_name_pascal}} at a glance.
+          </Text>
+        </LinearGradient>
+
+        <View>
+          <Text style={{ color: text, fontFamily: 'Inter_600SemiBold', fontSize: 16, marginBottom: 8 }}>Quick actions</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {quickActions.map((a) => (
+              <Pressable
+                key={a.key}
+                onPress={() => router.push(a.href as never)}
+                accessibilityRole="button" accessibilityLabel={a.label}
+                style={{ flexGrow: 1, flexBasis: '45%', backgroundColor: isDark ? '#2563eb' : '#2563eb', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+              >
+                {a.icon}
+                <Text style={{ color: '#ffffff', fontFamily: 'Inter_500Medium' }}>{a.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <View>
+          <Text style={{ color: text, fontFamily: 'Inter_600SemiBold', fontSize: 16, marginBottom: 8 }}>Recent activity</Text>
+          <View style={{ backgroundColor: card, borderRadius: 14, borderColor: border, borderWidth: 1, overflow: 'hidden' }}>
+            {isLoading && (
+              <View style={{ padding: 20, alignItems: 'center' }}><ActivityIndicator color={muted} /></View>
+            )}
+            {!isLoading && (!activity || activity.length === 0) && (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ color: muted, fontFamily: 'Inter_400Regular' }}>No recent activity yet.</Text>
+              </View>
+            )}
+            {!isLoading && activity?.map((item, idx) => (
+              <View
+                key={item.id}
+                style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderTopColor: border, borderTopWidth: idx === 0 ? 0 : 1 }}
+              >
+                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#334155' : '#f1f5f9', alignItems: 'center', justifyContent: 'center' }}>
+                  <Clock color={muted} size={18} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: text, fontFamily: 'Inter_500Medium' }}>{item.title}</Text>
+                  <Text style={{ color: muted, fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 }}>{item.timestamp}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

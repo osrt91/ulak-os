@@ -1,0 +1,56 @@
+"""/help handler — FAQ-style inline menu."""
+from __future__ import annotations
+
+import logging
+
+from aiogram import F, Router
+from aiogram.filters import Command
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+
+from services.i18n import t
+
+router = Router(name="help")
+logger = logging.getLogger(__name__)
+
+FAQ_TOPICS = ("getting_started", "account_linking", "notifications", "privacy", "contact")
+
+
+def _help_keyboard() -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton(text=t(f"bot.help.topic.{topic}", default_locale="{{default_locale}}"), callback_data=f"help:{topic}")]
+        for topic in FAQ_TOPICS
+    ]
+    rows.append([InlineKeyboardButton(text=t("bot.common.back", default_locale="{{default_locale}}"), callback_data="help:close")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+async def send_help_menu(message: Message) -> None:
+    await message.answer(
+        t("bot.help.intro", default_locale="{{default_locale}}"),
+        reply_markup=_help_keyboard(),
+    )
+
+
+@router.message(Command("help"))
+async def cmd_help(message: Message) -> None:
+    try:
+        await send_help_menu(message)
+    except Exception:
+        logger.exception("cmd_help failed")
+        await message.answer(t("bot.errors.generic", default_locale="{{default_locale}}"))
+
+
+@router.callback_query(F.data.startswith("help:"))
+async def cb_help_topic(callback: CallbackQuery) -> None:
+    topic = callback.data.split(":", 1)[1]
+    try:
+        if topic == "close":
+            await callback.message.delete()
+            await callback.answer()
+            return
+        body = t(f"bot.help.body.{topic}", default_locale="{{default_locale}}")
+        await callback.message.answer(body, reply_markup=_help_keyboard())
+        await callback.answer()
+    except Exception:
+        logger.exception("cb_help_topic failed topic=%s", topic)
+        await callback.answer(t("bot.errors.generic", default_locale="{{default_locale}}"), show_alert=True)
