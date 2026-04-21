@@ -1,5 +1,90 @@
 # Changelog
 
+## [1.1.0] — 2026-04-21 — Phase B: scaffolder completion (Next.js+Supabase SaaS ship-ready)
+
+### Context
+
+The scaffolder is now a **product skeleton**, not just a governance skeleton. A `/ulak-scaffold` run at v1.1 produces a Next.js 16 + Supabase SaaS project with working auth (customer + admin + partner tiers), real payment integration (Stripe + Iyzico), premium UI (shadcn/ui + Tailwind v4 + dark mode + RTL), 100-key bilingual i18n, Docker Compose stack, CI/CD workflows, and admin/audit-log surfaces — all from commit 1. Closes the `UX-HI-03` 14-file gap from v1.0.0 red-team in full.
+
+### What landed (76 new template files)
+
+**Pages (21 files)** — auth / customer / admin / partner / marketing surfaces:
+
+- Auth: `(auth)/{layout,login,register,forgot-password}` — Supabase SSR, magic-link, social auth gated on `{{has_social_auth}}`, tenant creation in signup transaction, AP-08 user-enumeration prevention on forgot-password
+- Customer: `(customer)/{layout,dashboard,settings}` — authenticated shell with role-aware sidebar, welcome + recent-activity dashboard, 5-tab settings (profile/account/billing/team/preferences)
+- Admin: `(admin)/{layout,page,users,audit-log}` — AP-06 fresh-DB-role-lookup gate, TanStack user CRUD, audit-log with filter/search/CSV export
+- Partner: `(partner)/{layout,page,sub-users}` — reseller surface (gated `{{has_reseller_tier}}`), partner-branded nav, privacy-masked sub-user emails
+- Marketing: `(marketing)/{about,pricing,blog,blog/[slug],changelog}` — about page, monthly/annual pricing toggle, MDX blog, runtime CHANGELOG reader
+- Landing rewrite: `(public)/page.tsx` from minimal → 369-line premium landing (hero + pricing + feature grid + embla testimonials + FAQ + CTA)
+
+**API routes (6 files)**: `public/health`, `customer/me`, `admin/users`, `partner/sub-users`, `webhooks/stripe`, `webhooks/iyzico` — all using `getAuthContext()` SSOT, tenant-scoped `.eq('tenant_id', ...)` belt-and-suspenders, webhook idempotency + dead-letter + FSM transition guard.
+
+**UI components (24 files)**:
+
+- 15 shadcn/ui primitives under `components/ui/` — button, input, form (RHF+Zod), card, dialog, sheet, dropdown-menu, tabs, accordion, avatar, badge, tooltip, separator, skeleton, toast (Sonner), table, data-table (TanStack v8 with sort/filter/pagination)
+- Dashboard shells: `dashboard/{sidebar,top-bar,empty-state}` — role-aware nav, cmd-k search placeholder, notifications/avatar/theme/locale dropdowns, reusable empty-state with illustration slot
+- Shared chrome: `shared/{header,footer}` — public-surface navigation + 4-column footer + social + language switcher
+- Auth form: `auth/login-form` — RHF + Zod wrapper with inline error + social button row
+- Theme provider: next-themes system/light/dark with `disableTransitionOnChange` + FOUC prevention
+- Design tokens: `lib/design-tokens.ts` — 159L typed exports (spacing, typography, color oklch, radius, shadow, motion, z-index)
+
+**Payment integration (6 files)**:
+
+- `lib/payments/index.ts` — provider-agnostic interface + 6-state FSM (trialing/pending/active/past_due/canceled/incomplete_expired) + `isLegalTransition()` guard
+- `lib/payments/stripe.ts` — full Stripe adapter with `stripe.webhooks.constructEvent()` signature verify, `processed_webhook_events` idempotency, FSM-guarded subscription writes, dead-letter on unknown events
+- `lib/payments/iyzico.ts` — Iyzico adapter with HMAC-SHA256 webhook verify, Turkey-specific checkout form init, dual-currency (TRY kurus + USD cents)
+- `supabase/migrations/00004_payments.sql` — subscriptions + payment_events (append-only) + processed_webhook_events (idempotency gate) with tenant-scoped RLS, partial-unique active-subscription index, FSM check constraint
+- `tests/unit/payments/{stripe,iyzico}.test.ts` — Vitest suites covering sandbox detection, signature rejection, idempotency skip, illegal-transition rejection, dead-letter
+
+**i18n expansion (3 files)**:
+
+- `docs/i18n/{tr,en}.json` — 100+ keys each across brand / nav / auth / customer dashboard / admin / partner / payment / errors / actions / time-ago (was 4 keys at v1.0.0)
+- `lib/i18n/index.ts` — server-side `t(key, vars)` helper with cookie → Accept-Language → primary-fallback resolution + `{{var}}` interpolation
+
+**Infrastructure (7 files)**:
+
+- `infrastructure/docker-compose.yml` — dev stack (web + postgres + redis + mailhog) with named volumes + healthchecks
+- `infrastructure/docker-compose.prod.yml` — production overrides with Traefik labels + Let's Encrypt + rate-limit middleware + resource limits
+- `infrastructure/nginx/{default.conf,security-headers.conf}` — vhost + reusable HSTS/CSP/X-Frame-Options/Permissions-Policy snippet
+- `infrastructure/.env.example.prod` — every secret with scope + rotation cadence comment
+- `.github/workflows/{deploy,secret-scan}.yml` — webhook-triggered deploy + daily gitleaks
+- `.github/dependabot.yml` — weekly grouped PRs, major Next/React pinned
+
+**Supporting updates**:
+
+- `package.json.template` — 17 new deps (Radix 8 packages, @tanstack/react-table, embla-carousel-react, next-themes, sonner, lucide-react, cva, clsx, tailwind-merge, @hookform/resolvers, react-hook-form, stripe)
+- `tailwind.config.ts.template` — `darkMode: 'class'`, `admin-*` oklch palette (distinct hue from brand), semantic color tokens (success/warning/info/destructive with fg/bg/border triples)
+- `lib/auth/index.ts.template` — new `getAuthContext()` wrapper used by every v1.1 server component + API route; optional `force_refresh` for AP-06 admin role re-read
+- `lib/utils.ts.template` (new) — `cn()` className merger, `absoluteUrl()`, Turkish-aware `slugify()`, `formatCurrency()`
+- `supabase/config.toml.template` + `supabase/migrations/00003_seed_tenants.sql.template` — local dev config + idempotent dev-env-gated seed
+
+### Skill contract update (saas-scaffolder)
+
+Appended a **determinism contract** + **post-scaffold verification matrix** + **template inventory reference** to `SKILL.md`:
+
+- Template-first, synthesis-second: skill substitutes existing `.template` files verbatim; synthesis allowed only when no template exists AND sector pack marks path `synthesizable: true`; every synthesized file logged with `source: synthesized`
+- Idempotency: rerun detects existing output, diffs against fresh template, writes `scaffold-rerun-report.md`, never overwrites operator-modified files without `--force`
+- Post-scaffold contract: `pnpm install && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm dev && pnpm preflight` — every gate must pass
+
+### Package metadata
+
+- `package.json` / `prompts/pack.json` / `.claude-plugin/plugin.json` — all three 1.0.1 → 1.1.0.
+
+### Deferred to v1.2+
+
+- **B.5** (more test coverage): E2E auth flow, RLS isolation test, admin role-elevation regression test — scaffolder template-tests baseline landed; expansion to full suites deferred
+- **B.6** (SEO + meta): sitemap.ts, robots.ts, manifest.ts, OG image generation — follow-up polish
+- **SEC-B-08** (middleware /api/public matcher integration test): scaffolder-template polish, minor surface
+- **SEC-B-10** (deploy rollback cleanup + COMMIT validation): scaffolder-template polish
+
+### Anti-patterns prevented by construction (v1.1 additions)
+
+- **AP-06** (user_metadata as authz source) — `getAuthContext({ force_refresh: true })` required for admin surfaces; role always re-read from DB, never from JWT claims
+- **AP-08** (user enumeration) — forgot-password flow never reveals whether email exists
+- **AP-11** (multi-layer auth bypass) — every server component + API route calls `getAuthContext()` directly; middleware is NOT trusted as the only gate
+- **AP-13** (server-only installed but never imported) — `lib/auth/index.ts` + `lib/payments/stripe.ts` + `lib/payments/iyzico.ts` all begin with `import 'server-only'` load-bearing line
+- **AP-19** (root .env.local in monorepo) — per-app env files ready for v2.0 monorepo phase
+
 ## [1.0.1] — 2026-04-21 — Phase A polish: security deferred items + agent stubs + governance closure
 
 ### Context
