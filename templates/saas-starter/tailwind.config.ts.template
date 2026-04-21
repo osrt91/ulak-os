@@ -10,6 +10,7 @@ const config: Config = {
     './components/**/*.{ts,tsx}',
     './lib/**/*.{ts,tsx}',
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -39,6 +40,42 @@ const config: Config = {
           muted:   'oklch(40% 0.015 260)',
           subtle:  'oklch(56% 0.010 260)',
           inverse: 'oklch(98% 0.005 260)',
+        },
+        // Admin-surface accent — distinct hue from brand so admin UI is
+        // visually separable from customer UI at a glance (AP §surface-confusion)
+        admin: {
+          50:  'oklch(97% 0.01 320)',
+          100: 'oklch(94% 0.02 320)',
+          200: 'oklch(88% 0.05 320)',
+          300: 'oklch(80% 0.09 320)',
+          400: 'oklch(70% 0.14 320)',
+          500: 'oklch(60% 0.18 320)',
+          600: 'oklch(52% 0.20 320)',
+          700: 'oklch(44% 0.19 320)',
+          800: 'oklch(36% 0.16 320)',
+          900: 'oklch(28% 0.12 320)',
+          950: 'oklch(18% 0.08 320)',
+        },
+        // Semantic colors consumed by Badge, Alert, Toast, form validation
+        success: {
+          fg:     'oklch(35% 0.15 150)',
+          bg:     'oklch(96% 0.04 150)',
+          border: 'oklch(70% 0.12 150)',
+        },
+        warning: {
+          fg:     'oklch(35% 0.14 75)',
+          bg:     'oklch(96% 0.06 75)',
+          border: 'oklch(70% 0.14 75)',
+        },
+        info: {
+          fg:     'oklch(35% 0.13 240)',
+          bg:     'oklch(96% 0.04 240)',
+          border: 'oklch(70% 0.11 240)',
+        },
+        destructive: {
+          fg:     'oklch(38% 0.18 30)',
+          bg:     'oklch(95% 0.04 30)',
+          border: 'oklch(65% 0.18 30)',
         },
       },
       spacing: {

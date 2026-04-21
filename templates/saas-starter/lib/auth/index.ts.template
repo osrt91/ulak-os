@@ -124,3 +124,136 @@ export async function requireSession(input: {
 
   return { allowed: true, redirectTo: '' }
 }
+
+// -----------------------------------------------------------------------------
+// Convenience wrapper used by server components + API routes (v1.1+)
+//
+// Most pages want a one-shot "resolve session + check role + return context OR
+// redirect". `getAuthContext` does exactly that; it wraps createServerClient()
+// from @supabase/ssr, reads the user, runs requireSession, and returns a
+// discriminated result. When `allowed: false`, callers do:
+//
+//   if (!ctx.allowed) redirect(ctx.redirectTo)
+//
+// `force_refresh: true` bypasses any edge cache on the role lookup — REQUIRED
+// for admin surface per AP-06 (role elevation must re-read DB on every
+// authz decision, not trust a stale JWT claim).
+// -----------------------------------------------------------------------------
+export interface GetAuthContextInput {
+  require_role?: Role | Role[]
+  require_surface?: Surface
+  require_plan_capability?: string
+  force_refresh?: boolean
+  /**
+   * Override the path for surface detection. Defaults to the request path
+   * when called from a server component / route handler.
+   */
+  path?: string
+}
+
+export type GetAuthContextResult =
+  | {
+      allowed: true
+      user: User
+      role: Role | null
+      tenantId: string | null
+      planCapabilities: string[]
+      /**
+       * When require_role='partner', partner sub-users + commission tables are
+       * scoped by this field. Equals tenantId for now; separated to allow future
+       * reseller multi-tenant shapes.
+       */
+      partnerTenantId: string | null
+    }
+  | {
+      allowed: false
+      redirectTo: string
+      reason: string
+    }
+
+/**
+ * Single-call auth resolution for server components + route handlers.
+ *
+ * Callers MUST redirect when `allowed === false`:
+ *   const ctx = await getAuthContext({ require_role: 'customer' })
+ *   if (!ctx.allowed) redirect(ctx.redirectTo)
+ *   // ctx.user, ctx.tenantId etc. typed as non-null here
+ *
+ * Under the hood: resolves supabase server client from request cookies via
+ * `lib/supabase/server.ts`, reads `auth.getUser()` (network round-trip per
+ * call — intentional; do NOT cache), then routes through requireSession().
+ */
+export async function getAuthContext(input: GetAuthContextInput = {}): Promise<GetAuthContextResult> {
+  const { createServerClient } = await import('@/lib/supabase/server')
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const path = input.path ?? (typeof window === 'undefined' ? '' : window.location.pathname)
+
+  // Resolve required surface: explicit override > role-implied > path-implied
+  const surface = input.require_surface
+    ?? (input.require_role ? roleToSurface(toRoleArray(input.require_role)[0]) : pathToSurface(path))
+
+  const gate = await requireSession({ supabase, user, path: surfaceToGatePath(surface) })
+  if (!gate.allowed) {
+    return { allowed: false, redirectTo: gate.redirectTo, reason: gate.reason ?? 'gate-denied' }
+  }
+
+  // User is guaranteed non-null at this point since requireSession would have denied.
+  const ctx = await getSessionContext(supabase, user)
+
+  // Explicit role guard: require_role overrides the surface-default role set
+  if (input.require_role) {
+    const requiredRoles = toRoleArray(input.require_role)
+    if (!ctx.role || !requiredRoles.includes(ctx.role)) {
+      return { allowed: false, redirectTo: '/', reason: 'wrong-role' }
+    }
+  }
+
+  // Plan capability guard
+  if (input.require_plan_capability && !ctx.planCapabilities.includes(input.require_plan_capability)) {
+    return {
+      allowed: false,
+      redirectTo: '/pricing?upgrade=' + input.require_plan_capability,
+      reason: 'plan-capability-denied',
+    }
+  }
+
+  // force_refresh: AP-06 — re-read role from DB, ignore any cached JWT claim
+  if (input.force_refresh && user) {
+    const fresh = await loadRoleFromDb(supabase, user.id)
+    if (input.require_role && (!fresh.role || !toRoleArray(input.require_role).includes(fresh.role))) {
+      return { allowed: false, redirectTo: '/', reason: 'role-lost-on-refresh' }
+    }
+    ctx.role = fresh.role
+    ctx.tenantId = fresh.tenantId
+    ctx.planCapabilities = fresh.planCapabilities
+  }
+
+  return {
+    allowed: true,
+    user: user!,
+    role: ctx.role,
+    tenantId: ctx.tenantId,
+    planCapabilities: ctx.planCapabilities,
+    partnerTenantId: ctx.role === 'partner' ? ctx.tenantId : null,
+  }
+}
+
+function toRoleArray(x: Role | Role[]): Role[] {
+  return Array.isArray(x) ? x : [x]
+}
+
+function roleToSurface(role: Role): Surface {
+  if (role === 'admin' || role === 'support') return 'admin'
+  if (role === 'partner') return 'partner'
+  return 'customer'
+}
+
+function surfaceToGatePath(surface: Surface): string {
+  switch (surface) {
+    case 'admin': return '/admin'
+    case 'partner': return '/partner'
+    case 'customer': return '/app'
+    default: return '/'
+  }
+}

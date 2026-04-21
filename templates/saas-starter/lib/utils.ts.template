@@ -1,0 +1,54 @@
+// {{product_name_pascal}} — shared utilities
+//
+// The canonical place for cross-cutting helpers that don't fit a more
+// specific module (auth, payments, i18n each have their own dir).
+
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/**
+ * `cn()` — the Tailwind className merger used across every shadcn/ui primitive.
+ * Combines clsx (conditional assembly) with tailwind-merge (conflict resolution
+ * on class pairs like `p-2 p-4`). Every component in `components/ui/*` imports
+ * this.
+ */
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
+}
+
+/**
+ * `absoluteUrl()` — build a full URL from a path. Reads `NEXT_PUBLIC_SITE_URL`
+ * first (fall back to localhost dev). Used by metadata, webhooks, OG images.
+ */
+export function absoluteUrl(path: string = "/"): string {
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  return new URL(path, base).toString();
+}
+
+/**
+ * `slugify()` — generate a URL-safe slug from a human string. Turkish-aware
+ * (preserves letters via locale-aware normalization, then strips diacritics
+ * per the ASCII-only slug convention).
+ */
+export function slugify(input: string): string {
+  return input
+    .toLocaleLowerCase("tr")
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+}
+
+/**
+ * `formatCurrency()` — locale-aware currency formatting. Reads the locale
+ * from the first argument (default: Turkish).
+ */
+export function formatCurrency(amount: number, currency: string = "TRY", locale: string = "tr-TR"): string {
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+}
+
+/**
+ * `sleep()` — dev/test helper; do NOT use in production request handlers.
+ */
+export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));

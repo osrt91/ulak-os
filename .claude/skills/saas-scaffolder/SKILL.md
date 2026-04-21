@@ -249,6 +249,55 @@ By design, commit 1 of the generated project cannot contain:
 - `docs/runtime/output-profiles.md` — GREENFIELD_BUILDER_PROFILE + PACK_GENERATION_PROFILE are compatible with this skill
 - `.claude/agents/autonomous-program-director.md` — the dispatching agent
 
+## Determinism contract (v1.1+)
+
+Every scaffolder run is a pure function of its input + the `templates/saas-starter/` tree at the current commit. Two properties:
+
+1. **Template-first, synthesis-second.** When a concrete `.template` file exists for a target path, the skill substitutes placeholders and writes the file verbatim. Synthesis (generating a file from sector-pack rules + rule-pack guidance) is only allowed when NO template exists for that path AND the sector pack explicitly marks the path as `synthesizable: true`. Every synthesized file records `source: synthesized` + the rules consulted in `scaffold-log.yaml`.
+
+2. **Idempotency.** Re-running the scaffolder with the same input against an existing output directory:
+   - Detects every file already present
+   - Diffs against what the current template+input would produce
+   - Writes a `scaffold-rerun-report.md` with: unchanged / template-updated-operator-untouched / operator-modified-ignored / missing (to be created)
+   - Never overwrites operator-modified files without explicit `--force` flag
+   - `--force` only restores to the template shape; operator losses are logged but not prevented
+
+## Verification — what a scaffolded project must pass (v1.1+)
+
+After scaffolder completes, the output directory must satisfy:
+
+```
+pnpm install        # zero errors, zero peer-dep warnings
+pnpm lint           # zero errors
+pnpm typecheck      # zero errors (tsc --noEmit)
+pnpm test           # all tests pass (Vitest baseline)
+pnpm build          # production build succeeds
+pnpm dev            # localhost:3000 responds (landing + login + dashboard)
+pnpm preflight      # full CI mirror passes
+```
+
+These are the post-scaffold contract. Template gaps that break any of them are v1.1+ blockers.
+
+## Template inventory reference (v1.1+)
+
+The canonical file list lives at `templates/saas-starter/`. As of v1.1:
+
+- Auth surfaces: `app/(auth)/{layout,login,register,forgot-password}/`
+- Customer surface: `app/(customer)/{layout,dashboard,settings}/`
+- Admin surface: `app/(admin)/{layout,page,users,audit-log}/`
+- Partner surface (gated): `app/(partner)/{layout,page,sub-users}/`
+- Marketing: `app/(marketing)/{about,pricing,blog,blog/[slug],changelog}/`
+- API routes: `app/api/{public/health,customer/me,admin/users,partner/sub-users,webhooks/stripe,webhooks/iyzico}/`
+- UI kit: 15 shadcn primitives under `components/ui/` + dashboard shells + theme provider
+- Auth helper: `lib/auth/index.ts.template` (single source of truth)
+- Payments: `lib/payments/{index,stripe,iyzico}.ts.template` (provider-agnostic)
+- i18n: `docs/i18n/{tr,en}.json.template` + `lib/i18n/index.ts.template`
+- Utils: `lib/utils.ts.template` (`cn()` + `absoluteUrl()` + `slugify()` + `formatCurrency()`)
+- DB: 4 migrations (initial schema + RLS + seed + payments)
+- Infra: `infrastructure/{docker-compose*,nginx/*}` + `.github/workflows/{deploy,ci-validation,secret-scan}` + `dependabot`
+
+Total templates at v1.1: ~95 files. Scaffolder emits ≥ 85 of them for any single run depending on input gates.
+
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.2.2**. This skill is the primary "Ulak OS produces a SaaS" capability and defines the v1.0 showcase promise.
+Authoritative as of Ulak OS **v1.1.0**. This skill is the primary "Ulak OS produces a SaaS" capability and defines the public-GA showcase promise. Determinism contract + verification table landed in v1.1 closing the v1.0.0 UX-HI-03 finding (scaffolder promised 41 files; delivered 27; now delivers ≥ 85 with documented synthesis contract for the remainder).
