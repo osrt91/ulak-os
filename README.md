@@ -94,21 +94,17 @@ Sonra: Claude Code / Gemini CLI / Codex / Copilot aç, `/ulak-hello` yaz. Gerisi
 ## 🧭 Mimari
 
 ```mermaid
-flowchart LR
-    U([Kullanıcı<br>slash / NL]) --> V{Vendor<br>Adapter}
-    V --> CC[Claude Code]
-    V --> GM[Gemini CLI]
-    V --> CX[Codex CLI]
-    V --> CP[Copilot Chat]
-
+flowchart TD
+    U([Kullanıcı · slash / NL]) --> V{Vendor Adapter}
+    V --> CC[Claude Code] & GM[Gemini CLI] & CX[Codex CLI] & CP[Copilot Chat]
     CC & GM & CX & CP --> R[Router]
-    R --> P0[Phase 0<br>Environment]
-    P0 --> P1[Phase 1<br>Deep Inventory]
-    P1 --> P2[Phase 2<br>Parallel Evidence]
-    P2 --> P3[Phase 3<br>Did-You-Know]
-    P3 --> P4[Phase 4<br>Synthesis]
-    P4 --> P5[Phase 5<br>Verdict]
-    P5 --> A[(13 Artefact<br>reports/current/)]
+    R --> P0[Phase 0 · Environment]
+    P0 --> P1[Phase 1 · Deep Inventory]
+    P1 --> P2[Phase 2 · Parallel Evidence]
+    P2 --> P3[Phase 3 · Did-You-Know]
+    P3 --> P4[Phase 4 · Synthesis]
+    P4 --> P5[Phase 5 · Verdict]
+    P5 --> A[(13 Artefact · reports/current/)]
 
     classDef primary fill:#ea580c,stroke:#7c2d12,color:#fff,stroke-width:2px
     classDef accent fill:#10b981,stroke:#047857,color:#fff,stroke-width:2px
@@ -116,7 +112,7 @@ flowchart LR
     class A accent
 ```
 
-**Imports zinciri**: `CLAUDE.md` → `@prompts/core/ulak-os-core-contract-2.0.0.md` → 33 runtime rule + 22 governance + 3 vendor adapter. Tek dosyadan tüm katmanlar yüklenir.
+**Imports zinciri**: `CLAUDE.md` → `@prompts/core/ulak-os-core-contract-2.0.0.md` → **24 runtime rule + 17 governance + 4 vendor adapter**. Tek dosyadan tüm katmanlar yüklenir.
 
 ---
 
