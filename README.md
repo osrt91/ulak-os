@@ -312,11 +312,36 @@ Tam notlar: [CHANGELOG.md](./CHANGELOG.md) · [docs/release/](./docs/release/)
 
 ---
 
-## 🤝 Katkı + güvenlik
+## 🤝 Katkıda bulun
 
-Yeni sector pack, rule pack, anti-pattern veya agent önermek için: [CONTRIBUTING.md](./CONTRIBUTING.md) · Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
+**Mail atmana gerek yok — fork'la, çalıştır, PR aç.** Ulak OS topluluk katkısıyla büyüyor.
 
-**🔒 Güvenlik sorunu**: GitHub issue AÇMAYIN — doğrudan `info@oguzhansert.dev` adresine mail atın ([SECURITY.md](./SECURITY.md)).
+### ⚡ 3 dakikada ilk katkı
+
+```bash
+gh repo fork osrt91/ulak-os --clone       # 1) fork + clone
+cd ulak-os && bash scripts/validate-imports.sh   # 2) pack sağlığı
+#    (bir sector pack ekle / typo düzelt / anti-pattern yakala)
+gh pr create                              # 3) PR aç, template seni yönlendirir
+```
+
+### 🎯 Nereden başlayabilirim?
+
+| İstiyorum | Git |
+|---|---|
+| Küçük bir iş arıyorum | [`good first issue`](https://github.com/osrt91/ulak-os/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) etiketli açık issue'lar |
+| Yeni sector pack / anti-pattern / rule pack | [pattern_contribution template](https://github.com/osrt91/ulak-os/issues/new?template=pattern_contribution.md) |
+| Bir bug raporlamak | [bug_report template](https://github.com/osrt91/ulak-os/issues/new?template=bug_report.md) |
+| Yeni komut / skill / agent fikri | [feature_request template](https://github.com/osrt91/ulak-os/issues/new?template=feature_request.md) |
+| Sormak istiyorum, ama issue açmak istemiyorum | [Discussions](https://github.com/osrt91/ulak-os/discussions) → Q&A |
+| Derin rehber | [CONTRIBUTING.md](./CONTRIBUTING.md) — pack governance, evidence kuralları, PR kontrol listesi |
+
+### 📞 İletişim
+
+- **Genel soru / öneri / fikir** → [GitHub Discussions](https://github.com/osrt91/ulak-os/discussions) (mail'den hızlı cevap)
+- **Bug raporu** → [Issues](https://github.com/osrt91/ulak-os/issues/new/choose)
+- **🔒 Güvenlik açığı** → issue AÇMAYIN, doğrudan mail: `info@oguzhansert.dev` ([SECURITY.md](./SECURITY.md))
+- [Code of Conduct](./CODE_OF_CONDUCT.md) — topluluk standardı
 
 ---
 
