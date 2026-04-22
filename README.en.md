@@ -232,23 +232,44 @@ Cross-platform validator chain. All-green = pack healthy.
 
 ## 🎛️ Does three things
 
-| | Command | Produces |
-|---|---|---|
-| 🔍 **Audit** | `/director komple` | Phase 0→5 protocol: 27 specialists parallel, 15-dim scorecard, ~100 anti-pattern scan, 13 artefacts |
-| ⚙️ **Govern** | `@prompts/core/ulak-os-core-contract-2.0.0.md` | Import core contract into CLAUDE.md → 23 governance + 15 sector + 9 rule packs active per session |
-| 🏗️ **Scaffold** | `/ulak-scaffold` or `/ulak-start` | Full-stack SaaS at commit 1 — 125 template files + 8 anti-patterns gated construction-time |
+<table>
+<thead>
+<tr>
+<th align="left" width="180">&nbsp;</th>
+<th align="left" width="260">Command</th>
+<th align="left" width="440">Produces</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🔍 <b>Audit</b></td>
+<td><code>/director komple</code></td>
+<td>Phase 0→5 protocol: 27 specialists parallel, 15-dim scorecard, ~100 anti-pattern scan, 13 artefacts</td>
+</tr>
+<tr>
+<td>⚙️ <b>Govern</b></td>
+<td><code>@prompts/core/ulak-os-core-contract-2.0.0.md</code></td>
+<td>Import core contract into CLAUDE.md → 23 governance + 15 sector + 9 rule packs active per session</td>
+</tr>
+<tr>
+<td>🏗️ <b>Scaffold</b></td>
+<td><code>/ulak-scaffold</code> or <code>/ulak-start</code></td>
+<td>Full-stack SaaS at commit 1 — 125 template files + 8 anti-patterns gated construction-time</td>
+</tr>
+</tbody>
+</table>
 
 ---
 
 ## 🌐 Vendor support
 
-<table width="100%">
+<table>
 <thead>
 <tr>
-<th align="left" width="25%">Vendor</th>
-<th align="center" width="30%">Command dispatch</th>
-<th align="center" width="25%">Status</th>
-<th align="center" width="20%">Adapter</th>
+<th align="left" width="220">Vendor</th>
+<th align="center" width="260">Command dispatch</th>
+<th align="center" width="200">Status</th>
+<th align="center" width="200">Adapter</th>
 </tr>
 </thead>
 <tbody>
@@ -286,12 +307,12 @@ Cross-platform validator chain. All-green = pack healthy.
 
 ## 🛠️ Supported stacks (`/ulak-scaffold`)
 
-<table width="100%">
+<table>
 <thead>
 <tr>
-<th align="left" width="18%">Layer</th>
-<th align="left" width="42%">Primary</th>
-<th align="left" width="40%">Experimental</th>
+<th align="left" width="160">Layer</th>
+<th align="left" width="360">Primary</th>
+<th align="left" width="360">Experimental</th>
 </tr>
 </thead>
 <tbody>
