@@ -29,7 +29,7 @@ _Projeni okur · eksikleri söyler · tam yığın SaaS üretir_
 
 <table>
 <tr>
-<td width="33%" align="center" valign="top">
+<td width="34%" align="center" valign="top">
 
 ### 👋<br>Yeni kullanıcı
 <br>
@@ -290,7 +290,7 @@ Tam notlar: [CHANGELOG.md](./CHANGELOG.md) · [docs/release/](./docs/release/)
 **🎬 Başlangıç**
 - [30 saniyelik tur](./docs/walkthrough/01-first-saas-end-to-end.md) — ilk SaaS senaryosu
 - [İlk saat](./docs/runbooks/first-hour-with-ulak-os.md) — 60 dk uçtan uca
-- [SSS](./docs/FAQ.md) — alternatiflerle karşılaştırma · platform · çevrimdışı · model
+- [SSS](./docs/FAQ.tr.md) — başlangıç operatörleri · terim demistifikasyonu · harici servisler
 - [Sorun giderme](./docs/runbooks/troubleshooting.md) — 16 yaygın hata
 
 </td>
