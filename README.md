@@ -2,7 +2,7 @@
 
 # Ulak OS
 
-### AI coding CLI'ları için vendor-agnostic prompt işletim sistemi
+### AI kodlama CLI'ları için sağlayıcıdan bağımsız prompt işletim sistemi
 
 _Projeni okur · eksikleri söyler · tam yığın SaaS üretir_
 
@@ -38,7 +38,7 @@ _Projeni okur · eksikleri söyler · tam yığın SaaS üretir_
 /ulak-hello
 ```
 
-30 saniye tour<br>4 seçenek, direkt yönlendirme
+30 saniyelik tur<br>4 seçenek, doğrudan yönlendirme
 
 </td>
 <td width="33%" align="center" valign="top">
@@ -50,7 +50,7 @@ _Projeni okur · eksikleri söyler · tam yığın SaaS üretir_
 /director komple
 ```
 
-Phase 0→5 audit<br>27 specialist paralel
+Phase 0→5 denetim<br>27 uzman paralel
 
 </td>
 <td width="33%" align="center" valign="top">
@@ -62,7 +62,7 @@ Phase 0→5 audit<br>27 specialist paralel
 /ulak-start
 ```
 
-27-soru wizard<br>Commit 1'de production-ready
+27 soruluk sihirbaz<br>İlk commit'te üretime hazır
 
 </td>
 </tr>
@@ -87,7 +87,7 @@ git clone https://github.com/osrt91/ulak-os.git && cd ulak-os
 
 Sonra: Claude Code / Gemini CLI / Codex / Copilot aç, `/ulak-hello` yaz. Gerisi menüden.
 
-> **Checksum + alternatif yollar** → [docs/runbooks/install-methods.md](./docs/runbooks/install-methods.md) · **Doğrulama** → `ulak doctor`
+> **Sağlama + alternatif yollar** → [docs/runbooks/install-methods.md](./docs/runbooks/install-methods.md) · **Doğrulama** → `ulak doctor`
 
 ---
 
@@ -95,7 +95,7 @@ Sonra: Claude Code / Gemini CLI / Codex / Copilot aç, `/ulak-hello` yaz. Gerisi
 
 ```mermaid
 flowchart TD
-    U([Kullanıcı · slash / NL]) --> V{Vendor Adapter}
+    U([Kullanıcı · slash / doğal dil]) --> V{Sağlayıcı Adaptörü}
     V --> CC[Claude Code] & GM[Gemini CLI] & CX[Codex CLI] & CP[Copilot Chat]
     CC & GM & CX & CP --> R[Router]
     R --> P0[Phase 0 · Environment]
@@ -104,7 +104,7 @@ flowchart TD
     P2 --> P3[Phase 3 · Did-You-Know]
     P3 --> P4[Phase 4 · Synthesis]
     P4 --> P5[Phase 5 · Verdict]
-    P5 --> A[(13 Artefact · reports/current/)]
+    P5 --> A[(13 Artefakt · reports/current/)]
 
     classDef primary fill:#ea580c,stroke:#7c2d12,color:#fff,stroke-width:2px
     classDef accent fill:#10b981,stroke:#047857,color:#fff,stroke-width:2px
@@ -112,7 +112,7 @@ flowchart TD
     class A accent
 ```
 
-**Imports zinciri**: `CLAUDE.md` → `@prompts/core/ulak-os-core-contract-2.0.0.md` → **24 runtime rule + 17 governance + 4 vendor adapter**. Tek dosyadan tüm katmanlar yüklenir.
+**İçe aktarım zinciri**: `CLAUDE.md` → `@prompts/core/ulak-os-core-contract-2.0.0.md` → **24 çalışma zamanı kuralı + 17 yönetişim + 4 sağlayıcı adaptörü**. Tek dosyadan tüm katmanlar yüklenir.
 
 ---
 
@@ -126,16 +126,16 @@ flowchart TD
 ```bash
 /ulak-start
 ```
-27 soru, auto-dispatch → sibling dizinde Next.js + Supabase + payment + i18n + CI + deploy. Commit 1'de RLS, auth, webhook, gitleaks baseline.
+27 soru, otomatik dağıtım → kardeş dizinde Next.js + Supabase + ödeme + i18n + CI + dağıtım. İlk commit'te RLS, kimlik doğrulama, webhook, gitleaks temeli hazır.
 
 </td>
 <td width="50%" valign="top">
 
-**2. Mevcut projeyi audit et** · `45-90 dk`
+**2. Mevcut projeyi denetle** · `45-90 dk`
 ```bash
 /director komple
 ```
-Phase 0→5: deep inventory (dosya+satır) · 4-13 specialist paralel · did-you-know · roadmap · validation-plan · pack-gap.
+Phase 0→5: derin envanter (dosya+satır) · 4-13 uzman paralel · did-you-know · yol haritası · doğrulama planı · paket eksiği.
 
 </td>
 </tr>
@@ -144,11 +144,11 @@ Phase 0→5: deep inventory (dosya+satır) · 4-13 specialist paralel · did-you
 
 **3. Doğal dille sor**
 ```bash
-/ulak-ask "turkish locale ekle"
+/ulak-ask "türkçe dil desteği ekle"
 /ulak-ask "rls asimetrisi var mı"
-/ulak-ask "pack-gap tara"
+/ulak-ask "paket eksiği tara"
 ```
-Plugin aramadan, flag ezberlemeden. Belirsizse "bunu mu dedin?" doğrular.
+Eklenti aramadan, bayrak ezberlemeden. Belirsizse "bunu mu dedin?" diye doğrular.
 
 </td>
 <td width="50%" valign="top">
@@ -159,20 +159,20 @@ Plugin aramadan, flag ezberlemeden. Belirsizse "bunu mu dedin?" doğrular.
 /pack-gap-audit
 /ulak-mcp-discover
 ```
-Tüm 24 komut + 10 skill + 27 agent tek ekranda. Eksik tespiti + MCP registry keşfi.
+Tüm 24 komut + 10 beceri + 27 ajan tek ekranda. Eksik tespiti + MCP kayıt defteri keşfi.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**5. Onboarding tour**
+**5. Tanışma turu**
 ```bash
-selam ulak       # TR natural greeting
-hi ulak          # EN
+selam ulak       # TR doğal selamlama
+hi ulak          # EN doğal selamlama
 /ulak-hello      # slash
 ```
-30 saniyede ilk ekran, 4 seçenek, direkt yönlendirme.
+30 saniyede ilk ekran, 4 seçenek, doğrudan yönlendirme.
 
 </td>
 <td width="50%" valign="top">
@@ -183,13 +183,13 @@ git pull origin main
 ulak doctor
 bash scripts/validate-*.sh
 ```
-Cross-platform validator zinciri. Hepsi yeşilse pack sağlıklı.
+Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 
 </td>
 </tr>
 </table>
 
-> **Tam yol**: [docs/walkthrough/01-first-saas-end-to-end.md](./docs/walkthrough/01-first-saas-end-to-end.md) — 75 dakikalık marketplace senaryosu (Supabase + GitHub + Vercel + Resend + Iyzico)
+> **Uçtan uca rehber**: [docs/walkthrough/01-first-saas-end-to-end.md](./docs/walkthrough/01-first-saas-end-to-end.md) — 75 dakikalık pazaryeri senaryosu (Supabase + GitHub + Vercel + Resend + Iyzico)
 
 ---
 
@@ -199,26 +199,26 @@ Cross-platform validator zinciri. Hepsi yeşilse pack sağlıklı.
 
 | **24** | **10** | **27** | **14** | **8** | **22** | **33** | **~100** |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Komut | Skill | Agent | Sector pack | Rule pack | Governance | Runtime rule | Anti-pattern |
+| Komut | Beceri | Ajan | Sektör paketi | Kural paketi | Yönetişim | Çalışma zamanı kuralı | Anti-desen |
 
 </div>
 
 <details>
-<summary><b>📂 Detaylı breakdown tablosu</b></summary>
+<summary><b>📂 Detaylı kırılım tablosu</b></summary>
 
 <br>
 
 | Yüzey | Sayı | Referans |
 |---|---|---|
 | **Komutlar** | 24 | [`.claude/commands/`](./.claude/commands/) — `/director`, `/ulak-start`, `/ulak-hello`, `/ulak-scaffold`, `/ulak-ask`, `/final-verdict`, `/intake`, `/frontend-war-room`, `/pack-gap-audit`, `/triage-build`, `/ulak-design-ref`, `/ulak-audit-deep`, `/ulak-pattern-extract`, `/ulak-mcp-discover`, `/ulak-brainstorm`, `/ulak-subagent-dispatch`, `/ulak-test-driven`, `/ulak-packs`, `/ulak-search`, `/ulak-locale`, `/ulak-intake`, `/ulak-demo`, `/ulak-explain`, `/ulak-next-steps` |
-| **Skills** | 10 | [`.claude/skills/`](./.claude/skills/) — `saas-scaffolder`, `fourteen-dimension-audit`, `god-module-decomposition`, `multi-agent-orchestration`, `final-validation`, `pack-gap-completion`, `project-intake`, `research-currency`, `awesome-packs-index`, `mcp-governance-auto` |
-| **Agents** | 27 | [`.claude/agents/`](./.claude/agents/) — 19 specialist + 1 autonomous-program-director + 7 persona (admin, customer, bayi, developer, support, compliance, security-redteam) |
-| **Sector packs** | 14 | [`templates/sectors/`](./templates/sectors/) — education, saas, fintech, ecommerce, marketplace, enterprise-b2b, media-content, health-sensitive, ai-copilot, pwa-desktop, ai-relay-cost-control, member-gated-community, admin-cms-hardening, self-hosted-supabase |
-| **Rule packs** | 8 | [`docs/runtime/rule-packs/`](./docs/runtime/rule-packs/) — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo |
-| **Governance** | 22 | [`docs/governance/`](./docs/governance/) — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization vd. |
-| **Runtime** | 33 | [`docs/runtime/`](./docs/runtime/) — router, program-phases (Phase 0-5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern vd. |
-| **Anti-pattern** | ~100 | 19 AP-NN (AP-01..AP-19) + klasik (IDOR, BOLA, N+1, RLS asymmetry, dead code vd.) |
-| **Scaffolder** | 285 | [`templates/saas-starter/`](./templates/saas-starter/) — Next.js 16 + TS strict + Tailwind v4 + Supabase SSR + RLS + CI + tests + VPS hardening + 59-brand design ref |
+| **Beceriler** | 10 | [`.claude/skills/`](./.claude/skills/) — `saas-scaffolder`, `fourteen-dimension-audit`, `god-module-decomposition`, `multi-agent-orchestration`, `final-validation`, `pack-gap-completion`, `project-intake`, `research-currency`, `awesome-packs-index`, `mcp-governance-auto` |
+| **Ajanlar** | 27 | [`.claude/agents/`](./.claude/agents/) — 19 uzman + 1 otonom program yönetici + 7 persona (admin, müşteri, bayi, geliştirici, destek, uyum, güvenlik-redteam) |
+| **Sektör paketleri** | 14 | [`templates/sectors/`](./templates/sectors/) — education, saas, fintech, ecommerce, marketplace, enterprise-b2b, media-content, health-sensitive, ai-copilot, pwa-desktop, ai-relay-cost-control, member-gated-community, admin-cms-hardening, self-hosted-supabase |
+| **Kural paketleri** | 8 | [`docs/runtime/rule-packs/`](./docs/runtime/rule-packs/) — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo |
+| **Yönetişim** | 22 | [`docs/governance/`](./docs/governance/) — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization vb. |
+| **Çalışma zamanı** | 33 | [`docs/runtime/`](./docs/runtime/) — router, program-phases (Phase 0-5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern vb. |
+| **Anti-desen** | ~100 | 19 AP-NN (AP-01..AP-19) + klasik (IDOR, BOLA, N+1, RLS asimetrisi, ölü kod vb.) |
+| **İskelet** | 285 | [`templates/saas-starter/`](./templates/saas-starter/) — Next.js 16 + TS strict + Tailwind v4 + Supabase SSR + RLS + CI + testler + VPS sıkılaştırma + 59 markalı tasarım referansı |
 
 </details>
 
@@ -228,53 +228,53 @@ Cross-platform validator zinciri. Hepsi yeşilse pack sağlıklı.
 
 | | Komut | Ne üretir |
 |---|---|---|
-| 🔍 **Audit** | `/director komple` | Phase 0→5 protokolü: 27 specialist paralel, 15-boyut scorecard, ~100 anti-pattern tarama, 13 artefakt |
-| ⚙️ **Govern** | `@prompts/core/ulak-os-core-contract-2.0.0.md` | Core contract CLAUDE.md'ye import → 22 governance + 14 sector + 8 rule pack her session aktif |
-| 🏗️ **Scaffold** | `/ulak-scaffold` veya `/ulak-start` | Full-stack SaaS commit 1'de — 285 template dosya + 8 anti-pattern construction-time gated |
+| 🔍 **Denetler** | `/director komple` | Phase 0→5 protokolü: 27 uzman paralel, 15 boyutlu değerlendirme, ~100 anti-desen taraması, 13 artefakt |
+| ⚙️ **Yönetir** | `@prompts/core/ulak-os-core-contract-2.0.0.md` | Çekirdek sözleşme CLAUDE.md'ye içe aktarılır → 22 yönetişim + 14 sektör + 8 kural paketi her oturumda aktif |
+| 🏗️ **İskelet kurar** | `/ulak-scaffold` veya `/ulak-start` | Tam yığın SaaS ilk commit'te — 285 şablon dosya + 8 anti-desen inşa anında kapıda tutulur |
 
 ---
 
-## 🌐 Vendor desteği
+## 🌐 Sağlayıcı desteği
 
 <div align="center">
 
-| Vendor | Komut dispatch | Status | Adapter |
+| Sağlayıcı | Komut dağıtımı | Durum | Adaptör |
 |:---|:---:|:---:|:---:|
-| **Claude Code** | 24 slash native | ✅ FULL | [↗](./docs/adapters/claude-code.md) |
-| **Gemini CLI** | 24 `.toml` native | ✅ FULL-MINUS | [↗](./docs/adapters/gemini-cli.md) |
-| **Codex CLI** | 24 NL trigger | ✅ CORE | [↗](./docs/adapters/codex-cli.md) |
-| **Copilot Chat** | 22 NL trigger | ⚠️ LIMITED | [↗](./docs/adapters/copilot-chat.md) |
+| **Claude Code** | 24 slash (yerel) | ✅ FULL | [↗](./docs/adapters/claude-code.md) |
+| **Gemini CLI** | 24 `.toml` (yerel) | ✅ FULL-MINUS | [↗](./docs/adapters/gemini-cli.md) |
+| **Codex CLI** | 24 doğal dil | ✅ CORE | [↗](./docs/adapters/codex-cli.md) |
+| **Copilot Chat** | 22 doğal dil | ⚠️ LIMITED | [↗](./docs/adapters/copilot-chat.md) |
 
 </div>
 
-> Parity disk-gerçek doğrulaması: `bash scripts/validate-vendor-parity.sh`  
-> Capability matrisi: [`docs/governance/vendor-capability-matrix.md`](./docs/governance/vendor-capability-matrix.md)
+> Disk-gerçek parity doğrulaması: `bash scripts/validate-vendor-parity.sh`  
+> Kapasite matrisi: [`docs/governance/vendor-capability-matrix.md`](./docs/governance/vendor-capability-matrix.md)
 
 ---
 
-## 🛠️ Desteklenen stack (`/ulak-scaffold`)
+## 🛠️ Desteklenen yığın (`/ulak-scaffold`)
 
-| Katman | Primary | Experimental |
+| Katman | Birincil | Deneysel |
 |---|---|---|
-| Frontend | Next.js 16 | Remix, SvelteKit |
-| Backend | Supabase SSR | FastAPI + Node hybrid |
-| Payment | Stripe · Iyzico · both · none | — |
-| Mobile | Expo 55+ (opsiyonel) | — |
-| Hosting | Self-managed VPS + Traefik | Vercel · Fly.io · Railway |
-| i18n | TR + EN baseline | localization-ssot pack ile ≥2 locale |
+| Önyüz | Next.js 16 | Remix, SvelteKit |
+| Arkayüz | Supabase SSR | FastAPI + Node hibrit |
+| Ödeme | Stripe · Iyzico · ikisi · yok | — |
+| Mobil | Expo 55+ (opsiyonel) | — |
+| Barındırma | Self-managed VPS + Traefik | Vercel · Fly.io · Railway |
+| i18n | TR + EN taban | localization-ssot paketi ile ≥2 dil |
 
 ---
 
-## 📜 Release history
+## 📜 Sürüm geçmişi
 
 <table>
-<tr><td><b>🚀 v1.6.0-final</b></td><td>2026-04-21</td><td>Cross-vendor parity — Gemini 7→24 native · Codex NL · Copilot NL · capability matrix · user manual refresh</td></tr>
-<tr><td><b>🚶 v1.5.0</b></td><td>2026-04-21</td><td>Walkthrough #1 (75dk marketplace) · "selam ulak" / "hi ulak" natural greeting</td></tr>
-<tr><td><b>🧑‍🏫 v1.4.0</b></td><td>2026-04-21</td><td>External service tutorials — Supabase · Vercel · GitHub · Resend step-by-step TR</td></tr>
-<tr><td><b>🎓 v1.3.0</b></td><td>2026-04-21</td><td>Beginner layer — visibility · post-scaffold onboarding · dual-mode wizard · term explainer · demo tour</td></tr>
-<tr><td><b>🧙 v1.2.0</b></td><td>2026-04-21</td><td>Wizard deepening — 6q → 27q × 5 phases · auto-dispatch · catalog sync · 15-command description_en</td></tr>
-<tr><td><b>👁️ v1.1.0</b></td><td>2026-04-21</td><td>Vision layer — ulak-ask · ulak-packs · ulak-search · ulak-start · ulak-hello · ulak-locale</td></tr>
-<tr><td><b>🎉 v1.0.0</b></td><td>2026-04-21</td><td>Public launch — manifest reset · release notes · CLI alias · doc polish</td></tr>
+<tr><td><b>🚀 v1.6.0-final</b></td><td>2026-04-21</td><td>Sağlayıcılar arası parity — Gemini 7→24 yerel · Codex doğal dil · Copilot doğal dil · kapasite matrisi · kullanıcı kılavuzu tazeleme</td></tr>
+<tr><td><b>🚶 v1.5.0</b></td><td>2026-04-21</td><td>Uçtan uca rehber #1 (75dk pazaryeri) · "selam ulak" / "hi ulak" doğal selamlama</td></tr>
+<tr><td><b>🧑‍🏫 v1.4.0</b></td><td>2026-04-21</td><td>Dış servis eğitimleri — Supabase · Vercel · GitHub · Resend adım adım TR</td></tr>
+<tr><td><b>🎓 v1.3.0</b></td><td>2026-04-21</td><td>Başlangıç katmanı — görünürlük · iskelet sonrası onboarding · çift modlu sihirbaz · terim açıklayıcı · demo turu</td></tr>
+<tr><td><b>🧙 v1.2.0</b></td><td>2026-04-21</td><td>Sihirbaz derinleştirme — 6 → 27 soru × 5 faz · otomatik dağıtım · katalog eşitleme · 15 komut EN açıklaması</td></tr>
+<tr><td><b>👁️ v1.1.0</b></td><td>2026-04-21</td><td>Görünürlük katmanı — ulak-ask · ulak-packs · ulak-search · ulak-start · ulak-hello · ulak-locale</td></tr>
+<tr><td><b>🎉 v1.0.0</b></td><td>2026-04-21</td><td>Halka açık yayın — manifest sıfırlama · sürüm notları · CLI takma adı · doküman cilası</td></tr>
 </table>
 
 Tam notlar: [CHANGELOG.md](./CHANGELOG.md) · [docs/release/](./docs/release/)
@@ -288,19 +288,19 @@ Tam notlar: [CHANGELOG.md](./CHANGELOG.md) · [docs/release/](./docs/release/)
 <td width="50%" valign="top">
 
 **🎬 Başlangıç**
-- [30sn tour](./docs/ulak-hello-walkthrough.md) — `/ulak-hello` ilk ekran
-- [İlk saat](./docs/runbooks/first-hour-with-ulak-os.md) — 60dk uçtan uca
-- [FAQ](./docs/FAQ.md) — vs alternatifler · platform · offline · model
+- [30 saniyelik tur](./docs/ulak-hello-walkthrough.md) — `/ulak-hello` ilk ekran
+- [İlk saat](./docs/runbooks/first-hour-with-ulak-os.md) — 60 dk uçtan uca
+- [SSS](./docs/FAQ.md) — alternatiflerle karşılaştırma · platform · çevrimdışı · model
 - [Sorun giderme](./docs/runbooks/troubleshooting.md) — 16 yaygın hata
 
 </td>
 <td width="50%" valign="top">
 
 **🧰 Referans**
-- [Catalog](./docs/catalog.md) — tüm kapasiteler tek yerde
-- [Architecture](./docs/architecture/) — 4 mermaid diagram + prose
-- [ADR](./docs/adr/) — 6 governance kararı
-- [Showcase](./docs/showcase/) — 4 walkthrough + video script
+- [Katalog](./docs/catalog.md) — tüm kapasiteler tek yerde
+- [Mimari](./docs/architecture/) — 4 mermaid diyagramı + açıklama
+- [ADR](./docs/adr/) — 6 yönetişim kararı
+- [Vitrin](./docs/showcase/) — 4 uçtan uca rehber + video senaryosu
 
 </td>
 </tr>
@@ -315,40 +315,40 @@ Tam notlar: [CHANGELOG.md](./CHANGELOG.md) · [docs/release/](./docs/release/)
 ### ⚡ 3 dakikada ilk katkı
 
 ```bash
-gh repo fork osrt91/ulak-os --clone       # 1) fork + clone
-cd ulak-os && bash scripts/validate-imports.sh   # 2) pack sağlığı
-#    (bir sector pack ekle / typo düzelt / anti-pattern yakala)
-gh pr create                              # 3) PR aç, template seni yönlendirir
+gh repo fork osrt91/ulak-os --clone              # 1) fork + klonla
+cd ulak-os && bash scripts/validate-imports.sh   # 2) paket sağlığına bak
+#    (bir sektör paketi ekle / yazım hatası düzelt / anti-desen yakala)
+gh pr create                                     # 3) PR aç, şablon seni yönlendirir
 ```
 
 ### 🎯 Nereden başlayabilirim?
 
 | İstiyorum | Git |
 |---|---|
-| Küçük bir iş arıyorum | [`good first issue`](https://github.com/osrt91/ulak-os/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) etiketli açık issue'lar |
-| Yeni sector pack / anti-pattern / rule pack | [pattern_contribution template](https://github.com/osrt91/ulak-os/issues/new?template=pattern_contribution.md) |
-| Bir bug raporlamak | [bug_report template](https://github.com/osrt91/ulak-os/issues/new?template=bug_report.md) |
-| Yeni komut / skill / agent fikri | [feature_request template](https://github.com/osrt91/ulak-os/issues/new?template=feature_request.md) |
-| Sormak istiyorum, ama issue açmak istemiyorum | [Discussions](https://github.com/osrt91/ulak-os/discussions) → Q&A |
-| Derin rehber | [CONTRIBUTING.md](./CONTRIBUTING.md) — pack governance, evidence kuralları, PR kontrol listesi |
+| Küçük bir iş arıyorum | [`good first issue`](https://github.com/osrt91/ulak-os/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) etiketli açık konular |
+| Yeni sektör paketi / anti-desen / kural paketi | [pattern_contribution şablonu](https://github.com/osrt91/ulak-os/issues/new?template=pattern_contribution.md) |
+| Hata raporlamak | [bug_report şablonu](https://github.com/osrt91/ulak-os/issues/new?template=bug_report.md) |
+| Yeni komut / beceri / ajan fikri | [feature_request şablonu](https://github.com/osrt91/ulak-os/issues/new?template=feature_request.md) |
+| Sormak istiyorum, issue açmak istemiyorum | [Discussions](https://github.com/osrt91/ulak-os/discussions) → Soru & Cevap |
+| Derin rehber | [CONTRIBUTING.md](./CONTRIBUTING.md) — paket yönetişimi, kanıt kuralları, PR kontrol listesi |
 
 ### 📞 İletişim
 
 - **Genel soru / öneri / fikir** → [GitHub Discussions](https://github.com/osrt91/ulak-os/discussions) (mail'den hızlı cevap)
-- **Bug raporu** → [Issues](https://github.com/osrt91/ulak-os/issues/new/choose)
+- **Hata raporu** → [Issues](https://github.com/osrt91/ulak-os/issues/new/choose)
 - **🔒 Güvenlik açığı** → issue AÇMAYIN, doğrudan mail: `info@oguzhansert.dev` ([SECURITY.md](./SECURITY.md))
-- [Code of Conduct](./CODE_OF_CONDUCT.md) — topluluk standardı
+- [Davranış Kuralları](./CODE_OF_CONDUCT.md) — topluluk standardı
 
 ---
 
 <div align="center">
 
-**📄 License** — [MIT](./LICENSE) · fork, uyarla, kendi operasyonuna uygula. Attribution yeterli.
+**📄 Lisans** — [MIT](./LICENSE) · fork'la, uyarla, kendi operasyonuna uygula. Atıf yeterli.
 
-**👤 Maintainer** — [**Oğuzhan Sert**](https://github.com/osrt91) · `info@oguzhansert.dev`
+**👤 Sorumlu** — [**Oğuzhan Sert**](https://github.com/osrt91) · `info@oguzhansert.dev`
 
 <br>
 
-<sub>Authoritative as of Ulak OS <b>v1.6.1</b> · Build metadata: <a href="./prompts/pack.json"><code>prompts/pack.json</code></a> · Core contract: <a href="./prompts/core/ulak-os-core-contract-2.0.0.md"><code>ulak-os-core-contract-2.0.0.md</code></a></sub>
+<sub>Ulak OS <b>v1.6.1</b> itibarıyla yetkili · Derleme bilgisi: <a href="./prompts/pack.json"><code>prompts/pack.json</code></a> · Çekirdek sözleşme: <a href="./prompts/core/ulak-os-core-contract-2.0.0.md"><code>ulak-os-core-contract-2.0.0.md</code></a></sub>
 
 </div>
