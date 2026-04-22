@@ -39,7 +39,7 @@ def text_size(draw, text, font):
 
 def build():
     # --- base gradient ---
-    orange_950 = (56, 18, 6)
+    orange_950 = (67, 20, 7)  # #431407 — matches docs/branding/README.md palette
     orange_700 = (194, 65, 12)
     amber_500  = (245, 158, 11)
 
