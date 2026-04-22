@@ -328,6 +328,6 @@ To propose new sector packs, rule packs, anti-patterns or agents: [CONTRIBUTING.
 
 <br>
 
-<sub>Authoritative as of Ulak OS <b>v1.6.0-final</b> · Build metadata: <a href="./prompts/pack.json"><code>prompts/pack.json</code></a> · Core contract: <a href="./prompts/core/ulak-os-core-contract-2.0.0.md"><code>ulak-os-core-contract-2.0.0.md</code></a></sub>
+<sub>Authoritative as of Ulak OS <b>v1.6.1</b> · Build metadata: <a href="./prompts/pack.json"><code>prompts/pack.json</code></a> · Core contract: <a href="./prompts/core/ulak-os-core-contract-2.0.0.md"><code>ulak-os-core-contract-2.0.0.md</code></a></sub>
 
 </div>
