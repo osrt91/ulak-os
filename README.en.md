@@ -242,16 +242,42 @@ Cross-platform validator chain. All-green = pack healthy.
 
 ## 🌐 Vendor support
 
-<div align="center">
-
-| Vendor | Command dispatch | Status | Adapter |
-|:---|:---:|:---:|:---:|
-| **Claude Code** | 24 slash native | ✅ FULL | [↗](./docs/adapters/claude-code.md) |
-| **Gemini CLI** | 24 `.toml` native | ✅ FULL-MINUS | [↗](./docs/adapters/gemini-cli.md) |
-| **Codex CLI** | 24 NL trigger | ✅ CORE | [↗](./docs/adapters/codex-cli.md) |
-| **Copilot Chat** | 22 NL trigger | ⚠️ LIMITED | [↗](./docs/adapters/copilot-chat.md) |
-
-</div>
+<table width="100%">
+<thead>
+<tr>
+<th align="left" width="25%">Vendor</th>
+<th align="center" width="30%">Command dispatch</th>
+<th align="center" width="25%">Status</th>
+<th align="center" width="20%">Adapter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><b>Claude Code</b></td>
+<td align="center">24 slash native</td>
+<td align="center">✅ FULL</td>
+<td align="center"><a href="./docs/adapters/claude-code.md">↗ details</a></td>
+</tr>
+<tr>
+<td><b>Gemini CLI</b></td>
+<td align="center">24 <code>.toml</code> native</td>
+<td align="center">✅ FULL-MINUS</td>
+<td align="center"><a href="./docs/adapters/gemini-cli.md">↗ details</a></td>
+</tr>
+<tr>
+<td><b>Codex CLI</b></td>
+<td align="center">24 NL trigger</td>
+<td align="center">✅ CORE</td>
+<td align="center"><a href="./docs/adapters/codex-cli.md">↗ details</a></td>
+</tr>
+<tr>
+<td><b>Copilot Chat</b></td>
+<td align="center">22 NL trigger</td>
+<td align="center">⚠️ LIMITED</td>
+<td align="center"><a href="./docs/adapters/copilot-chat.md">↗ details</a></td>
+</tr>
+</tbody>
+</table>
 
 > Disk-truth parity validation: `bash scripts/validate-vendor-parity.sh`  
 > Capability matrix: [`docs/governance/vendor-capability-matrix.md`](./docs/governance/vendor-capability-matrix.md)
@@ -260,14 +286,23 @@ Cross-platform validator chain. All-green = pack healthy.
 
 ## 🛠️ Supported stacks (`/ulak-scaffold`)
 
-| Layer | Primary | Experimental |
-|---|---|---|
-| Frontend | Next.js 16 | Remix, SvelteKit |
-| Backend | Supabase SSR | FastAPI + Node hybrid |
-| Payment | Stripe · Iyzico · both · none | — |
-| Mobile | Expo 55+ (optional) | — |
-| Hosting | Self-managed VPS + Traefik | Vercel · Fly.io · Railway |
-| i18n | TR + EN baseline | localization-ssot pack for ≥2 locales |
+<table width="100%">
+<thead>
+<tr>
+<th align="left" width="18%">Layer</th>
+<th align="left" width="42%">Primary</th>
+<th align="left" width="40%">Experimental</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><b>Frontend</b></td><td>Next.js 16</td><td>Remix, SvelteKit</td></tr>
+<tr><td><b>Backend</b></td><td>Supabase SSR</td><td>FastAPI + Node hybrid</td></tr>
+<tr><td><b>Payment</b></td><td>Stripe · Iyzico · both · none</td><td>—</td></tr>
+<tr><td><b>Mobile</b></td><td>Expo 55+ (optional)</td><td>Flutter iOS-first (rule pack v2026)</td></tr>
+<tr><td><b>Hosting</b></td><td>Self-managed VPS + Traefik</td><td>Vercel · Fly.io · Railway</td></tr>
+<tr><td><b>i18n</b></td><td>TR + EN baseline</td><td>localization-ssot pack for ≥2 locales</td></tr>
+</tbody>
+</table>
 
 ---
 

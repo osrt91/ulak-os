@@ -104,12 +104,12 @@ flowchart TD
     GM --> R
     CX --> R
     CP --> R
-    R --> P0[Phase 0 - Environment]
-    P0 --> P1[Phase 1 - Deep Inventory]
-    P1 --> P2[Phase 2 - Parallel Evidence]
+    R --> P0[Phase 0 - Ortam]
+    P0 --> P1[Phase 1 - Derin Envanter]
+    P1 --> P2[Phase 2 - Paralel Kanıt]
     P2 --> P3[Phase 3 - Did-You-Know]
-    P3 --> P4[Phase 4 - Synthesis]
-    P4 --> P5[Phase 5 - Verdict]
+    P3 --> P4[Phase 4 - Sentez]
+    P4 --> P5[Phase 5 - Karar]
     P5 --> A[13 Artefakt<br/>reports/current/]
 
     classDef primary fill:#ea580c,stroke:#7c2d12,color:#fff,stroke-width:2px
@@ -242,16 +242,42 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 
 ## 🌐 Sağlayıcı desteği
 
-<div align="center">
-
-| Sağlayıcı | Komut dağıtımı | Durum | Adaptör |
-|:---|:---:|:---:|:---:|
-| **Claude Code** | 24 slash (yerel) | ✅ FULL | [↗](./docs/adapters/claude-code.md) |
-| **Gemini CLI** | 24 `.toml` (yerel) | ✅ FULL-MINUS | [↗](./docs/adapters/gemini-cli.md) |
-| **Codex CLI** | 24 doğal dil | ✅ CORE | [↗](./docs/adapters/codex-cli.md) |
-| **Copilot Chat** | 22 doğal dil | ⚠️ LIMITED | [↗](./docs/adapters/copilot-chat.md) |
-
-</div>
+<table width="100%">
+<thead>
+<tr>
+<th align="left" width="25%">Sağlayıcı</th>
+<th align="center" width="30%">Komut dağıtımı</th>
+<th align="center" width="25%">Durum</th>
+<th align="center" width="20%">Adaptör</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><b>Claude Code</b></td>
+<td align="center">24 slash (yerel)</td>
+<td align="center">✅ FULL</td>
+<td align="center"><a href="./docs/adapters/claude-code.md">↗ detay</a></td>
+</tr>
+<tr>
+<td><b>Gemini CLI</b></td>
+<td align="center">24 <code>.toml</code> (yerel)</td>
+<td align="center">✅ FULL-MINUS</td>
+<td align="center"><a href="./docs/adapters/gemini-cli.md">↗ detay</a></td>
+</tr>
+<tr>
+<td><b>Codex CLI</b></td>
+<td align="center">24 doğal dil</td>
+<td align="center">✅ CORE</td>
+<td align="center"><a href="./docs/adapters/codex-cli.md">↗ detay</a></td>
+</tr>
+<tr>
+<td><b>Copilot Chat</b></td>
+<td align="center">22 doğal dil</td>
+<td align="center">⚠️ LIMITED</td>
+<td align="center"><a href="./docs/adapters/copilot-chat.md">↗ detay</a></td>
+</tr>
+</tbody>
+</table>
 
 > Disk-gerçek parity doğrulaması: `bash scripts/validate-vendor-parity.sh`  
 > Kapasite matrisi: [`docs/governance/vendor-capability-matrix.md`](./docs/governance/vendor-capability-matrix.md)
@@ -260,14 +286,23 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 
 ## 🛠️ Desteklenen yığın (`/ulak-scaffold`)
 
-| Katman | Birincil | Deneysel |
-|---|---|---|
-| Önyüz | Next.js 16 | Remix, SvelteKit |
-| Arkayüz | Supabase SSR | FastAPI + Node hibrit |
-| Ödeme | Stripe · Iyzico · ikisi · yok | — |
-| Mobil | Expo 55+ (opsiyonel) | — |
-| Barındırma | Kendi yönettiğin VPS + Traefik | Vercel · Fly.io · Railway |
-| i18n | TR + EN taban | localization-ssot paketi ile ≥2 dil |
+<table width="100%">
+<thead>
+<tr>
+<th align="left" width="18%">Katman</th>
+<th align="left" width="42%">Birincil</th>
+<th align="left" width="40%">Deneysel</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><b>Önyüz</b></td><td>Next.js 16</td><td>Remix, SvelteKit</td></tr>
+<tr><td><b>Arkayüz</b></td><td>Supabase SSR</td><td>FastAPI + Node hibrit</td></tr>
+<tr><td><b>Ödeme</b></td><td>Stripe · Iyzico · ikisi · yok</td><td>—</td></tr>
+<tr><td><b>Mobil</b></td><td>Expo 55+ (opsiyonel)</td><td>Flutter iOS-first (rule pack v2026)</td></tr>
+<tr><td><b>Barındırma</b></td><td>Kendi yönettiğin VPS + Traefik</td><td>Vercel · Fly.io · Railway</td></tr>
+<tr><td><b>i18n</b></td><td>TR + EN taban</td><td>localization-ssot paketi ile ≥2 dil</td></tr>
+</tbody>
+</table>
 
 ---
 
