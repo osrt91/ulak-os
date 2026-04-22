@@ -197,7 +197,7 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 
 <div align="center">
 
-| **24** | **10** | **27** | **14** | **8** | **24** | **36** | **~100** |
+| **24** | **10** | **27** | **15** | **8** | **23** | **35** | **~100** |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | Komut | Beceri | Ajan | Sektör paketi | Kural paketi | Yönetişim | Çalışma zamanı kuralı | Anti-desen |
 
@@ -213,12 +213,12 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 | **Komutlar** | 24 | [`.claude/commands/`](./.claude/commands/) — `/director`, `/ulak-start`, `/ulak-hello`, `/ulak-scaffold`, `/ulak-ask`, `/final-verdict`, `/intake`, `/frontend-war-room`, `/pack-gap-audit`, `/triage-build`, `/ulak-design-ref`, `/ulak-audit-deep`, `/ulak-pattern-extract`, `/ulak-mcp-discover`, `/ulak-brainstorm`, `/ulak-subagent-dispatch`, `/ulak-test-driven`, `/ulak-packs`, `/ulak-search`, `/ulak-locale`, `/ulak-intake`, `/ulak-demo`, `/ulak-explain`, `/ulak-next-steps` |
 | **Beceriler** | 10 | [`.claude/skills/`](./.claude/skills/) — `saas-scaffolder`, `fourteen-dimension-audit`, `god-module-decomposition`, `multi-agent-orchestration`, `final-validation`, `pack-gap-completion`, `project-intake`, `research-currency`, `awesome-packs-index`, `mcp-governance-auto` |
 | **Ajanlar** | 27 | [`.claude/agents/`](./.claude/agents/) — 19 uzman + 1 otonom program yönetici + 7 persona (admin, müşteri, bayi, geliştirici, destek, uyum, güvenlik-redteam) |
-| **Sektör paketleri** | 14 | [`templates/sectors/`](./templates/sectors/) — education, saas, fintech, ecommerce, marketplace, enterprise-b2b, media-content, health-sensitive, ai-copilot, pwa-desktop, ai-relay-cost-control, member-gated-community, admin-cms-hardening, self-hosted-supabase |
+| **Sektör paketleri** | 15 | [`templates/sectors/`](./templates/sectors/) — admin-cms-hardening, ai-copilot, ai-relay-cost-control, container-k8s, ecommerce, education, enterprise-b2b, fintech, health-sensitive, marketplace, media-content, member-gated-community, pwa-desktop, regulated-saas, self-hosted-supabase |
 | **Kural paketleri** | 8 | [`docs/runtime/rule-packs/`](./docs/runtime/rule-packs/) — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo |
-| **Yönetişim** | 24 | [`docs/governance/`](./docs/governance/) — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization vb. |
-| **Çalışma zamanı** | 36 | [`docs/runtime/`](./docs/runtime/) — router, intent-router, program-phases (Phase 0-5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern, runtime-constants vb. |
+| **Yönetişim** | 23 | [`docs/governance/`](./docs/governance/) — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization vb. |
+| **Çalışma zamanı** | 35 | [`docs/runtime/`](./docs/runtime/) — router, intent-router, program-phases (Phase 0-5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern, runtime-constants vb. |
 | **Anti-desen** | ~100 | 19 AP-NN (AP-01..AP-19) + klasik (IDOR, BOLA, N+1, RLS asimetrisi, ölü kod vb.) |
-| **İskelet** | 285 | [`templates/saas-starter/`](./templates/saas-starter/) — Next.js 16 + TS strict + Tailwind v4 + Supabase SSR + RLS + CI + testler + VPS sıkılaştırma + 59 markalı tasarım referansı |
+| **İskelet** | 125 | [`templates/saas-starter/`](./templates/saas-starter/) — Next.js 16 + TS strict + Tailwind v4 + Supabase SSR + RLS + CI + testler + VPS sıkılaştırma + 59 markalı tasarım referansı |
 
 </details>
 
@@ -229,8 +229,8 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 | | Komut | Ne üretir |
 |---|---|---|
 | 🔍 **Denetler** | `/director komple` | Phase 0→5 protokolü: 27 uzman paralel, 15 boyutlu değerlendirme, ~100 anti-desen taraması, 13 artefakt |
-| ⚙️ **Yönetir** | `@prompts/core/ulak-os-core-contract-2.0.0.md` | Çekirdek sözleşme CLAUDE.md'ye içe aktarılır → 24 yönetişim + 14 sektör + 8 kural paketi her oturumda aktif |
-| 🏗️ **İskelet kurar** | `/ulak-scaffold` veya `/ulak-start` | Tam yığın SaaS ilk commit'te — 285 şablon dosya + 8 anti-desen inşa anında kapıda tutulur |
+| ⚙️ **Yönetir** | `@prompts/core/ulak-os-core-contract-2.0.0.md` | Çekirdek sözleşme CLAUDE.md'ye içe aktarılır → 23 yönetişim + 15 sektör + 8 kural paketi her oturumda aktif |
+| 🏗️ **İskelet kurar** | `/ulak-scaffold` veya `/ulak-start` | Tam yığın SaaS ilk commit'te — 125 şablon dosya + 8 anti-desen inşa anında kapıda tutulur |
 
 ---
 
@@ -288,7 +288,7 @@ Tam notlar: [CHANGELOG.md](./CHANGELOG.md) · [docs/release/](./docs/release/)
 <td width="50%" valign="top">
 
 **🎬 Başlangıç**
-- [30 saniyelik tur](./docs/ulak-hello-walkthrough.md) — `/ulak-hello` ilk ekran
+- [30 saniyelik tur](./docs/walkthrough/01-first-saas-end-to-end.md) — ilk SaaS senaryosu
 - [İlk saat](./docs/runbooks/first-hour-with-ulak-os.md) — 60 dk uçtan uca
 - [SSS](./docs/FAQ.md) — alternatiflerle karşılaştırma · platform · çevrimdışı · model
 - [Sorun giderme](./docs/runbooks/troubleshooting.md) — 16 yaygın hata
