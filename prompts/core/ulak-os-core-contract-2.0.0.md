@@ -1,12 +1,14 @@
 # Ulak OS Core Contract 2.0.0
 
-Bu dosya vendor-agnostic çekirdektir.
+Bu dosya vendor-agnostic çekirdek sözleşmesidir. Claude Code, Gemini CLI, Codex CLI ve Copilot Chat oturumlarında `@prompts/core/ulak-os-core-contract-2.0.0.md` yolu ile `CLAUDE.md` / `GEMINI.md` / `AGENTS.md`'ye içe aktarılır. Çözümlendiğinde aşağıdaki 45 `@`-import diskten okunur ve o oturumun çalışma zamanı yüzeyi haline gelir.
 
-## Runtime discipline layer (v2.1)
+**Sürüm bağlamı:** Dosya adındaki `2.0.0` bu sözleşmenin *şema sürümüdür* — repo semver'inden bağımsızdır. Repo şu an **v1.6.1**; sözleşme şeması **v2.0.0** stabil, içeriği **v2.1 disiplin kurallarıyla** güncellenir. Dosya adının bilinçli sabit tutulduğu kayıt altındadır (bkz. `docs/release/v2.1.0-release-notes.md` — *"The core contract filename stays `ulak-os-core-contract-2.0.0.md`"*).
+
+## Çalışma zamanı disiplin katmanı (v2.1)
 
 Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu dosyalar her aktif run'da yüklenen public runtime surface'in bir parçasıdır:
 
-### Runtime rules
+### Çalışma zamanı kuralları
 @docs/runtime/router.md
 @docs/runtime/intent-router.md
 @docs/runtime/program-phases.md
@@ -27,7 +29,7 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 @docs/runtime/office-roster.md
 @docs/runtime/runtime-constants.md
 
-### Operational motors (mode-loaded)
+### Operasyonel motorlar (moda göre yüklenir)
 @docs/runtime/toolchain-precheck.md
 @docs/runtime/intake-protocol.md
 @docs/runtime/architecture-currency.md
@@ -36,7 +38,7 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 @docs/runtime/market-research-engine.md
 @docs/runtime/sector-packs.md
 
-### Governance
+### Yönetişim
 @docs/governance/plugin-skill-decision.md
 @docs/governance/rule-collision-matrix.md
 @docs/governance/evidence-trust-scoring.md
@@ -57,7 +59,7 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 @docs/governance/ai-provider-allowlist.md
 @docs/governance/pattern-import-ledger.md
 
-### Imports are Layer 1 (public runtime surface)
+### İçe aktarımlar Layer 1'dir (public runtime surface)
 Bu dosyaların tümü `docs/governance/surface-split.md` tanımındaki **public runtime surface**'e aittir. Historical/version-diff notları bu listeye girmez; onlar hidden core'a aittir.
 
 ## Ana vaat
@@ -70,18 +72,18 @@ Sistem, projeye sıfırdan, ortadan veya final aşamasından girebilir. Her duru
 - pack-gap'leri ve validation gereksinimlerini söyler,
 - doğrulama olmadan bitmiş saymaz.
 
-## v2 eklentileri
+## Çalışma zamanı altyapısı
 - CLI orkestrasyon katmanı (`ulak` komutu)
 - Proje hafızası (SQLite + FTS5)
 - Vendor adapter soyutlaması (subprocess tabanlı)
 - Pack versiyonlama ve güncelleme sistemi
 
-## Project state switch
+## Proje durum seçimi
 - GREENFIELD
 - BROWNFIELD
 - HYBRID
 
-## Intervention modes
+## Müdahale modları
 - CREATE
 - REPAIR
 - EXTEND
@@ -111,18 +113,34 @@ Inventory ve evidence fazları yüzeysel listeleme değildir. Bunlar zorunlu der
 Çekirdek prensip: **"Manager katmanı ancak derin evidence üstünde kararlı plan verebilir."**
 
 ## Artefakt zinciri
-- runtime-manifest
-- assumptions
-- intake
-- inventory (deep — dosya+satır bazlı, klasör dökümü değil)
-- evidence-register (paralel uzman bulguları)
-- deep-scan-report (cartographer + specialist merge)
-- did-you-know (non-obvious findings, zorunlu — opsiyonel dual-path validation ile güçlendirilebilir)
-- research-notes
-- analysis-findings
-- target-state
-- execution-roadmap (Waves pattern ile execute edilir)
-- validation-plan
-- pack-gap-register
-- **live-probe-results** (conditional-mandatory Phase 4.5 — validation-plan §6'da ≥1 probe varsa zorunlu)
-- manager-verdict
+
+Tüm artefaktların şeması: [`docs/runtime/artefact-contract.md`](../../docs/runtime/artefact-contract.md). Phase bazlı üretim sırası:
+
+### Phase 0 — Ortam kilidi
+- `runtime-manifest`
+- `assumptions`
+
+### Phase 1 — Derin envanter
+- `intake`
+- `inventory` (deep — dosya+satır bazlı, klasör dökümü değil)
+
+### Phase 2 — Paralel uzman kanıtı
+- `evidence-register`
+- `deep-scan-report`
+
+### Phase 3 — Sürpriz katmanı (zorunlu)
+- `did-you-know` (opsiyonel dual-path validation ile güçlendirilebilir)
+
+### Phase 4 — Sentez
+- `research-notes` (koşullu — market-entry / architecture-currency modlarında)
+- `analysis-findings`
+- `target-state`
+- `execution-roadmap` (Waves pattern ile yürütülür)
+- `validation-plan`
+- `pack-gap-register`
+
+### Phase 4.5 — Canlı doğrulama (koşullu-zorunlu)
+- `live-probe-results` (validation-plan §6'da ≥1 probe varsa zorunlu)
+
+### Phase 5 — Yönetici kararı
+- `manager-verdict`
