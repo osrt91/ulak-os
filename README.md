@@ -232,23 +232,44 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 
 ## 🎛️ Üç şey yapar
 
-| | Komut | Ne üretir |
-|---|---|---|
-| 🔍 **Denetler** | `/director komple` | Phase 0→5 protokolü: 27 uzman paralel, 15 boyutlu değerlendirme, ~100 anti-desen taraması, 13 artefakt |
-| ⚙️ **Yönetir** | `@prompts/core/ulak-os-core-contract-2.0.0.md` | Çekirdek sözleşme CLAUDE.md'ye içe aktarılır → 23 yönetişim + 15 sektör + 9 kural paketi her oturumda aktif |
-| 🏗️ **İskelet kurar** | `/ulak-scaffold` veya `/ulak-start` | Tam yığın SaaS ilk commit'te — 125 şablon dosya + 8 anti-desen inşa anında kapıda tutulur |
+<table>
+<thead>
+<tr>
+<th align="left" width="180">&nbsp;</th>
+<th align="left" width="260">Komut</th>
+<th align="left" width="440">Ne üretir</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🔍 <b>Denetler</b></td>
+<td><code>/director komple</code></td>
+<td>Phase 0→5 protokolü: 27 uzman paralel, 15 boyutlu değerlendirme, ~100 anti-desen taraması, 13 artefakt</td>
+</tr>
+<tr>
+<td>⚙️ <b>Yönetir</b></td>
+<td><code>@prompts/core/ulak-os-core-contract-2.0.0.md</code></td>
+<td>Çekirdek sözleşme CLAUDE.md'ye içe aktarılır → 23 yönetişim + 15 sektör + 9 kural paketi her oturumda aktif</td>
+</tr>
+<tr>
+<td>🏗️ <b>İskelet kurar</b></td>
+<td><code>/ulak-scaffold</code> veya <code>/ulak-start</code></td>
+<td>Tam yığın SaaS ilk commit'te — 125 şablon dosya + 8 anti-desen inşa anında kapıda tutulur</td>
+</tr>
+</tbody>
+</table>
 
 ---
 
 ## 🌐 Sağlayıcı desteği
 
-<table width="100%">
+<table>
 <thead>
 <tr>
-<th align="left" width="25%">Sağlayıcı</th>
-<th align="center" width="30%">Komut dağıtımı</th>
-<th align="center" width="25%">Durum</th>
-<th align="center" width="20%">Adaptör</th>
+<th align="left" width="220">Sağlayıcı</th>
+<th align="center" width="260">Komut dağıtımı</th>
+<th align="center" width="200">Durum</th>
+<th align="center" width="200">Adaptör</th>
 </tr>
 </thead>
 <tbody>
@@ -286,12 +307,12 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 
 ## 🛠️ Desteklenen yığın (`/ulak-scaffold`)
 
-<table width="100%">
+<table>
 <thead>
 <tr>
-<th align="left" width="18%">Katman</th>
-<th align="left" width="42%">Birincil</th>
-<th align="left" width="40%">Deneysel</th>
+<th align="left" width="160">Katman</th>
+<th align="left" width="360">Birincil</th>
+<th align="left" width="360">Deneysel</th>
 </tr>
 </thead>
 <tbody>
