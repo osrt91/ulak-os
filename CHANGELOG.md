@@ -4,6 +4,31 @@ All notable **public releases** of Ulak OS. The pre-v1.0.0 internal development 
 
 ---
 
+## [1.6.1] — 2026-04-22 — Branding refresh + dependency hygiene
+
+### Added
+- `docs/branding/social-preview.png` (1280×640 PNG) — GitHub social preview / Open Graph banner. Unified orange identity with bilingual `Türkçe · English` marker.
+- `scripts/generate-social-preview.py` — idempotent Pillow-based generator (Segoe UI + geometric `anchor='mm'` centering for sub-pixel drift-free layout).
+- `docs/branding/README.md` — palette documentation + regeneration instructions.
+- `docs/release/v1.6.1-release-notes.md` — full branding refresh narrative.
+
+### Changed
+- `README.md` + `README.en.md` — hero redesign: centred layout, Mermaid architecture diagram, 3-card CTA grid, 6-scenario 2×3 grid, capability summary tiles, compact release history table.
+- Badge + Mermaid palette: indigo/violet (`#7c3aed` / `#1e1b4b` / `#4c1d95`) → orange (`#ea580c` / `#431407` / `#7c2d12`) across both READMEs.
+- Dependency bumps (Dependabot batch, 7 PRs merged): `actions/setup-python` 5→6, `actions/checkout` 4→6, `typescript-toolchain` group (3 updates), `better-sqlite3` 11.10→12.9, `ora` 8.2→9.3, `commander` 12.1→14.0.
+- Version metadata: `package.json` + `prompts/pack.json` 1.6.0 → 1.6.1; README footer version refreshed.
+
+### Removed
+- Stale `v3.0.0` and `v3.0.0-public-ga` tags — deleted from origin + local. The v3.0.0 lineage was abandoned on 2026-04-21 in favour of the semver reset (v1.0.0-launch → v1.6.x). Tags served no public purpose; removing them prevents confusion on `gh release list`.
+
+### Unchanged (explicit)
+- Runtime contract (`prompts/core/ulak-os-core-contract-2.0.0.md`) byte-identical to v1.6.0.
+- Commands (24) / skills (10) / agents (27) / sector packs (24) / rule packs (8) / governance docs (22) / anti-patterns (33) / templates (~100) counts + behaviour identical.
+- Vendor capability matrix — support levels unchanged (Claude FULL, Gemini FULL-MINUS, Codex CORE, Copilot LIMITED).
+- User manual (TR + EN, 20 files) — unchanged.
+
+---
+
 ## [1.6.0] — 2026-04-21 — Cross-vendor parity (Gemini native + Codex NL + Copilot NL)
 
 ### Added
