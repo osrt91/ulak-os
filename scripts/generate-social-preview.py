@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 """Generate GitHub social preview banner (1280x640 PNG) for Ulak OS.
 
-Design v3 (orange edition, polished):
-- Clean 3-stop orange gradient (orange-950 -> orange-600 -> amber-500)
-- Prominent bilingual bar: [TR Türkçe] [EN English] with visible accent blocks
-- Large centered wordmark with soft halo, no decoration overlap
-- Decorations pushed to corners so typography owns the center
-- Faded ">" sigil bottom-right for CLI vibe
-- Subtle dot grid + diagonal sheen for texture
-- Glass-style vendor chips with amber border glow
+Design v4 (orange edition, perfectly centered):
+- Every chip uses anchor='mm' so text is geometrically centered (no manual nudges)
+- Single unified bilingual pill: [Türkçe · English] — balanced, symmetric
+- Vertical rhythm: bar(top) -> title -> subtitle -> tagline -> chips(bottom) -> footer
+- 3-stop warm gradient with a soft radial glow behind the wordmark
+- Decorations pushed to the edges; no visual collision with typography
 """
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from pathlib import Path
@@ -33,11 +31,17 @@ def lerp3(a, b, c, t):
     return lerp(b, c, (t - 0.5) * 2)
 
 
+def text_size(draw, text, font):
+    """Return (w, h) using anchor='lt' for width measurement."""
+    b = draw.textbbox((0, 0), text, font=font, anchor="lt")
+    return b[2] - b[0], b[3] - b[1]
+
+
 def build():
-    # --- base gradient: warm diagonal (3-stop) ---
-    orange_950 = (60, 18, 6)       # deeper anchor
-    orange_700 = (194, 65, 12)     # #c2410c
-    amber_500  = (245, 158, 11)    # #f59e0b
+    # --- base gradient ---
+    orange_950 = (56, 18, 6)
+    orange_700 = (194, 65, 12)
+    amber_500  = (245, 158, 11)
 
     img = Image.new("RGB", (W, H), orange_950)
     px = img.load()
@@ -49,23 +53,23 @@ def build():
 
     img = img.convert("RGBA")
 
-    # --- radial glow behind wordmark (boosts readability + depth) ---
+    # --- radial glow behind wordmark ---
     glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     gdraw = ImageDraw.Draw(glow)
-    cx, cy = W // 2, H // 2 + 10
-    for r in range(480, 0, -16):
-        alpha = int(75 * (1 - r / 480))
+    gcx, gcy = W // 2, H // 2 + 20
+    for r in range(500, 0, -18):
+        alpha = int(80 * (1 - r / 500))
         gdraw.ellipse(
-            [cx - r, cy - int(r * 0.55), cx + r, cy + int(r * 0.55)],
+            [gcx - r, gcy - int(r * 0.55), gcx + r, gcy + int(r * 0.55)],
             fill=(255, 220, 160, alpha),
         )
-    glow = glow.filter(ImageFilter.GaussianBlur(32))
+    glow = glow.filter(ImageFilter.GaussianBlur(34))
     img = Image.alpha_composite(img, glow)
 
     draw = ImageDraw.Draw(img, "RGBA")
 
-    # --- concentric rings pushed to top-left corner (out of text zone) ---
-    rx, ry = -40, -20
+    # --- decorations: rings tucked into top-left corner (out of text zone) ---
+    rx, ry = -40, -30
     for ring in range(5):
         r = 140 + ring * 70
         alpha = max(10, 55 - ring * 10)
@@ -75,7 +79,7 @@ def build():
             width=2,
         )
 
-    # --- orbit ellipse: pushed well off-canvas bottom-right ---
+    # --- orbit pushed off-canvas bottom-right ---
     ocx, ocy = W + 20, H + 80
     for rw, rh, a in [(280, 120, 40), (210, 90, 60), (140, 60, 85)]:
         draw.ellipse(
@@ -83,7 +87,6 @@ def build():
             outline=(255, 237, 213, a),
             width=2,
         )
-    # Orbit nodes on visible upper arc
     for angle_deg, size in [(200, 6), (220, 5), (245, 7)]:
         ang = math.radians(angle_deg)
         nx = ocx + int(210 * math.cos(ang))
@@ -93,220 +96,176 @@ def build():
             fill=(255, 237, 213, 210),
         )
 
-    # --- faded prompt sigil ">" bottom-right background ---
+    # --- faded ">" prompt sigil bottom-right ---
     sigil_font = ImageFont.truetype(F_TITLE, 440)
-    sigil_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    sdraw = ImageDraw.Draw(sigil_layer)
-    sdraw.text(
-        (W - 340, H - 420),
-        ">",
-        font=sigil_font,
-        fill=(255, 237, 213, 22),
-    )
-    sigil_layer = sigil_layer.filter(ImageFilter.GaussianBlur(2))
-    img = Image.alpha_composite(img, sigil_layer)
+    sigil = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    sdraw = ImageDraw.Draw(sigil)
+    sdraw.text((W - 340, H - 420), ">", font=sigil_font, fill=(255, 237, 213, 22))
+    sigil = sigil.filter(ImageFilter.GaussianBlur(2))
+    img = Image.alpha_composite(img, sigil)
 
     draw = ImageDraw.Draw(img, "RGBA")
 
-    # --- subtle amber dot grid (very low alpha) ---
+    # --- subtle dot grid ---
     for gy in range(0, H, 28):
         for gx in range(0, W, 28):
-            draw.ellipse(
-                [gx - 1, gy - 1, gx + 1, gy + 1],
-                fill=(255, 237, 213, 20),
-            )
+            draw.ellipse([gx - 1, gy - 1, gx + 1, gy + 1], fill=(255, 237, 213, 20))
 
-    # --- diagonal highlight stripe top-right (glass sheen) ---
+    # --- diagonal sheen top-right ---
     draw.polygon(
         [(W - 380, 0), (W, 0), (W, 380), (W - 80, 0)],
         fill=(255, 237, 213, 16),
     )
 
-    # --- typography ---
-    title_font    = ImageFont.truetype(F_TITLE, 140)
+    # --- fonts ---
+    title_font    = ImageFont.truetype(F_TITLE, 148)
     subtitle_font = ImageFont.truetype(F_BODY, 34)
     tagline_font  = ImageFont.truetype(F_SEMI, 24)
     chip_font     = ImageFont.truetype(F_SEMI, 22)
-    version_font  = ImageFont.truetype(F_BODY, 22)
     lang_font     = ImageFont.truetype(F_TITLE, 26)
-    lang_code_font = ImageFont.truetype(F_TITLE, 22)
+    footer_font   = ImageFont.truetype(F_BODY, 22)
 
+    # =====================================================
+    # 1) BILINGUAL PILL — one unified chip, perfectly centered
+    #    [ Türkçe · English ]
+    # =====================================================
+    lang_text = "Türkçe  ·  English"
+    lw, lh = text_size(draw, lang_text, lang_font)
+    pill_h = 58
+    pill_w = lw + 80  # horizontal breathing room
+    pill_x = (W - pill_w) // 2
+    pill_y = 62
+
+    # Soft halo around pill
+    halo = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    hdr = ImageDraw.Draw(halo)
+    hdr.rounded_rectangle(
+        [pill_x - 4, pill_y - 4, pill_x + pill_w + 4, pill_y + pill_h + 4],
+        radius=pill_h // 2 + 4,
+        outline=(255, 200, 120, 190),
+        width=4,
+    )
+    halo = halo.filter(ImageFilter.GaussianBlur(9))
+    img = Image.alpha_composite(img, halo)
+    draw = ImageDraw.Draw(img, "RGBA")
+
+    # Pill body (dark glass) + amber outline
+    draw.rounded_rectangle(
+        [pill_x, pill_y, pill_x + pill_w, pill_y + pill_h],
+        radius=pill_h // 2,
+        fill=(48, 16, 6, 225),
+        outline=(255, 210, 140, 240),
+        width=2,
+    )
+
+    # Pill text — centered via anchor='mm'
+    pill_cx = pill_x + pill_w // 2
+    pill_cy = pill_y + pill_h // 2
+    # draw Türkçe, separator, English separately so we can color the middle dot
+    tr_txt = "Türkçe"
+    sep_txt = "  ·  "
+    en_txt = "English"
+    tr_w, _ = text_size(draw, tr_txt, lang_font)
+    sep_w, _ = text_size(draw, sep_txt, lang_font)
+    en_w, _ = text_size(draw, en_txt, lang_font)
+    total_w = tr_w + sep_w + en_w
+    x0 = pill_cx - total_w // 2
+    # Türkçe (warm amber tint for subtle TR accent)
+    draw.text((x0 + tr_w // 2, pill_cy), tr_txt, font=lang_font,
+              fill=(255, 220, 150), anchor="mm")
+    # Separator (bright amber)
+    draw.text((x0 + tr_w + sep_w // 2, pill_cy), sep_txt, font=lang_font,
+              fill=(255, 180, 90), anchor="mm")
+    # English (crisp white)
+    draw.text((x0 + tr_w + sep_w + en_w // 2, pill_cy), en_txt, font=lang_font,
+              fill=(255, 255, 255), anchor="mm")
+
+    # =====================================================
+    # 2) TITLE / SUBTITLE / TAGLINE — centered stack
+    # =====================================================
     title = "Ulak OS"
     subtitle = "Vendor-neutral prompt OS for AI coding CLIs"
     tagline = "Reads your project  ·  Surfaces gaps  ·  Scaffolds full-stack SaaS"
 
-    # ---------------------------------------------------------------
-    # BILINGUAL BAR — two pill chips at top, each with accent + label
-    # ---------------------------------------------------------------
-    # Each chip: [ colored square with "TR"/"EN" ] [ "Türkçe"/"English" ]
+    tw, th = text_size(draw, title, title_font)
+    _, sh = text_size(draw, subtitle, subtitle_font)
+    _, gh = text_size(draw, tagline, tagline_font)
 
-    pill_h = 56
-    pill_pad_x = 22
-    pill_gap = 20
-    accent_w = 44  # colored code square width inside pill
-
-    langs = [
-        ("TR", "Türkçe",  (230, 85, 45)),    # warm red-orange accent
-        ("EN", "English", (255, 200, 100)),  # amber accent
-    ]
-
-    # measure labels
-    pill_widths = []
-    for code, label, _ in langs:
-        lb = draw.textbbox((0, 0), label, font=lang_font, anchor="lt")
-        label_w = lb[2] - lb[0]
-        pill_widths.append(accent_w + pill_pad_x + label_w + pill_pad_x)
-
-    total_bar_w = sum(pill_widths) + pill_gap
-    bar_start_x = (W - total_bar_w) // 2
-    bar_y = 64
-
-    # Draw pills
-    cx_acc = bar_start_x
-    for i, (code, label, accent) in enumerate(langs):
-        pw = pill_widths[i]
-        # Glow pass (soft amber halo)
-        plg = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        plgd = ImageDraw.Draw(plg)
-        plgd.rounded_rectangle(
-            [cx_acc - 3, bar_y - 3, cx_acc + pw + 3, bar_y + pill_h + 3],
-            radius=pill_h // 2 + 2,
-            outline=(255, 200, 120, 180),
-            width=3,
-        )
-        plg = plg.filter(ImageFilter.GaussianBlur(7))
-        img = Image.alpha_composite(img, plg)
-        draw = ImageDraw.Draw(img, "RGBA")
-
-        # Pill body (dark glass)
-        draw.rounded_rectangle(
-            [cx_acc, bar_y, cx_acc + pw, bar_y + pill_h],
-            radius=pill_h // 2,
-            fill=(50, 18, 8, 220),
-            outline=(255, 210, 140, 240),
-            width=2,
-        )
-
-        # Accent block (code color)
-        accent_x0 = cx_acc + 4
-        accent_y0 = bar_y + 4
-        accent_x1 = accent_x0 + accent_w
-        accent_y1 = bar_y + pill_h - 4
-        draw.rounded_rectangle(
-            [accent_x0, accent_y0, accent_x1, accent_y1],
-            radius=pill_h // 2 - 4,
-            fill=accent + (255,),
-        )
-        # Code text on accent
-        cb = draw.textbbox((0, 0), code, font=lang_code_font, anchor="lt")
-        cw_ = cb[2] - cb[0]
-        ch_ = cb[3] - cb[1]
-        draw.text(
-            (accent_x0 + (accent_w - cw_) // 2,
-             accent_y0 + (accent_y1 - accent_y0 - ch_) // 2 - 3),
-            code,
-            font=lang_code_font,
-            fill=(40, 14, 4),
-            anchor="lt",
-        )
-
-        # Label text (Türkçe / English)
-        label_x = accent_x1 + pill_pad_x // 2 + 6
-        lb = draw.textbbox((0, 0), label, font=lang_font, anchor="lt")
-        lh = lb[3] - lb[1]
-        label_y = bar_y + (pill_h - lh) // 2 - 4
-        draw.text((label_x, label_y), label, font=lang_font, fill=(255, 255, 255), anchor="lt")
-
-        cx_acc += pw + pill_gap
-
-    # ---------------------------------------------------------------
-    # TITLE + SUBTITLE + TAGLINE — centered stack
-    # ---------------------------------------------------------------
-    tb = draw.textbbox((0, 0), title, font=title_font, anchor="lt")
-    sb = draw.textbbox((0, 0), subtitle, font=subtitle_font, anchor="lt")
-    gb = draw.textbbox((0, 0), tagline, font=tagline_font, anchor="lt")
-
-    title_w = tb[2] - tb[0]
-    title_h = tb[3] - tb[1]
-    subtitle_h = sb[3] - sb[1]
-
-    ty = bar_y + pill_h + 60
-    sy = ty + title_h + 40
-    gy = sy + subtitle_h + 22
+    # Vertical layout
+    title_cy    = pill_y + pill_h + 50 + th // 2
+    subtitle_cy = title_cy + th // 2 + 42 + sh // 2
+    tagline_cy  = subtitle_cy + sh // 2 + 20 + gh // 2
 
     # Title halo
-    tx = (W - title_w) // 2
     halo = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    hdraw = ImageDraw.Draw(halo)
-    hdraw.text((tx, ty), title, font=title_font, fill=(255, 200, 110, 190), anchor="lt")
-    halo = halo.filter(ImageFilter.GaussianBlur(18))
+    hdr = ImageDraw.Draw(halo)
+    hdr.text((W // 2, title_cy), title, font=title_font,
+             fill=(255, 200, 110, 200), anchor="mm")
+    halo = halo.filter(ImageFilter.GaussianBlur(20))
     img = Image.alpha_composite(img, halo)
     draw = ImageDraw.Draw(img, "RGBA")
 
-    # Title shadow + main
-    draw.text((tx + 3, ty + 4), title, font=title_font, fill=(40, 14, 4, 200), anchor="lt")
-    draw.text((tx, ty), title, font=title_font, fill=(255, 255, 255), anchor="lt")
+    # Title shadow + main (both via anchor='mm' so shadow stays aligned)
+    draw.text((W // 2 + 3, title_cy + 4), title, font=title_font,
+              fill=(40, 14, 4, 210), anchor="mm")
+    draw.text((W // 2, title_cy), title, font=title_font,
+              fill=(255, 255, 255), anchor="mm")
 
-    # Subtitle
-    sx = (W - (sb[2] - sb[0])) // 2
-    draw.text((sx, sy), subtitle, font=subtitle_font, fill=(255, 237, 213), anchor="lt")
+    draw.text((W // 2, subtitle_cy), subtitle, font=subtitle_font,
+              fill=(255, 237, 213), anchor="mm")
+    draw.text((W // 2, tagline_cy), tagline, font=tagline_font,
+              fill=(254, 215, 170), anchor="mm")
 
-    # Tagline
-    gxp = (W - (gb[2] - gb[0])) // 2
-    draw.text((gxp, gy), tagline, font=tagline_font, fill=(254, 215, 170), anchor="lt")
-
-    # ---------------------------------------------------------------
-    # VENDOR CHIPS at bottom
-    # ---------------------------------------------------------------
+    # =====================================================
+    # 3) VENDOR CHIPS — perfectly centered row
+    # =====================================================
     chips = ["Claude Code", "Gemini CLI", "Codex CLI", "Copilot Chat"]
-    chip_padding_x = 22
-    gap = 16
+    chip_pad_x = 24
+    chip_gap = 16
+    chip_h = 50
 
     chip_widths = []
     for c in chips:
-        b = draw.textbbox((0, 0), c, font=chip_font, anchor="lt")
-        chip_widths.append((b[2] - b[0]) + chip_padding_x * 2)
-    total_w = sum(chip_widths) + gap * (len(chips) - 1)
-    start_x = (W - total_w) // 2
-    chip_y = H - 128
-    chip_h = 48
+        w, _ = text_size(draw, c, chip_font)
+        chip_widths.append(w + chip_pad_x * 2)
+    total_w = sum(chip_widths) + chip_gap * (len(chips) - 1)
+    chip_start_x = (W - total_w) // 2
+    chip_y = H - 130
+    chip_cy = chip_y + chip_h // 2
 
     # Chip glow pass
     chip_glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    cgdraw = ImageDraw.Draw(chip_glow)
-    cx_acc = start_x
-    for i, c in enumerate(chips):
-        cw = chip_widths[i]
-        cgdraw.rounded_rectangle(
-            [cx_acc - 2, chip_y - 2, cx_acc + cw + 2, chip_y + chip_h + 2],
-            radius=24,
-            outline=(255, 180, 90, 170),
-            width=3,
+    cg = ImageDraw.Draw(chip_glow)
+    cursor = chip_start_x
+    for cw in chip_widths:
+        cg.rounded_rectangle(
+            [cursor - 2, chip_y - 2, cursor + cw + 2, chip_y + chip_h + 2],
+            radius=26, outline=(255, 180, 90, 170), width=3,
         )
-        cx_acc += cw + gap
+        cursor += cw + chip_gap
     chip_glow = chip_glow.filter(ImageFilter.GaussianBlur(8))
     img = Image.alpha_composite(img, chip_glow)
     draw = ImageDraw.Draw(img, "RGBA")
 
-    cx_acc = start_x
-    for i, c in enumerate(chips):
-        cw = chip_widths[i]
+    # Chip bodies + labels (anchor='mm')
+    cursor = chip_start_x
+    for label, cw in zip(chips, chip_widths):
         draw.rounded_rectangle(
-            [cx_acc, chip_y, cx_acc + cw, chip_y + chip_h],
-            radius=23,
-            fill=(70, 22, 8, 210),
+            [cursor, chip_y, cursor + cw, chip_y + chip_h],
+            radius=25,
+            fill=(70, 22, 8, 215),
             outline=(255, 210, 140, 240),
             width=2,
         )
-        tb = draw.textbbox((0, 0), c, font=chip_font, anchor="lt")
-        ttx = cx_acc + (cw - (tb[2] - tb[0])) // 2
-        tty = chip_y + (chip_h - (tb[3] - tb[1])) // 2 - 4
-        draw.text((ttx, tty), c, font=chip_font, fill=(255, 255, 255), anchor="lt")
-        cx_acc += cw + gap
+        draw.text((cursor + cw // 2, chip_cy), label,
+                  font=chip_font, fill=(255, 255, 255), anchor="mm")
+        cursor += cw + chip_gap
 
-    # --- footer: repo url only (evergreen — no version tag) ---
-    repo = "github.com/osrt91/ulak-os"
-    draw.text((40, H - 44), repo, font=version_font, fill=(255, 215, 170), anchor="lt")
+    # =====================================================
+    # 4) FOOTER — repo URL, bottom-left
+    # =====================================================
+    draw.text((40, H - 34), "github.com/osrt91/ulak-os",
+              font=footer_font, fill=(255, 215, 170), anchor="lm")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     img.convert("RGB").save(OUT, "PNG", optimize=True)
