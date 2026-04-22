@@ -8,14 +8,14 @@ _Reads your project · surfaces gaps · scaffolds full-stack SaaS_
 
 <br>
 
-[![Release](https://img.shields.io/github/v/release/osrt91/ulak-os?style=for-the-badge&color=7c3aed&labelColor=1e1b4b&label=RELEASE)](https://github.com/osrt91/ulak-os/releases)
-[![License](https://img.shields.io/github/license/osrt91/ulak-os?style=for-the-badge&color=7c3aed&labelColor=1e1b4b&label=LICENSE)](./LICENSE)
-[![Stars](https://img.shields.io/github/stars/osrt91/ulak-os?style=for-the-badge&color=7c3aed&labelColor=1e1b4b&label=STARS)](https://github.com/osrt91/ulak-os/stargazers)
+[![Release](https://img.shields.io/github/v/release/osrt91/ulak-os?style=for-the-badge&color=ea580c&labelColor=431407&label=RELEASE)](https://github.com/osrt91/ulak-os/releases)
+[![License](https://img.shields.io/github/license/osrt91/ulak-os?style=for-the-badge&color=ea580c&labelColor=431407&label=LICENSE)](./LICENSE)
+[![Stars](https://img.shields.io/github/stars/osrt91/ulak-os?style=for-the-badge&color=ea580c&labelColor=431407&label=STARS)](https://github.com/osrt91/ulak-os/stargazers)
 
-[![Claude Code](https://img.shields.io/badge/Claude_Code-24%2F24_native-7c3aed?style=flat-square&labelColor=1e1b4b)](./docs/adapters/claude-code.md)
-[![Gemini CLI](https://img.shields.io/badge/Gemini_CLI-24%2F24_native-7c3aed?style=flat-square&labelColor=1e1b4b)](./docs/adapters/gemini-cli.md)
-[![Codex CLI](https://img.shields.io/badge/Codex_CLI-24%2F24_NL-7c3aed?style=flat-square&labelColor=1e1b4b)](./docs/adapters/codex-cli.md)
-[![Copilot Chat](https://img.shields.io/badge/Copilot_Chat-22%2F24_NL-7c3aed?style=flat-square&labelColor=1e1b4b)](./docs/adapters/copilot-chat.md)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-24%2F24_native-ea580c?style=flat-square&labelColor=431407)](./docs/adapters/claude-code.md)
+[![Gemini CLI](https://img.shields.io/badge/Gemini_CLI-24%2F24_native-ea580c?style=flat-square&labelColor=431407)](./docs/adapters/gemini-cli.md)
+[![Codex CLI](https://img.shields.io/badge/Codex_CLI-24%2F24_NL-ea580c?style=flat-square&labelColor=431407)](./docs/adapters/codex-cli.md)
+[![Copilot Chat](https://img.shields.io/badge/Copilot_Chat-22%2F24_NL-ea580c?style=flat-square&labelColor=431407)](./docs/adapters/copilot-chat.md)
 
 [**🇹🇷 Türkçe**](./README.md) · **🇬🇧 English** (this file) · [**📚 Docs**](./docs/) · [**🗺️ Catalog**](./docs/catalog.md) · [**📝 Changelog**](./CHANGELOG.md)
 
@@ -110,7 +110,7 @@ flowchart LR
     P4 --> P5[Phase 5<br>Verdict]
     P5 --> A[(13 Artefacts<br>reports/current/)]
 
-    classDef primary fill:#7c3aed,stroke:#4c1d95,color:#fff,stroke-width:2px
+    classDef primary fill:#ea580c,stroke:#7c2d12,color:#fff,stroke-width:2px
     classDef accent fill:#10b981,stroke:#047857,color:#fff,stroke-width:2px
     class V,R primary
     class A accent
