@@ -45,7 +45,7 @@ Findings that match an anti-pattern automatically carry a tag in the finding sch
 - **Poor answer reveal UX** — (education) answer reveal that buries the explanation
 - **Poor filters / search** — filters that reload the page, search that doesn't return results fast
 - **Fake-premium visuals** — trying to look premium by adding blur and gradients instead of by restraint and hierarchy
-- **Bad dark mode parity** — dark mode implemented as "invert colors" without thought
+- **AP-20 Dark mode as second-class citizen** — dark mode ships as an afterthought: inverted colors instead of proper semantic token swap, untested scenes (cards invisible on dark bg, overlays washed out, photos burn retinas, primary accent illegible). Testing matrix is light-only; QA + screenshot tests never cover dark. Fix: (1) both modes designed in parallel from commit 1, not dark as follow-up; (2) semantic tokens (`color.surface.elevated`, `color.text.primary`, `color.accent`) map to HSL pairs — one source of truth, two render outputs; (3) screenshot CI captures both modes on every PR touching UI; (4) no component shipped without both visuals reviewed; (5) explicit elevation strategy for dark mode (not just darker shadows — luminance hierarchy via layered surface tints).
 - **Childish edtech styling** — cartoonish UI on a product marketed to serious learners
 - **Android patterns used badly on iOS** — Material Design Floating Action Button on an iOS-first app
 - **Inconsistent iconography** — three icon sets in one app
