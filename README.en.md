@@ -312,11 +312,36 @@ Full notes: [CHANGELOG.md](./CHANGELOG.md) · [docs/release/](./docs/release/)
 
 ---
 
-## 🤝 Contributing + security
+## 🤝 Contribute
 
-To propose new sector packs, rule packs, anti-patterns or agents: [CONTRIBUTING.md](./CONTRIBUTING.md) · Code of Conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
+**No need to email — fork, run, open a PR.** Ulak OS grows through community contribution.
 
-**🔒 Security issue**: DO NOT open a GitHub issue — mail `info@oguzhansert.dev` directly ([SECURITY.md](./SECURITY.md)).
+### ⚡ Your first contribution in 3 minutes
+
+```bash
+gh repo fork osrt91/ulak-os --clone              # 1) fork + clone
+cd ulak-os && bash scripts/validate-imports.sh   # 2) see pack health
+#    (add a sector pack / fix a typo / catch an anti-pattern)
+gh pr create                                     # 3) open PR, template guides you
+```
+
+### 🎯 Where do I start?
+
+| I want to | Go to |
+|---|---|
+| Pick a small task | [`good first issue`](https://github.com/osrt91/ulak-os/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) labelled open issues |
+| Propose a sector pack / anti-pattern / rule pack | [pattern_contribution template](https://github.com/osrt91/ulak-os/issues/new?template=pattern_contribution.md) |
+| Report a bug | [bug_report template](https://github.com/osrt91/ulak-os/issues/new?template=bug_report.md) |
+| Suggest a new command / skill / agent | [feature_request template](https://github.com/osrt91/ulak-os/issues/new?template=feature_request.md) |
+| Ask something without opening an issue | [Discussions](https://github.com/osrt91/ulak-os/discussions) → Q&A |
+| Deep guide | [CONTRIBUTING.md](./CONTRIBUTING.md) — pack governance, evidence rules, PR checklist |
+
+### 📞 Contact
+
+- **Questions / ideas / general chat** → [GitHub Discussions](https://github.com/osrt91/ulak-os/discussions) (faster than email)
+- **Bug reports** → [Issues](https://github.com/osrt91/ulak-os/issues/new/choose)
+- **🔒 Security vulnerability** → DO NOT open an issue, mail directly: `info@oguzhansert.dev` ([SECURITY.md](./SECURITY.md))
+- [Code of Conduct](./CODE_OF_CONDUCT.md) — community standard
 
 ---
 
