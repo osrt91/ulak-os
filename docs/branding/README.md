@@ -29,8 +29,11 @@ The upload is live immediately. Verify by pasting the repo URL into any platform
 
 | Token | Hex | Usage |
 |---|---|---|
-| Indigo-950 | `#1e1b4b` | Gradient start, badge `labelColor` |
-| Violet-600 | `#7c3aed` | Gradient end, all accent surfaces |
-| Emerald-500 | `#10b981` | Success/artefact accent (mermaid) |
+| Orange-950 | `#431407` | Gradient start, badge `labelColor`, mermaid dark |
+| Orange-700 | `#c2410c` | Gradient mid, chip body |
+| Orange-600 | `#ea580c` | Badge primary fill, mermaid node primary |
+| Orange-900 | `#7c2d12` | Mermaid stroke |
+| Amber-500 | `#f59e0b` | Gradient end, halo accent |
+| Amber-200 | `#fed7aa` | Tagline + secondary text on dark |
+| Emerald-500 | `#10b981` | Success/artefact accent (mermaid, retained for contrast) |
 | Slate-200 | `#e2e8f0` | Subtitle on dark surface |
-| Violet-300 | `#c4b5fd` | Tagline + version tag |
