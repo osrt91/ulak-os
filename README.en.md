@@ -29,7 +29,7 @@ _Reads your project · surfaces gaps · scaffolds full-stack SaaS_
 
 <table>
 <tr>
-<td width="33%" align="center" valign="top">
+<td width="34%" align="center" valign="top">
 
 ### 👋<br>New here
 <br>
