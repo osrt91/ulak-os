@@ -95,16 +95,22 @@ Sonra: Claude Code / Gemini CLI / Codex / Copilot aç, `/ulak-hello` yaz. Gerisi
 
 ```mermaid
 flowchart TD
-    U([Kullanıcı · slash / doğal dil]) --> V{Sağlayıcı Adaptörü}
-    V --> CC[Claude Code] & GM[Gemini CLI] & CX[Codex CLI] & CP[Copilot Chat]
-    CC & GM & CX & CP --> R[Router]
-    R --> P0[Phase 0 · Environment]
-    P0 --> P1[Phase 1 · Deep Inventory]
-    P1 --> P2[Phase 2 · Parallel Evidence]
-    P2 --> P3[Phase 3 · Did-You-Know]
-    P3 --> P4[Phase 4 · Synthesis]
-    P4 --> P5[Phase 5 · Verdict]
-    P5 --> A[(13 Artefakt · reports/current/)]
+    U([Kullanıcı - slash veya doğal dil]) --> V{Sağlayıcı Adaptörü}
+    V --> CC[Claude Code]
+    V --> GM[Gemini CLI]
+    V --> CX[Codex CLI]
+    V --> CP[Copilot Chat]
+    CC --> R[Router]
+    GM --> R
+    CX --> R
+    CP --> R
+    R --> P0[Phase 0 - Environment]
+    P0 --> P1[Phase 1 - Deep Inventory]
+    P1 --> P2[Phase 2 - Parallel Evidence]
+    P2 --> P3[Phase 3 - Did-You-Know]
+    P3 --> P4[Phase 4 - Synthesis]
+    P4 --> P5[Phase 5 - Verdict]
+    P5 --> A[13 Artefakt<br/>reports/current/]
 
     classDef primary fill:#ea580c,stroke:#7c2d12,color:#fff,stroke-width:2px
     classDef accent fill:#10b981,stroke:#047857,color:#fff,stroke-width:2px
@@ -260,7 +266,7 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 | Arkayüz | Supabase SSR | FastAPI + Node hibrit |
 | Ödeme | Stripe · Iyzico · ikisi · yok | — |
 | Mobil | Expo 55+ (opsiyonel) | — |
-| Barındırma | Self-managed VPS + Traefik | Vercel · Fly.io · Railway |
+| Barındırma | Kendi yönettiğin VPS + Traefik | Vercel · Fly.io · Railway |
 | i18n | TR + EN taban | localization-ssot paketi ile ≥2 dil |
 
 ---
@@ -310,7 +316,7 @@ Tam notlar: [CHANGELOG.md](./CHANGELOG.md) · [docs/release/](./docs/release/)
 
 ## 🤝 Katkıda bulun
 
-**Mail atmana gerek yok — fork'la, çalıştır, PR aç.** Ulak OS topluluk katkısıyla büyüyor.
+**Mail atmana gerek yok — çatalla, çalıştır, PR aç.** Ulak OS topluluk katkısıyla büyüyor.
 
 ### ⚡ 3 dakikada ilk katkı
 
@@ -343,7 +349,7 @@ gh pr create                                     # 3) PR aç, şablon seni yönl
 
 <div align="center">
 
-**📄 Lisans** — [MIT](./LICENSE) · fork'la, uyarla, kendi operasyonuna uygula. Atıf yeterli.
+**📄 Lisans** — [MIT](./LICENSE) · çatalla, uyarla, kendi operasyonuna uygula. Atıf yeterli.
 
 **👤 Sorumlu** — [**Oğuzhan Sert**](https://github.com/osrt91) · `info@oguzhansert.dev`
 

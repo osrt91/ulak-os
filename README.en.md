@@ -95,16 +95,22 @@ Then: open Claude Code / Gemini CLI / Codex / Copilot, type `/ulak-hello`. The m
 
 ```mermaid
 flowchart TD
-    U([User · slash / NL]) --> V{Vendor Adapter}
-    V --> CC[Claude Code] & GM[Gemini CLI] & CX[Codex CLI] & CP[Copilot Chat]
-    CC & GM & CX & CP --> R[Router]
-    R --> P0[Phase 0 · Environment]
-    P0 --> P1[Phase 1 · Deep Inventory]
-    P1 --> P2[Phase 2 · Parallel Evidence]
-    P2 --> P3[Phase 3 · Did-You-Know]
-    P3 --> P4[Phase 4 · Synthesis]
-    P4 --> P5[Phase 5 · Verdict]
-    P5 --> A[(13 Artefacts · reports/current/)]
+    U([User - slash or NL]) --> V{Vendor Adapter}
+    V --> CC[Claude Code]
+    V --> GM[Gemini CLI]
+    V --> CX[Codex CLI]
+    V --> CP[Copilot Chat]
+    CC --> R[Router]
+    GM --> R
+    CX --> R
+    CP --> R
+    R --> P0[Phase 0 - Environment]
+    P0 --> P1[Phase 1 - Deep Inventory]
+    P1 --> P2[Phase 2 - Parallel Evidence]
+    P2 --> P3[Phase 3 - Did-You-Know]
+    P3 --> P4[Phase 4 - Synthesis]
+    P4 --> P5[Phase 5 - Verdict]
+    P5 --> A[13 Artefacts<br/>reports/current/]
 
     classDef primary fill:#ea580c,stroke:#7c2d12,color:#fff,stroke-width:2px
     classDef accent fill:#10b981,stroke:#047857,color:#fff,stroke-width:2px
