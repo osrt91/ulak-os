@@ -8,6 +8,7 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 
 ### Runtime rules
 @docs/runtime/router.md
+@docs/runtime/intent-router.md
 @docs/runtime/program-phases.md
 @docs/runtime/artefact-contract.md
 @docs/runtime/context-budget.md
@@ -24,6 +25,7 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 @docs/runtime/handoff-plan-contract.md
 @docs/runtime/persona-dispatch-pattern.md
 @docs/runtime/office-roster.md
+@docs/runtime/runtime-constants.md
 
 ### Operational motors (mode-loaded)
 @docs/runtime/toolchain-precheck.md
@@ -52,6 +54,8 @@ Bu çekirdeğin operasyonel disiplini aşağıdaki dosyalarda tanımlıdır. Bu 
 @docs/governance/lock-file-hygiene.md
 @docs/governance/secrets-rotation-policy.md
 @docs/governance/observability-baseline.md
+@docs/governance/ai-provider-allowlist.md
+@docs/governance/pattern-import-ledger.md
 
 ### Imports are Layer 1 (public runtime surface)
 Bu dosyaların tümü `docs/governance/surface-split.md` tanımındaki **public runtime surface**'e aittir. Historical/version-diff notları bu listeye girmez; onlar hidden core'a aittir.

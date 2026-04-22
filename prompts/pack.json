@@ -12,8 +12,8 @@
   "sector_overlays": 14,
   "anti_pattern_bullets": 98,
   "anti_pattern_numbered": 19,
-  "governance_docs": 22,
-  "runtime_rules": 33,
+  "governance_docs": 24,
+  "runtime_rules": 36,
   "scaffolder_templates": 284,
   "adrs": 7,
   "artefacts": [
@@ -39,5 +39,5 @@
     "cli": ">=1.0.0",
     "vendors": ["claude-code", "codex-cli", "gemini-cli"]
   },
-  "updated": "2026-04-21"
+  "updated": "2026-04-22"
 }

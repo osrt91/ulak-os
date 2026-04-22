@@ -112,7 +112,7 @@ flowchart TD
     class A accent
 ```
 
-**İçe aktarım zinciri**: `CLAUDE.md` → `@prompts/core/ulak-os-core-contract-2.0.0.md` → **24 çalışma zamanı kuralı + 17 yönetişim + 4 sağlayıcı adaptörü**. Tek dosyadan tüm katmanlar yüklenir.
+**İçe aktarım zinciri**: `CLAUDE.md` → `@prompts/core/ulak-os-core-contract-2.0.0.md` → **26 çalışma zamanı kuralı + 19 yönetişim + 4 sağlayıcı adaptörü**. Tek dosyadan tüm katmanlar yüklenir.
 
 ---
 
@@ -197,7 +197,7 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 
 <div align="center">
 
-| **24** | **10** | **27** | **14** | **8** | **22** | **33** | **~100** |
+| **24** | **10** | **27** | **14** | **8** | **24** | **36** | **~100** |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | Komut | Beceri | Ajan | Sektör paketi | Kural paketi | Yönetişim | Çalışma zamanı kuralı | Anti-desen |
 
@@ -215,8 +215,8 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 | **Ajanlar** | 27 | [`.claude/agents/`](./.claude/agents/) — 19 uzman + 1 otonom program yönetici + 7 persona (admin, müşteri, bayi, geliştirici, destek, uyum, güvenlik-redteam) |
 | **Sektör paketleri** | 14 | [`templates/sectors/`](./templates/sectors/) — education, saas, fintech, ecommerce, marketplace, enterprise-b2b, media-content, health-sensitive, ai-copilot, pwa-desktop, ai-relay-cost-control, member-gated-community, admin-cms-hardening, self-hosted-supabase |
 | **Kural paketleri** | 8 | [`docs/runtime/rule-packs/`](./docs/runtime/rule-packs/) — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo |
-| **Yönetişim** | 22 | [`docs/governance/`](./docs/governance/) — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization vb. |
-| **Çalışma zamanı** | 33 | [`docs/runtime/`](./docs/runtime/) — router, program-phases (Phase 0-5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern vb. |
+| **Yönetişim** | 24 | [`docs/governance/`](./docs/governance/) — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization vb. |
+| **Çalışma zamanı** | 36 | [`docs/runtime/`](./docs/runtime/) — router, intent-router, program-phases (Phase 0-5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern, runtime-constants vb. |
 | **Anti-desen** | ~100 | 19 AP-NN (AP-01..AP-19) + klasik (IDOR, BOLA, N+1, RLS asimetrisi, ölü kod vb.) |
 | **İskelet** | 285 | [`templates/saas-starter/`](./templates/saas-starter/) — Next.js 16 + TS strict + Tailwind v4 + Supabase SSR + RLS + CI + testler + VPS sıkılaştırma + 59 markalı tasarım referansı |
 
@@ -229,7 +229,7 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 | | Komut | Ne üretir |
 |---|---|---|
 | 🔍 **Denetler** | `/director komple` | Phase 0→5 protokolü: 27 uzman paralel, 15 boyutlu değerlendirme, ~100 anti-desen taraması, 13 artefakt |
-| ⚙️ **Yönetir** | `@prompts/core/ulak-os-core-contract-2.0.0.md` | Çekirdek sözleşme CLAUDE.md'ye içe aktarılır → 22 yönetişim + 14 sektör + 8 kural paketi her oturumda aktif |
+| ⚙️ **Yönetir** | `@prompts/core/ulak-os-core-contract-2.0.0.md` | Çekirdek sözleşme CLAUDE.md'ye içe aktarılır → 24 yönetişim + 14 sektör + 8 kural paketi her oturumda aktif |
 | 🏗️ **İskelet kurar** | `/ulak-scaffold` veya `/ulak-start` | Tam yığın SaaS ilk commit'te — 285 şablon dosya + 8 anti-desen inşa anında kapıda tutulur |
 
 ---

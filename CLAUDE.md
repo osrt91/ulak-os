@@ -4,7 +4,6 @@
 @docs/adapters/universal-runtime-contract.md
 @docs/adapters/claude-code.md
 @docs/governance/vendor-capability-matrix.md
-@docs/runtime/localization-strategy.md
 
 ## Project identity
 - Product: Ulak OS

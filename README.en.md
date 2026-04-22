@@ -112,7 +112,7 @@ flowchart TD
     class A accent
 ```
 
-**Import chain**: `CLAUDE.md` → `@prompts/core/ulak-os-core-contract-2.0.0.md` → **24 runtime rules + 17 governance + 4 vendor adapters**. All layers load from one entry.
+**Import chain**: `CLAUDE.md` → `@prompts/core/ulak-os-core-contract-2.0.0.md` → **26 runtime rules + 19 governance + 4 vendor adapters**. All layers load from one entry.
 
 ---
 
@@ -197,7 +197,7 @@ Cross-platform validator chain. All-green = pack healthy.
 
 <div align="center">
 
-| **24** | **10** | **27** | **14** | **8** | **22** | **33** | **~100** |
+| **24** | **10** | **27** | **14** | **8** | **24** | **36** | **~100** |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | Commands | Skills | Agents | Sector packs | Rule packs | Governance | Runtime rules | Anti-patterns |
 
@@ -215,8 +215,8 @@ Cross-platform validator chain. All-green = pack healthy.
 | **Agents** | 27 | [`.claude/agents/`](./.claude/agents/) — 19 specialists + 1 autonomous-program-director + 7 persona (admin, customer, bayi, developer, support, compliance, security-redteam) |
 | **Sector packs** | 14 | [`templates/sectors/`](./templates/sectors/) — education, saas, fintech, ecommerce, marketplace, enterprise-b2b, media-content, health-sensitive, ai-copilot, pwa-desktop, ai-relay-cost-control, member-gated-community, admin-cms-hardening, self-hosted-supabase |
 | **Rule packs** | 8 | [`docs/runtime/rule-packs/`](./docs/runtime/rule-packs/) — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo |
-| **Governance** | 22 | [`docs/governance/`](./docs/governance/) — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization, etc. |
-| **Runtime** | 33 | [`docs/runtime/`](./docs/runtime/) — router, program-phases (Phase 0-5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern, etc. |
+| **Governance** | 24 | [`docs/governance/`](./docs/governance/) — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization, etc. |
+| **Runtime** | 36 | [`docs/runtime/`](./docs/runtime/) — router, intent-router, program-phases (Phase 0-5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern, runtime-constants, etc. |
 | **Anti-patterns** | ~100 | 19 AP-NN (AP-01..AP-19) + classic (IDOR, BOLA, N+1, RLS asymmetry, dead code, etc.) |
 | **Scaffolder** | 285 | [`templates/saas-starter/`](./templates/saas-starter/) — Next.js 16 + TS strict + Tailwind v4 + Supabase SSR + RLS + CI + tests + VPS hardening + 59-brand design reference |
 
@@ -229,7 +229,7 @@ Cross-platform validator chain. All-green = pack healthy.
 | | Command | Produces |
 |---|---|---|
 | 🔍 **Audit** | `/director komple` | Phase 0→5 protocol: 27 specialists parallel, 15-dim scorecard, ~100 anti-pattern scan, 13 artefacts |
-| ⚙️ **Govern** | `@prompts/core/ulak-os-core-contract-2.0.0.md` | Import core contract into CLAUDE.md → 22 governance + 14 sector + 8 rule packs active per session |
+| ⚙️ **Govern** | `@prompts/core/ulak-os-core-contract-2.0.0.md` | Import core contract into CLAUDE.md → 24 governance + 14 sector + 8 rule packs active per session |
 | 🏗️ **Scaffold** | `/ulak-scaffold` or `/ulak-start` | Full-stack SaaS at commit 1 — 285 template files + 8 anti-patterns gated construction-time |
 
 ---
