@@ -133,7 +133,7 @@ Three principles explain most of the choices made in Ulak OS.
 
 ## A note on origins
 
-Ulak OS was built by distilling lessons from a portfolio of production SaaS projects. The first internal release line (branded with codename letters — "V6", "V7", and so on) evolved through nine internal versions before the project was reframed as a vendor-neutral pack anyone could adopt. `v1.0.0` was the first public GA release; `v1.6.0` is the current version documented by this manual.
+Ulak OS was built by distilling lessons from a portfolio of production SaaS projects. The first internal release line (branded with codename letters — "V6", "V7", and so on) evolved through nine internal versions before the project was reframed as a vendor-neutral pack anyone could adopt. `v1.0.0` was the first public GA release; `v1.9.0` is the current version, the latest in the v1.7 → v1.9 portfolio absorption arc that bumps one minor per absorbed source project until v2.0.0 final.
 
 That history shows up in a few ways. The word "Ulak" is Turkish. Some runtime rule files retain their original Turkish imperatives (see the `turkish-normalization.md` runtime rule, which specifically addresses Turkish character handling in i18n code). The localization-SSOT rule pack defaults to bilingual Turkish + English, because that is the baseline every origin-project shipped with.
 
