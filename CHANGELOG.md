@@ -1,6 +1,52 @@
 # Changelog
 
-All notable **public releases** of Ulak OS. The pre-v1.0.0 internal development cycle is intentionally not retained in this changelog — that history led to the v1.0.0 consolidation (see the v1.0.0 entry's "Hardening" section) and was replaced by the semver reset + scrub pass. Public users see only the v1.x lineage from this file forward.
+All notable **public releases** of Ulak OS. The pre-v1.0.0 internal development cycle is intentionally not retained in this changelog — that history led to the v1.0.0 consolidation (see the v1.0.0 entry's "Hardening" section) and was replaced by the semver reset + scrub pass. Public users see only the v1.x → v2.x lineage from this file forward.
+
+---
+
+## [2.0.0] — 2026-04-26 — Multi-locale + multi-jurisdiction maturity milestone
+
+**Why v2.0**: First public absorption of cross-project patterns from a portfolio production SaaS into Ulak OS canonical packs. Ulak OS exits the v1.x "consolidation + cross-vendor parity" arc and enters the v2.x "pattern-absorption flywheel" arc — the runtime now ships rule-packs and anti-patterns derived from real production evidence rather than synthesized doctrine. Sufficiently load-bearing to warrant a major bump.
+
+### Added
+
+- **`docs/runtime/rule-packs/multi-locale-eleven-rtl.md` (NEW, 98 lines)** — 11-locale governance pack covering LTR + RTL (Arabic) + CJK (Chinese / Japanese / Korean) script families, locale-detection precedence (URL > cookie > Accept-Language > IP-geo > default), lazy-load enforcement (no eager-bundle of all locales), bidi marks for mixed text, font-stack rules, IME composition handling, per-locale `Intl.*` formatting, hreflang + per-locale OG tags, and a surface-coverage gate (UI / email / push / legal / store / SEO / help / errors all required before a locale is "shipped"). Sibling-loads with `localization-ssot.md` and `turkish-locale.md`.
+- **`docs/runtime/rule-packs/kvkk-gdpr-compliance.md` (NEW, 117 lines)** — Multi-jurisdiction privacy regime pack with a canonical 11-row matrix (TR-KVKK / EU-GDPR / UK-DPA / US-CCPA-CPRA / JA-APPI / KR-PIPA / ZH-PIPL / RU-152-FZ / KSA-PDPL / UAE-PDPL / BR-LGPD), per-regime cookie consent rules, DSR endpoint contract (`/api/dsr/access|export|delete|rectify|restrict|portability|withdraw`), data retention YAML schema, cross-border transfer governance (SCCs + adequacy + PIPL security assessment + Russian data residency), DPO + representative requirements per jurisdiction, sub-processor chain discipline, breach notification SLAs, and 4 CI-blocking validators (`validate-privacy-notice-coverage.sh`, `validate-retention-config.sh`, `validate-dsr-endpoints.sh`, `validate-cookie-consent.sh`).
+- **`docs/runtime/anti-patterns.md` AP-21 — Locale-blind case conversion** — `String.toLowerCase()` / `.toUpperCase()` without locale arg breaks Turkish (combining-mark `i̇`, missing dotted-İ uppercase), German `ß`, Greek final-sigma. Lookup paths (login email match, dedupe, search) are the dangerous surface, not just display. Fix prescribed across JS / Python / Java-Kotlin / Postgres stacks.
+- **`docs/runtime/anti-patterns.md` AP-22 — Turkish slug collision + display leak** — Three-layer failure: information loss on Turkish-char fold, unresolved collision on `Şişli`/`Sisli`, slug-as-display-label leak. Fix: separate `display` / `search_key` / `slug` fields; collision suffix at insert time; never derive display from slug.
+- **`docs/runtime/anti-patterns.md` AP-23 — God i18n file** — Single `i18n.ts` >3000 LOC bundling all locales blocks lazy-load + tree-shake + translator workflow; merge conflicts pile up. Strangler Fig 4-step migration prescribed; trigger threshold >1500 LOC OR >4 locales bundled.
+- **`docs/governance/pattern-import-ledger.md` IL-002..IL-006** — Five new ledger entries with abstract source descriptors ("11-locale security/QA scanner SaaS"), T2 trust tier, divergence notes, and upstream-fix-pending tracking. Source-of-truth for the v2.0.0 pattern absorption pass.
+
+### Changed
+
+- `prompts/pack.json` counts: `rule_packs` 9 → 11; `anti_pattern_numbered` 20 → 23; `updated` 2026-04-22 → 2026-04-26.
+- `package.json` + `prompts/pack.json` version: 1.6.1 → 2.0.0.
+- `docs/governance/pattern-import-ledger.md` canonical footer: now references v2.0.0 baseline; clarifies that the prior "v2.2.0" footnote referred to the abandoned pre-reset cycle and the current public line is v1.0.0-launch → v1.6.1 → v2.0.0.
+
+### Pattern absorption methodology (process note for future v2.x releases)
+
+This release inaugurates the formal cross-project absorption flywheel:
+
+1. **Source**: Run `/director komple` on a portfolio production project (real bugs, real users, real jurisdictions).
+2. **Extract**: Run `/ulak-pattern-extract` to surface cross-project-reusable patterns with file:line evidence.
+3. **Abstract**: Author Ulak OS canonical entry (rule-pack / sector-pack / anti-pattern / ADR) using abstract source descriptors per redaction discipline (`docs/governance/memory-hygiene.md`).
+4. **Ledger**: Record provenance in `pattern-import-ledger.md` with T1/T2 trust tier + divergence notes + upstream-fix tracking.
+5. **Ship**: Bump version, update CHANGELOG, regenerate disk-counts.
+
+This release covers absorption pass #1 (single source project, 11-locale + multi-jurisdiction patterns). Future v2.x minor releases will absorb additional portfolio projects' cross-cutting patterns under the same protocol.
+
+### Unchanged (explicit)
+
+- Runtime contract (`prompts/core/ulak-os-core-contract-2.0.0.md`) — byte-identical to v1.6.1; the contract's schema version intentionally remains `2.0.0` (filename invariant; see core-contract sürüm bağlamı section).
+- Vendor capability matrix — Claude FULL / Gemini FULL-MINUS / Codex CORE / Copilot LIMITED, no changes.
+- Commands (24) / skills (10) / agents (27) / sector packs (24) / sector overlays (15) — counts identical.
+- Governance docs (23) — count identical (pattern-import-ledger.md extended in place, not added new).
+- Scaffolder templates (125) / ADRs (7) / runtime rules (36) — unchanged.
+
+### Carried-forward residual risks (open in v2.0.0, scheduled for v2.0.x or v2.1.0)
+
+- 2026-04-25 self-audit MERGED-001..010 P0 critical findings (vendor-adapter `child_process.exec` RCE risk, plugin-manifest version drift, scaffolder-templates count fabrication, prepublishOnly without real tests, install supply-chain hardening) — NOT addressed in v2.0.0; scheduled for v2.0.1 / v2.1.0.
+- Untracked tooling (`bin/ulak.ps1` PowerShell wrapper, `scripts/integrate-sibling-projects.ps1`) — NOT committed in this release; scheduled for v2.0.1 PowerShell-parity bundle.
 
 ---
 

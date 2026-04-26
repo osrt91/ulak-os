@@ -220,10 +220,10 @@ Platform bağımsız doğrulayıcı zinciri. Hepsi yeşilse paket sağlıklı.
 | **Beceriler** | 10 | [`.claude/skills/`](./.claude/skills/) — `saas-scaffolder`, `fourteen-dimension-audit`, `god-module-decomposition`, `multi-agent-orchestration`, `final-validation`, `pack-gap-completion`, `project-intake`, `research-currency`, `awesome-packs-index`, `mcp-governance-auto` |
 | **Ajanlar** | 27 | [`.claude/agents/`](./.claude/agents/) — 19 uzman + 1 otonom program yönetici + 7 persona (admin, müşteri, bayi, geliştirici, destek, uyum, güvenlik-redteam) |
 | **Sektör paketleri** | 15 | [`templates/sectors/`](./templates/sectors/) — admin-cms-hardening, ai-copilot, ai-relay-cost-control, container-k8s, ecommerce, education, enterprise-b2b, fintech, health-sensitive, marketplace, media-content, member-gated-community, pwa-desktop, regulated-saas, self-hosted-supabase |
-| **Kural paketleri** | 9 | [`docs/runtime/rule-packs/`](./docs/runtime/rule-packs/) — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo, flutter-ios-2026 |
+| **Kural paketleri** | 11 | [`docs/runtime/rule-packs/`](./docs/runtime/rule-packs/) — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo, flutter-ios-2026, multi-locale-eleven-rtl, kvkk-gdpr-compliance |
 | **Yönetişim** | 23 | [`docs/governance/`](./docs/governance/) — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization vb. |
 | **Çalışma zamanı** | 36 | [`docs/runtime/`](./docs/runtime/) — router, intent-router, program-phases (Phase 0-5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern, runtime-constants, screen-redesign-template vb. |
-| **Anti-desen** | ~100 | 20 AP-NN (AP-01..AP-20) + klasik (IDOR, BOLA, N+1, RLS asimetrisi, ölü kod vb.) |
+| **Anti-desen** | ~100 | 23 AP-NN (AP-01..AP-23 — v2.0.0'da AP-21/22/23 lokalleştirme katmanı eklendi) + klasik (IDOR, BOLA, N+1, RLS asimetrisi, ölü kod vb.) |
 | **İskelet** | 125 | [`templates/saas-starter/`](./templates/saas-starter/) — Next.js 16 + TS strict + Tailwind v4 + Supabase SSR + RLS + CI + testler + VPS sıkılaştırma + 59 markalı tasarım referansı |
 
 </details>
@@ -411,6 +411,6 @@ gh pr create                                     # 3) PR aç, şablon seni yönl
 
 <br>
 
-<sub>Ulak OS <b>v1.6.1</b> itibarıyla yetkili · Derleme bilgisi: <a href="./prompts/pack.json"><code>prompts/pack.json</code></a> · Çekirdek sözleşme: <a href="./prompts/core/ulak-os-core-contract-2.0.0.md"><code>ulak-os-core-contract-2.0.0.md</code></a></sub>
+<sub>Ulak OS <b>v2.0.0</b> itibarıyla yetkili · Derleme bilgisi: <a href="./prompts/pack.json"><code>prompts/pack.json</code></a> · Çekirdek sözleşme: <a href="./prompts/core/ulak-os-core-contract-2.0.0.md"><code>ulak-os-core-contract-2.0.0.md</code></a></sub>
 
 </div>
