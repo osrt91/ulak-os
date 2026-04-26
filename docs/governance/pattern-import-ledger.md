@@ -819,6 +819,287 @@ upstream_fixes_pending:
     scheduled_for: "(source project Sprint 2)"
 ```
 
+### IL-027: Community/event platform → AP-41 security primitive fails open
+
+```yaml
+id: IL-027
+pattern_name: "Security primitive fails OPEN on missing config or empty token (Turnstile + Origin check)"
+source_project: "(operator's portfolio — Next.js 16 + Expo React Native + self-hosted Supabase community/event platform with Turnstile bot-protection)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(production HEAD as of 2026-04-26; absorbed from did-you-know DYK-11 + DYK-12)"
+source_files:
+  - "lib/turnstile.ts:8 (returns true when TURNSTILE_SECRET_KEY unset — fail-open)"
+  - "lib/actions/contact.ts:31 (if turnstileToken wrap — empty token bypasses gate)"
+  - "middleware.ts:36-38 (return !origin — no Origin header = pass)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-41"
+  - "docs/runtime/rule-packs/security-primitive-fail-closed.md (NEW — full pack)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source has Turnstile + Origin check specifically; AP-41 generalizes to all verify primitives (CAPTCHA/CSRF/HMAC/JWT/rate-limit).
+  - Startup-time secret-presence check + integration test prescriptions are Ulak generalizations.
+  - Cloudflare-brownout scenario (no try/catch, no timeout) is mentioned as compounding factor.
+upstream_fixes_pending:
+  - id: UF-IL027-01
+    description: "Source project: refactor verifyTurnstile to throw on missing secret; refactor call sites to reject on empty token; refactor middleware Origin to require Origin on state-changing methods"
+    severity: high
+    scheduled_for: "(source project Wave 2)"
+```
+
+### IL-028: Community/event platform → AP-42 self-hosted multi-tenant secret coupling
+
+```yaml
+id: IL-028
+pattern_name: "Self-hosted multi-tenant JWT_SECRET coupling (rotation cascades across tenants)"
+source_project: "(operator's portfolio — multiple tenants on shared self-hosted Supabase instance)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-9)"
+source_files:
+  - "(self-hosted Supabase shares JWT_SECRET across schema-isolated tenants)"
+  - ".env.local (service-role JWT exp=2036, same secret across portfolio sibling tenant)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-42"
+  - "docs/runtime/rule-packs/security-primitive-fail-closed.md §Secret rotation"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Specific to self-hosted Supabase; AP-42 generalizes to any multi-tenant on shared signing-key (Auth0, Keycloak, custom JWT issuer).
+  - Per-tenant asymmetric JWT recommendation (RS256/ES256) is industry consensus.
+  - "Short expiry forces regular review" prescription is Ulak operator-knowledge.
+upstream_fixes_pending:
+  - id: UF-IL028-01
+    description: "Operator: migrate self-hosted Supabase to per-tenant signing keys OR document cross-tenant rotation runbook"
+    severity: high
+    scheduled_for: "(operator decision — cross-tenant coordination required)"
+```
+
+### IL-029: Community/event platform → AP-43 + security-primitive-fail-closed rule-pack
+
+```yaml
+id: IL-029
+pattern_name: "Rotate-without-revoke duplicate live secrets + consolidated security fail-closed contract"
+source_project: "(operator's portfolio — Next.js 16 + Expo + self-hosted Supabase community/event platform)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-10 + cross-cluster of 11 fail-open observations)"
+source_files:
+  - ".env:1 (cfut_ArWw… Cloudflare token, un-revoked)"
+  - ".env.local:8 (cfut_XmglB… Cloudflare token, un-revoked — same service, different token)"
+  - "(same pattern: 2 distinct Resend API keys, both alive)"
+  - "(11-cluster fail-open compounding observed across same project — codified as rule-pack)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-43"
+  - "docs/runtime/rule-packs/security-primitive-fail-closed.md (NEW — full pack)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Rotate-without-revoke pattern observed in 2 services (Cloudflare + Resend); AP-43 generalizes to any provider rotation.
+  - Four-atomic-step runbook (issue→deploy→verify→revoke) is Ulak prescription.
+  - Quarterly secret-audit cron is Ulak generalization.
+  - The full security-primitive-fail-closed rule-pack consolidates AP-41/42/43/44/45/46/47/48 into a single fail-mode contract — 11 observed surfaces in same project all made the same architectural choice.
+upstream_fixes_pending:
+  - id: UF-IL029-01
+    description: "Source project: revoke older Cloudflare token + older Resend key; install secret-rotate.sh with built-in revocation step"
+    severity: high
+    scheduled_for: "(operator immediate — both tokens alive in repo)"
+```
+
+### IL-030: Community/event platform → AP-44 tests default to production URL
+
+```yaml
+id: IL-030
+pattern_name: "Test config defaults baseURL to PRODUCTION URL"
+source_project: "(operator's portfolio — Next.js 16 + Playwright e2e)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-7)"
+source_files:
+  - "playwright.config.ts (baseURL defaults to https://example.com when PLAYWRIGHT_BASE_URL unset)"
+  - "(auth.spec.ts step that signs up creates real user in prod DB)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-44"
+  - "docs/runtime/rule-packs/security-primitive-fail-closed.md (validator: validate-test-base-url-not-prod.sh)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source has Playwright; AP-44 generalizes to Cypress / Vitest / load-test runners.
+  - "Refuse to run against prod" deploy-time gate is Ulak prescription.
+  - STAGING_ONLY env guard for destructive specs is Ulak generalization.
+upstream_fixes_pending:
+  - id: UF-IL030-01
+    description: "Source project: change default baseURL to localhost:port; add prod-URL refusal guard"
+    severity: medium
+    scheduled_for: "(source project Wave 2)"
+```
+
+### IL-031: Community/event platform → AP-45 CSP self-defeat
+
+```yaml
+id: IL-031
+pattern_name: "CSP self-defeat (`unsafe-inline` + `unsafe-eval` together)"
+source_project: "(operator's portfolio — Next.js 16 community/event platform)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-14)"
+source_files:
+  - "next.config.ts:21 (CSP grants script-src 'unsafe-inline' AND 'unsafe-eval')"
+  - "(combined with Zustand persist to localStorage = XSS → session theft)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-45"
+  - "docs/runtime/rule-packs/security-primitive-fail-closed.md §CSP"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Specific to script-src; AP-45 generalizes the principle "any combination of unsafe-* directives = no CSP".
+  - Next.js 13+ nonce API recommendation is industry consensus.
+  - HttpOnly + SameSite=Strict cookie alternative to localStorage is Ulak prescription.
+  - CI gate (`validate-csp-no-unsafe.sh`) is Ulak-shipped template.
+upstream_fixes_pending:
+  - id: UF-IL031-01
+    description: "Source project: refactor inline scripts to nonce-based; replace eval-using libs; CSP report-only 2wk before enforce"
+    severity: high
+    scheduled_for: "(source project Wave 3)"
+```
+
+### IL-032: Community/event platform → AP-46 audit log as account-enumeration oracle
+
+```yaml
+id: IL-032
+pattern_name: "Audit log stores raw email-typed on failed-login (account-enumeration oracle)"
+source_project: "(operator's portfolio — community/event platform with staff-tier audit_log RLS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-17)"
+source_files:
+  - "(failed-login path writes {email_typed, error_message: 'Invalid login credentials'} to audit_log)"
+  - "(staff-tier RLS allows SELECT email FROM audit_log → bulk user-list exfiltration)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-46"
+  - "docs/runtime/rule-packs/security-primitive-fail-closed.md §Audit log"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source has failed-login specifically; AP-46 generalizes to failed-OTP, failed-password-reset, failed-2FA.
+  - email_hash = sha256(email + salt) preservation pattern is Ulak prescription.
+  - Distinguished RLS ("scan vs select-by-user-id") is Ulak prescription.
+  - 90d auto-purge for failed-attempt entries is Ulak prescription.
+upstream_fixes_pending:
+  - id: UF-IL032-01
+    description: "Source project: hash email_typed in failed-login audit entries; tighten audit_log RLS for staff scan vs incident-response"
+    severity: high
+    scheduled_for: "(source project Wave 4)"
+```
+
+### IL-033: Community/event platform → AP-47 open-redirect via protocol-relative URL
+
+```yaml
+id: IL-033
+pattern_name: "OAuth callback open-redirect via protocol-relative `//evil.com` next param"
+source_project: "(operator's portfolio — Next.js 16 OAuth callback)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-16)"
+source_files:
+  - "app/(auth)/auth/callback/route.ts:23 (redirect(`${origin}${next}`) — string concat with user-controllable next)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-47"
+  - "docs/runtime/rule-packs/security-primitive-fail-closed.md §Redirect after action"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source has OAuth callback; AP-47 generalizes to login-redirect, post-action-redirect, any URL built from user input.
+  - Variant catalog (backslash, URL-encoded, unicode fullwidth, javascript:) is Ulak operator-knowledge synthesis.
+  - new URL(next, origin) + .origin assertion is industry standard fix.
+upstream_fixes_pending:
+  - id: UF-IL033-01
+    description: "Source project: refactor callback redirect to parse + assert origin; add fuzz test for known variants"
+    severity: high
+    scheduled_for: "(source project Wave 2)"
+```
+
+### IL-034: Community/event platform → AP-48 SVG upload stored-XSS
+
+```yaml
+id: IL-034
+pattern_name: "SVG upload admitted via mime.startsWith('image/'); no server-side allowed_mime_types"
+source_project: "(operator's portfolio — Supabase storage admin gallery)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-19)"
+source_files:
+  - "components/common/ImageUpload.tsx:29 (admits image/svg+xml via startsWith check)"
+  - "(Supabase storage migration: no allowed_mime_types set on bucket)"
+  - "(AdminGalleryContent renders raw SVG via <img src> — no canvas re-encode)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-48"
+  - "docs/runtime/rule-packs/security-primitive-fail-closed.md §File upload"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source has Supabase storage; AP-48 generalizes to S3 / R2 / Cloudinary / any object storage.
+  - Cookieless subdomain serving for user uploads is industry consensus security pattern.
+  - Content-Disposition: attachment fallback is Ulak prescription.
+  - dompurify / svg-sanitizer for legitimate SVG uploads is industry standard.
+upstream_fixes_pending:
+  - id: UF-IL034-01
+    description: "Source project: add allowed_mime_types Supabase migration excluding svg+xml; if SVG required, pipe through svg-sanitizer"
+    severity: high
+    scheduled_for: "(source project Wave 2)"
+```
+
+### IL-035: Community/event platform → AP-49 server-client timezone hydration mismatch
+
+```yaml
+id: IL-035
+pattern_name: "Server-client timezone hydration mismatch (SSR UTC vs client local)"
+source_project: "(operator's portfolio — Next.js 16 SSR community/event platform with Europe/Istanbul users)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-21)"
+source_files:
+  - "(event display layer used raw new Date() — server UTC, client Europe/Istanbul, every event time flipped on hydration)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-49"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source has events specifically; AP-49 generalizes to publishedAt, comments, last-seen, schedule grids.
+  - Three remediation strategies (UTC-on-server-format-on-client, fixed-server-TZ, suppressHydrationWarning) presented as alternatives.
+  - storing event-timezone alongside event is Ulak prescription for cross-timezone events.
+  - Playwright integration test asserting no hydration warnings is Ulak prescription.
+upstream_fixes_pending:
+  - id: UF-IL035-01
+    description: "Source project: refactor event time rendering to UTC-on-server / Intl.DateTimeFormat-on-client pattern"
+    severity: medium
+    scheduled_for: "(source project Wave 3)"
+```
+
+### IL-036: Community/event platform → security-primitive-fail-closed rule-pack (full pack provenance)
+
+```yaml
+id: IL-036
+pattern_name: "Security primitive fail-closed discipline pack (consolidated fail-mode contract)"
+source_project: "(operator's portfolio — Next.js 16 + Expo + self-hosted Supabase community/event platform observed making same fail-open mistake on 11 independent surfaces)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(consolidated from did-you-know DYK-11 + DYK-12 + DYK-14 + DYK-16 + DYK-17 + DYK-19 + DYK-7 + DYK-9 + DYK-10 cluster)"
+source_files:
+  - "(11-surface fail-open cluster across single audit: Turnstile lib + Turnstile call site + Origin check + CSP self-defeat + WhatsApp webhook unsigned + audit-log oracle + open-redirect + SVG upload + tests-against-prod + multi-tenant secret coupling + rotate-without-revoke)"
+target_files:
+  - "docs/runtime/rule-packs/security-primitive-fail-closed.md (NEW — full pack)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Pack consolidates 8 anti-patterns (AP-41..AP-48) into a single architectural fail-mode contract.
+  - Core principle (every security primitive fails closed, never open) is industry consensus elevated to canonical Ulak rule.
+  - 6 CI validators are Ulak-shipped templates closing the detection gap for each pattern.
+  - The pack's load-bearing claim: 11 independent surfaces in same project all made the same architectural mistake — preferring graceful-degradation over explicit-rejection. The pattern is the choice, not any individual instance; codifying it once should prevent the cluster across future projects.
+upstream_fixes_pending: []
+```
+
 ## Canonical footer
 
-Authoritative as of Ulak OS **v1.8.0** (updated from v2.2.0 IL-001 baseline — note: that "v2.2.0" reference is from the abandoned pre-reset cycle; the current public line is v1.0.0-launch → v1.6.1 → v1.7.0 → v1.8.0 → … → v2.0.0 final). v1.7.0 absorption pass #1 (2026-04-26 morning) added IL-002..IL-006 from the 11-locale security/QA scanner SaaS i18n + privacy regime patterns. v1.7.0 absorption pass #2 (2026-04-26 evening) added IL-007..IL-016 from the same source project's async-FastAPI safety, doc-drift, zombie-router, hardcoded-UUID, cosmetic-coverage, AI-content artefact, admin-lockout, and cache-timing-race patterns plus 2 consolidated rule-packs (async-python-fastapi + ai-generated-content-hygiene). v1.8.0 absorption (2026-04-26 late evening) added IL-017..IL-026 from a Next.js 16 + self-hosted Supabase content/portfolio site with multi-locale i18n + OTP admin CMS — 9 cross-cutting anti-patterns (devDeps-runtime crash, type-escape hatch, raw-anchor i18n leak, alias-without-metadata, cosmetic privacy ceremony, OG/SEO drift, half-shipped feature, sensitive-subject-leak, admin-recovery loop) plus 1 consolidated rule-pack (i18n-routing-discipline). Each subsequent portfolio project absorption bumps one minor (v1.9.0, v1.10.0, …) until v2.0.0 final milestone.
+Authoritative as of Ulak OS **v1.9.0** (updated from v2.2.0 IL-001 baseline — note: that "v2.2.0" reference is from the abandoned pre-reset cycle; the current public line is v1.0.0-launch → v1.6.1 → v1.7.0 → v1.8.0 → v1.9.0 → … → v2.0.0 final). v1.7.0 absorption pass (2026-04-26 morning + evening) added IL-002..IL-016 from an 11-locale security/QA scanner SaaS — i18n + privacy regimes + async-FastAPI safety + AI-content artefact patterns plus 4 consolidated rule-packs. v1.8.0 absorption (2026-04-26 late evening) added IL-017..IL-026 from a Next.js 16 + self-hosted Supabase content/portfolio site with multi-locale i18n + OTP admin CMS — 9 cross-cutting anti-patterns plus 1 consolidated rule-pack (i18n-routing-discipline). v1.9.0 absorption (2026-04-26 night) added IL-027..IL-036 from a Next.js 16 + Expo React Native + self-hosted Supabase community/event platform with Turnstile bot-protection — 9 fail-open / security-discipline anti-patterns (verify fail-open, multi-tenant secret coupling, rotate-without-revoke, tests-against-prod, CSP self-defeat, audit-log enumeration oracle, open-redirect, SVG upload XSS, timezone hydration mismatch) plus 1 consolidated rule-pack (security-primitive-fail-closed). Each subsequent portfolio project absorption bumps one minor until v2.0.0 final milestone.

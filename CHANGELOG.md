@@ -6,6 +6,37 @@ All notable **public releases** of Ulak OS. The pre-v1.0.0 internal development 
 
 ---
 
+## [1.9.0] — 2026-04-26 — Pattern absorption #3: security primitive fail-closed discipline + 9 fail-open anti-patterns
+
+**Source project (abstract)**: Next.js 16 + Expo React Native + self-hosted Supabase community/event platform with Turnstile bot-protection. 2026-04-24 director run (signoff: conditional_go) produced 69 findings + 29 non-obvious did-you-know findings dominated by an 11-surface "fail-open" cluster — the same architectural mistake (preferring graceful-degradation over explicit-rejection) made independently across CAPTCHA verify, Origin check, CSP, webhook signature, audit log, redirect, file upload, test config, secret rotation, multi-tenant coupling.
+
+### Added
+
+- **`docs/runtime/rule-packs/security-primitive-fail-closed.md` (NEW, 167 lines)** — Sibling to `api-security.md`; codifies the architectural principle "every security primitive fails CLOSED, never OPEN". Concrete fail-closed contracts for: verify primitives (CAPTCHA / HMAC / JWT / CSRF), Origin/CSRF middleware, HMAC webhook signatures, JWT verify (algorithm-confusion ban, exp/iss/aud verify), rate-limiter Redis-outage policy, audit log (hash sensitive identifiers in failed-attempts), file upload (server-side MIME allowlist + cookieless serving), redirect-after-action (parse + assert origin, never concat), CSP (no `unsafe-inline + unsafe-eval` together), secret rotation (4-step issue→deploy→verify→revoke). 6 CI validators (`validate-no-fail-open.sh`, `validate-csp-no-unsafe.sh`, `validate-webhook-hmac-coverage.sh`, `validate-redirect-no-concat.sh`, `validate-required-env.sh`, `validate-test-base-url-not-prod.sh`).
+- **`docs/runtime/anti-patterns.md` AP-41 — Security primitive fails OPEN on missing config or empty token** — verify lib returns `true` when env var unset; call sites bypass on falsy token. Concrete: Turnstile lib + contact-form gate + middleware Origin check all fail-open in same project. Generalizes to CAPTCHA / HMAC / JWT / CSRF / rate-limit.
+- **`docs/runtime/anti-patterns.md` AP-42 — Self-hosted multi-tenant secret coupling** — multiple tenants share single self-hosted Supabase / Auth0 / Keycloak, with shared JWT_SECRET. Rotating one tenant's compromised secret cascades — invalidates every neighbor's sessions simultaneously. Per-tenant asymmetric JWT prescribed.
+- **`docs/runtime/anti-patterns.md` AP-43 — Rotate-without-revoke (duplicate live secrets)** — credential rotation creates new token but does not revoke old; both remain valid. After 3-4 rotations, secret store has 3-4 live tokens for same service. 4-atomic-step runbook (issue → deploy → verify → revoke) prescribed.
+- **`docs/runtime/anti-patterns.md` AP-44 — Test config defaults to PRODUCTION URL** — `playwright.config.ts` `baseURL` defaults to prod URL when env unset; running tests without env-prep accidentally hammers prod, creates real users. Refusal-on-prod-URL guard prescribed.
+- **`docs/runtime/anti-patterns.md` AP-45 — CSP self-defeat (`unsafe-inline` + `unsafe-eval` together)** — combination is functionally no-CSP. Combined with `localStorage`-stored auth → XSS = session theft. Nonce-based inline scripts + eval-using lib replacement prescribed.
+- **`docs/runtime/anti-patterns.md` AP-46 — Audit log as account-enumeration oracle** — failed-login writes raw `email_typed` to audit_log; staff RLS allows SELECT; bulk user-list exfiltration. `email_hash = sha256(email + salt)` for failed-attempt entries prescribed.
+- **`docs/runtime/anti-patterns.md` AP-47 — Open-redirect via protocol-relative URL** — `?next=//evil.com` becomes phishing primitive when redirect built via `${origin}${next}` string concat. `new URL(next, origin)` + `.origin` assertion prescribed.
+- **`docs/runtime/anti-patterns.md` AP-48 — SVG upload stored-XSS** — `mime.startsWith("image/")` admits `image/svg+xml`; storage bucket has no `allowed_mime_types`; SVG with `<script>` becomes stored-XSS at the file URL. Server-side MIME allowlist + cookieless subdomain serving + `dompurify`/svg-sanitizer prescribed.
+- **`docs/runtime/anti-patterns.md` AP-49 — Server-client timezone hydration mismatch** — `new Date()` server (UTC) vs client (Europe/Istanbul) → SSR `18:00` flips to `21:00` on hydration; React warns; user sees visible time-flip. Three remediation strategies prescribed (UTC-on-server-format-on-client, fixed-server-TZ, suppressHydrationWarning).
+- **`docs/governance/pattern-import-ledger.md` IL-027..IL-036** — Ten new ledger entries (9 anti-patterns + 1 rule-pack) with T1 trust tier, abstract source descriptor ("community/event platform with Turnstile bot-protection"), divergence notes, upstream-fix-pending tracking back to source project's Wave 2/3/4 schedule.
+
+### Changed
+
+- `prompts/pack.json` counts: `rule_packs` 14 → 15 (+ security-primitive-fail-closed); `anti_pattern_numbered` 40 → 49 (+ AP-41..AP-49).
+- `package.json` + `prompts/pack.json` version: 1.8.0 → 1.9.0.
+- `docs/governance/pattern-import-ledger.md` canonical footer: now references v1.9.0 baseline + roadmap to v2.0.0 final.
+- `README.md` + `README.en.md` rule-pack list extended (14 → 15: + security-primitive-fail-closed); anti-pattern note bumped to AP-01..AP-49.
+
+### Carried-forward residual risks (open in v1.9.0)
+
+- Same as v1.7.0 / v1.8.0 — 2026-04-25 self-audit MERGED-001..010 P0 critical findings + untracked PowerShell tooling. No new residual added in v1.9.0.
+
+---
+
 ## [1.8.0] — 2026-04-26 — Pattern absorption #2: i18n routing discipline + 9 cross-cutting anti-patterns
 
 **Source project (abstract)**: Next.js 16 + self-hosted Supabase content/portfolio site with multi-locale i18n + OTP admin CMS. 2026-04-25 director run produced 49 findings (1 Critical + 10 High + 14 Medium + 12 Low + 12 positive) plus 23 non-obvious did-you-know findings dominated by post-baseline regressions and persistent doc-code drift. Absorption pass extracts cross-project-reusable patterns under the redaction discipline (`docs/governance/memory-hygiene.md` — abstract source descriptor, no portfolio identity leak).
