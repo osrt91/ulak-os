@@ -110,4 +110,4 @@ Project `.claude/rules/i18n-locales.md` overrides specific imperatives (e.g., a 
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.0.0**. Imported from a multi-tenant 11-locale security/QA scanner SaaS observed in 2026-Q2. Bidirectional + CJK + privacy-regime composability is the load-bearing contribution.
+Authoritative as of Ulak OS **v1.7.0**. Imported from a multi-tenant 11-locale security/QA scanner SaaS observed in 2026-Q2. Bidirectional + CJK + privacy-regime composability is the load-bearing contribution.

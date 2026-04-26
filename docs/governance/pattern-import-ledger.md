@@ -315,7 +315,7 @@ trust_tier: T1  # specialist file:line evidence in source project audit
 divergence_notes: |
   - Stack-specific replacements (psycopg2→asyncpg, requests→httpx, redis-py→redis.asyncio, pymongo→motor, boto3→aioboto3) are Ulak generalizations.
   - Connection pool lifecycle (FastAPI lifespan, app.state.db_pool) is canonical async-FastAPI pattern; source project may not yet implement.
-  - Validator script (`validate-no-sync-in-async.sh`) is a Ulak-shipped CI template; source project will adopt as part of v2.0.0 absorption.
+  - Validator script (`validate-no-sync-in-async.sh`) is a Ulak-shipped CI template; source project will adopt as part of v1.7.0 absorption.
 upstream_fixes_pending:
   - id: UF-IL007-01
     description: "Source project: migrate 68 sync calls to asyncpg + lifespan-managed pool (Sprint 2-3 XL)"
@@ -521,7 +521,7 @@ divergence_notes: |
   - Pack consolidates 5 anti-patterns (AP-24, AP-26, AP-28, AP-31 plus baseline AP-01/AP-07 references) into a single technical contract.
   - Connection pool sizing heuristic (`(vCPU * 2) + 1`) is general FastAPI lore, not source-specific.
   - Background task discipline (BackgroundTasks vs queue) reflects industry consensus, not unique source-project insight.
-  - This pack is the load-bearing addition for any async-Python project; v2.0.0 absorption pass #2 elevates it from operator knowledge to canonical pack.
+  - This pack is the load-bearing addition for any async-Python project; v1.7.0 absorption pass #2 elevates it from operator knowledge to canonical pack.
 upstream_fixes_pending: []
 ```
 
@@ -545,7 +545,7 @@ divergence_notes: |
   - Per-locale conversational-marker lists (English + Turkish baseline; 9 other locales are extension points) are Ulak operator-knowledge synthesis.
   - JSON-LD validator gate, Schema.org @type allowlist, and content-staleness scanner are Ulak-shipped CI templates.
   - Provenance front-matter contract (ai_assisted, ai_tool, review_date, peer_reviewer) elevates editorial discipline from informal practice to ledger-verifiable.
-  - This pack is the most timely-novel addition in absorption pass #2 — AI-era content hygiene was not in any pack pre-v2.0.0.
+  - This pack is the most timely-novel addition in absorption pass #2 — AI-era content hygiene was not in any pack pre-v1.7.0.
 upstream_fixes_pending:
   - id: UF-IL016-01
     description: "Source project: install full validator chain (markers + JSON-LD + provenance); extend per-locale marker lists for 9 non-TR/EN locales"
@@ -555,4 +555,4 @@ upstream_fixes_pending:
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.0.0** (updated from v2.2.0 IL-001 baseline — note: that "v2.2.0" reference is from the abandoned pre-reset cycle; the current public line is v1.0.0-launch → v1.6.1 → v2.0.0). v2.0.0 absorption pass #1 (2026-04-26 morning) added IL-002..IL-006 from the 11-locale security/QA scanner SaaS i18n + privacy regime patterns. v2.0.0 absorption pass #2 (2026-04-26 evening) added IL-007..IL-016 from the same source project's async-FastAPI safety, doc-drift, zombie-router, hardcoded-UUID, cosmetic-coverage, AI-content artefact, admin-lockout, and cache-timing-race patterns plus 2 consolidated rule-packs (async-python-fastapi + ai-generated-content-hygiene).
+Authoritative as of Ulak OS **v1.7.0** (updated from v2.2.0 IL-001 baseline — note: that "v2.2.0" reference is from the abandoned pre-reset cycle; the current public line is v1.0.0-launch → v1.6.1 → v1.7.0 → … → v2.0.0 final). v1.7.0 absorption pass #1 (2026-04-26 morning) added IL-002..IL-006 from the 11-locale security/QA scanner SaaS i18n + privacy regime patterns. v1.7.0 absorption pass #2 (2026-04-26 evening) added IL-007..IL-016 from the same source project's async-FastAPI safety, doc-drift, zombie-router, hardcoded-UUID, cosmetic-coverage, AI-content artefact, admin-lockout, and cache-timing-race patterns plus 2 consolidated rule-packs (async-python-fastapi + ai-generated-content-hygiene). Each subsequent portfolio project absorption bumps one minor (v1.8.0, v1.9.0, …) until v2.0.0 final milestone.

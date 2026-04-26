@@ -126,4 +126,4 @@ Project `.claude/rules/content-hygiene.md` overrides specific markers (a project
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.0.0**. Imported from a security/QA scanner SaaS where 5 production blog posts shipped Gemini conversational artefacts and broken Schema.org JSON-LD before detection (2026-04-26 absorption pass #2, commit `e601aaf`-class). The cross-locale marker lists + JSON-LD validation gate is the load-bearing contribution.
+Authoritative as of Ulak OS **v1.7.0**. Imported from a security/QA scanner SaaS where 5 production blog posts shipped Gemini conversational artefacts and broken Schema.org JSON-LD before detection (2026-04-26 absorption pass #2, commit `e601aaf`-class). The cross-locale marker lists + JSON-LD validation gate is the load-bearing contribution.

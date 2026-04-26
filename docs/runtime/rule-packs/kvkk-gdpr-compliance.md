@@ -143,4 +143,4 @@ Project `.claude/rules/privacy-jurisdiction.md` overrides specific imperatives (
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.0.0**. Imported from an 11-locale multi-jurisdiction security/QA scanner SaaS operating under TR-KVKK + EU-GDPR + JA-APPI + KR-PIPA + ZH-PIPL + RU-152-FZ + KSA-PDPL simultaneously. The 11-locale × 7-regime cross-product is the load-bearing contribution; single-jurisdiction projects load only the matching subset.
+Authoritative as of Ulak OS **v1.7.0**. Imported from an 11-locale multi-jurisdiction security/QA scanner SaaS operating under TR-KVKK + EU-GDPR + JA-APPI + KR-PIPA + ZH-PIPL + RU-152-FZ + KSA-PDPL simultaneously. The 11-locale × 7-regime cross-product is the load-bearing contribution; single-jurisdiction projects load only the matching subset.

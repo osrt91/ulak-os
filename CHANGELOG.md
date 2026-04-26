@@ -1,14 +1,16 @@
 # Changelog
 
-All notable **public releases** of Ulak OS. The pre-v1.0.0 internal development cycle is intentionally not retained in this changelog — that history led to the v1.0.0 consolidation (see the v1.0.0 entry's "Hardening" section) and was replaced by the semver reset + scrub pass. Public users see only the v1.x → v2.x lineage from this file forward.
+All notable **public releases** of Ulak OS. The pre-v1.0.0 internal development cycle is intentionally not retained in this changelog — that history led to the v1.0.0 consolidation (see the v1.0.0 entry's "Hardening" section) and was replaced by the semver reset + scrub pass. Public users see only the v1.x lineage from this file forward.
+
+**v1.x → v2.0 roadmap**: Each portfolio project absorption bumps one minor (v1.7.0, v1.8.0, v1.9.0, …) until v2.0.0 final ships as the cross-project pattern-absorption milestone. Each minor release embeds T1/T2 evidence from a real production codebase into Ulak OS canonical packs (rule-packs, anti-patterns, sector-packs, governance docs, ADRs).
 
 ---
 
-## [2.0.0] — 2026-04-26 — Multi-locale + multi-jurisdiction + async-safety + AI-content-hygiene maturity milestone
+## [1.7.0] — 2026-04-26 — Pattern absorption #1: 11-locale + multi-jurisdiction + async-safety + AI-content-hygiene
 
-**Why v2.0**: First public absorption of cross-project patterns from a portfolio production SaaS into Ulak OS canonical packs. Ulak OS exits the v1.x "consolidation + cross-vendor parity" arc and enters the v2.x "pattern-absorption flywheel" arc — the runtime now ships rule-packs and anti-patterns derived from real production evidence rather than synthesized doctrine. Sufficiently load-bearing to warrant a major bump.
+**Source project**: portfolio production SaaS — 11-locale multi-tenant security/QA scanner operating across TR + EU + JP + KR + CN + RU + KSA jurisdictions. Audit run (Composite C+, 6 Critical findings, 10 did-you-know surface) produced cross-project-reusable patterns absorbed into Ulak OS canonical surfaces under the redaction discipline (`docs/governance/memory-hygiene.md` — abstract source descriptors, no portfolio identity leak).
 
-This release is **assembled across N absorption passes** as portfolio projects' Director runs surface absorbable patterns. Each pass stacks new IL ledger entries + canonical entries; v2.0.0 final tag ships when the operator declares the absorption window closed.
+This is the first portfolio absorption since v1.6.1; subsequent projects (7 more in the operator's portfolio) bump v1.8.0 → v1.9.0 → … → v2.0.0 final.
 
 ### Added — Absorption pass #1 (2026-04-26 morning, 11-locale + multi-jurisdiction)
 
@@ -17,7 +19,7 @@ This release is **assembled across N absorption passes** as portfolio projects' 
 - **`docs/runtime/anti-patterns.md` AP-21 — Locale-blind case conversion** — `String.toLowerCase()` / `.toUpperCase()` without locale arg breaks Turkish (combining-mark `i̇`, missing dotted-İ uppercase), German `ß`, Greek final-sigma. Lookup paths (login email match, dedupe, search) are the dangerous surface, not just display. Fix prescribed across JS / Python / Java-Kotlin / Postgres stacks.
 - **`docs/runtime/anti-patterns.md` AP-22 — Turkish slug collision + display leak** — Three-layer failure: information loss on Turkish-char fold, unresolved collision on `Şişli`/`Sisli`, slug-as-display-label leak. Fix: separate `display` / `search_key` / `slug` fields; collision suffix at insert time; never derive display from slug.
 - **`docs/runtime/anti-patterns.md` AP-23 — God i18n file** — Single `i18n.ts` >3000 LOC bundling all locales blocks lazy-load + tree-shake + translator workflow; merge conflicts pile up. Strangler Fig 4-step migration prescribed; trigger threshold >1500 LOC OR >4 locales bundled.
-- **`docs/governance/pattern-import-ledger.md` IL-002..IL-006** — Five new ledger entries with abstract source descriptors ("11-locale security/QA scanner SaaS"), T2 trust tier, divergence notes, and upstream-fix-pending tracking.
+- **`docs/governance/pattern-import-ledger.md` IL-002..IL-006** — Five new ledger entries with abstract source descriptors ("11-locale security/QA scanner SaaS"), T2 trust tier, divergence notes, and upstream-fix-pending tracking. Source-of-truth for absorption pass #1.
 
 ### Added — Absorption pass #2 (2026-04-26 evening, async-safety + AI-content-hygiene + 6 cross-cutting anti-patterns)
 
@@ -38,9 +40,9 @@ Source: same portfolio project's 2026-04-24 director run (Composite C+ grade, 6 
 ### Changed
 
 - `prompts/pack.json` counts (cumulative across both passes): `rule_packs` 9 → 13; `anti_pattern_numbered` 20 → 31; `updated` 2026-04-22 → 2026-04-26.
-- `package.json` + `prompts/pack.json` version: 1.6.1 → 2.0.0.
-- `docs/governance/pattern-import-ledger.md` canonical footer: now references v2.0.0 baseline; clarifies that the prior "v2.2.0" footnote referred to the abandoned pre-reset cycle and the current public line is v1.0.0-launch → v1.6.1 → v2.0.0; ledger now contains IL-001 baseline + IL-002..IL-016 from absorption passes #1 and #2.
-- `README.md` + `README.en.md` rule-pack list extended (11 → 13: + async-python-fastapi, + ai-generated-content-hygiene); anti-pattern note bumped to AP-01..AP-31.
+- `package.json` + `prompts/pack.json` version: 1.6.1 → 1.7.0.
+- `docs/governance/pattern-import-ledger.md` canonical footer: now references v1.7.0 baseline; clarifies that the prior "v2.2.0" footnote referred to the abandoned pre-reset cycle; the current public line is v1.0.0-launch → v1.6.1 → v1.7.0 → … → v2.0.0 final; ledger now contains IL-001 baseline + IL-002..IL-016 from absorption passes #1 and #2 of this release.
+- `README.md` + `README.en.md` rule-pack list extended (9 → 13: + multi-locale-eleven-rtl, + kvkk-gdpr-compliance, + async-python-fastapi, + ai-generated-content-hygiene); anti-pattern note bumped to AP-01..AP-31.
 
 ### Pattern absorption methodology (process note for future v2.x releases)
 
@@ -62,10 +64,10 @@ This release covers absorption pass #1 (single source project, 11-locale + multi
 - Governance docs (23) — count identical (pattern-import-ledger.md extended in place, not added new).
 - Scaffolder templates (125) / ADRs (7) / runtime rules (36) — unchanged.
 
-### Carried-forward residual risks (open in v2.0.0, scheduled for v2.0.x or v2.1.0)
+### Carried-forward residual risks (open in v1.7.0, scheduled for v1.7.x or later)
 
-- 2026-04-25 self-audit MERGED-001..010 P0 critical findings (vendor-adapter `child_process.exec` RCE risk, plugin-manifest version drift, scaffolder-templates count fabrication, prepublishOnly without real tests, install supply-chain hardening) — NOT addressed in v2.0.0; scheduled for v2.0.1 / v2.1.0.
-- Untracked tooling (`bin/ulak.ps1` PowerShell wrapper, `scripts/integrate-sibling-projects.ps1`) — NOT committed in this release; scheduled for v2.0.1 PowerShell-parity bundle.
+- 2026-04-25 self-audit MERGED-001..010 P0 critical findings (vendor-adapter `child_process.exec` RCE risk, plugin-manifest version drift, scaffolder-templates count fabrication, prepublishOnly without real tests, install supply-chain hardening) — NOT addressed in v1.7.0; scheduled for a hardening minor before v2.0.0 final.
+- Untracked tooling (`bin/ulak.ps1` PowerShell wrapper, `scripts/integrate-sibling-projects.ps1`) — NOT committed in this release; scheduled for a PowerShell-parity minor.
 
 ---
 

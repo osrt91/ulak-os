@@ -88,4 +88,4 @@ Project `.claude/rules/python-async.md` overrides specific imperatives (e.g., a 
 
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.0.0**. Imported from a Python 3.12 + FastAPI security/QA scanner SaaS observed 2026-04-26 absorption pass #2. The 68-sync-in-async finding (event loop saturation under load) is the load-bearing concrete evidence.
+Authoritative as of Ulak OS **v1.7.0**. Imported from a Python 3.12 + FastAPI security/QA scanner SaaS observed 2026-04-26 absorption pass #2. The 68-sync-in-async finding (event loop saturation under load) is the load-bearing concrete evidence.
