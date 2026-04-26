@@ -294,6 +294,265 @@ upstream_fixes_pending:
     scheduled_for: "(source-project decision)"
 ```
 
+### IL-007: Security/QA scanner SaaS → AP-24 + async-python-fastapi rule-pack (sync DB in async)
+
+```yaml
+id: IL-007
+pattern_name: "Sync DB / HTTP call inside async def handler — event loop saturation"
+source_project: "(operator's portfolio — Python 3.12 + FastAPI security/QA scanner SaaS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(production HEAD as of 2026-04-26; absorbed from 2026-04-24 director run finding B-004)"
+source_files:
+  - "app/routers/admin.py (42 endpoints, multiple async def with sync db._get_conn())"
+  - "app/db.py (sync psycopg2 connection wrapper)"
+  - "(68 sync db._get_conn() instances inside async def across the codebase, per backend-api specialist count)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-24"
+  - "docs/runtime/rule-packs/async-python-fastapi.md (NEW — full pack)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1  # specialist file:line evidence in source project audit
+divergence_notes: |
+  - Stack-specific replacements (psycopg2→asyncpg, requests→httpx, redis-py→redis.asyncio, pymongo→motor, boto3→aioboto3) are Ulak generalizations.
+  - Connection pool lifecycle (FastAPI lifespan, app.state.db_pool) is canonical async-FastAPI pattern; source project may not yet implement.
+  - Validator script (`validate-no-sync-in-async.sh`) is a Ulak-shipped CI template; source project will adopt as part of v2.0.0 absorption.
+upstream_fixes_pending:
+  - id: UF-IL007-01
+    description: "Source project: migrate 68 sync calls to asyncpg + lifespan-managed pool (Sprint 2-3 XL)"
+    severity: critical
+    scheduled_for: "(source project Sprint 2-3 per their execution-roadmap)"
+```
+
+### IL-008: Security/QA scanner SaaS → AP-25 spec/doc drift from disk
+
+```yaml
+id: IL-008
+pattern_name: "Spec / doc drift from disk reality (8.5x undercount)"
+source_project: "(operator's portfolio — security/QA scanner SaaS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(production HEAD as of 2026-04-26; absorbed from did-you-know #1)"
+source_files:
+  - "CLAUDE.md §API Endpoint Tablosu (claimed 14 routes + 1 WebSocket)"
+  - "app/routers/*.py (16 router files; grep confirmed 119 actual routes)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-25"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - 8.5x ratio (14 declared / 119 actual) used in AP-25 as concrete example without naming source.
+  - Auto-regeneration prescription (`scripts/regenerate-claude-md.sh`) is Ulak generalization; source project's actual auto-regen tooling not specified.
+  - 10% drift threshold for CI gate is a Ulak heuristic.
+upstream_fixes_pending: []
+```
+
+### IL-009: Security/QA scanner SaaS → AP-26 zombie router
+
+```yaml
+id: IL-009
+pattern_name: "Zombie router / silent route override via include_router order"
+source_project: "(operator's portfolio — FastAPI security/QA scanner SaaS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(production HEAD as of 2026-04-26; absorbed from did-you-know #2)"
+source_files:
+  - "app/routers/content.py (4 routes for /content/* with cache-invalidation logic)"
+  - "app/routers/admin.py (registered first, claims same /content/* paths)"
+  - "app/main.py (include_router order)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-26"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - FastAPI-specific (include_router) but pattern generalizes to Express (app.use), Next.js (route.ts ordering), Rails (routes.rb).
+  - Detection script + integration test prescription are Ulak generalizations.
+  - Symptom narrative ("cache sometimes doesn't refresh") is a real reported observation, not synthesized.
+upstream_fixes_pending:
+  - id: UF-IL009-01
+    description: "Source project: remove duplicate /content/* registration; consolidate cache-invalidation logic into single live router"
+    severity: high
+    scheduled_for: "(source project Sprint 1)"
+```
+
+### IL-010: Security/QA scanner SaaS → AP-27 hardcoded production UUIDs in migrations
+
+```yaml
+id: IL-010
+pattern_name: "Hardcoded production UUIDs in migration committed to public history"
+source_project: "(operator's portfolio — security/QA scanner SaaS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(production HEAD as of 2026-04-26; absorbed from did-you-know #6 / D-003 finding)"
+source_files:
+  - "app/db.py:331-342 (migration step 12 with 3 hardcoded production user UUIDs for role bootstrap)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-27"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source project has 3 UUIDs hardcoded; AP-27 generalizes to "any literal production identifier in migration".
+  - Mitigation strategy (rotate vs git history rewrite) presented as alternatives.
+  - The "attacker target list" framing is a Ulak operator-knowledge expansion of the original finding's risk note.
+upstream_fixes_pending:
+  - id: UF-IL010-01
+    description: "Source project: rotate 3 leaked admin/operator/viewer UUIDs (new user creation + soft-delete of leaked); document in v2.0 incident log"
+    severity: high
+    scheduled_for: "(source project Sprint 0-1)"
+```
+
+### IL-011: Security/QA scanner SaaS → AP-28 cosmetic coverage gate
+
+```yaml
+id: IL-011
+pattern_name: "Cosmetic coverage gate (fail_under declared, --cov never invoked)"
+source_project: "(operator's portfolio — security/QA scanner SaaS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(production HEAD as of 2026-04-26; absorbed from did-you-know #9 / Q-002 finding)"
+source_files:
+  - "pyproject.toml:43 (fail_under = 70 declared)"
+  - "scripts/preflight.sh:85 (pytest call without --cov flag)"
+  - "9 compliance modules / 6841 LOC / 0 tests (audit verdict's Q-001)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-28"
+  - "docs/runtime/rule-packs/async-python-fastapi.md §Test discipline (cross-references AP-28)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Generalizes to JS ecosystems (`coverageThreshold` in jest.config.js + `npm test` without --coverage).
+  - Validator script (`validate-coverage-gate.sh`) is Ulak-shipped CI template.
+  - Family relationship to AP-03 (non-blocking CI gate) made explicit in cross-reference.
+upstream_fixes_pending:
+  - id: UF-IL011-01
+    description: "Source project: enable `--cov=app --cov-fail-under=70` in preflight; expect first run failure; calibrate threshold to realistic baseline"
+    severity: medium
+    scheduled_for: "(source project Sprint 1)"
+```
+
+### IL-012: Security/QA scanner SaaS → AP-29 + ai-generated-content-hygiene rule-pack
+
+```yaml
+id: IL-012
+pattern_name: "AI-generated content artefacts shipped to production (Gemini conversational + broken JSON-LD)"
+source_project: "(operator's portfolio — security/QA scanner SaaS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from commit `e601aaf` — chore(blog): 5 yazıdan Gemini sohbet artıkları + bozuk schema temizliği)"
+source_files:
+  - "docs/marketing/blog/*.md (5 blog posts containing Gemini chat artefacts pre-cleanup)"
+  - "(JSON-LD blocks in those posts with hallucinated @type / missing required fields / trailing commas)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-29"
+  - "docs/runtime/rule-packs/ai-generated-content-hygiene.md (NEW — full pack)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1  # actual git commit cleaning the artefacts is direct evidence
+divergence_notes: |
+  - Per-locale marker lists (TR, EN, plus 9-locale extension points) are Ulak generalization across portfolio.
+  - JSON-LD validator + Schema.org @type allowlist are Ulak-shipped CI templates.
+  - Provenance front-matter contract (ai_assisted, ai_tool, review_date, peer_reviewer) is Ulak prescription; source project may not yet adopt.
+  - This is the most timely-novel anti-pattern in absorption pass #2 — AI-era content hygiene is a 2026 essential.
+upstream_fixes_pending:
+  - id: UF-IL012-01
+    description: "Source project: install validate-ai-content-markers.sh + validate-schema-jsonld.sh in CI; backfill provenance metadata for existing AI-assisted posts"
+    severity: medium
+    scheduled_for: "(source project content-ops sprint)"
+```
+
+### IL-013: Security/QA scanner SaaS → AP-30 admin self-lockout
+
+```yaml
+id: IL-013
+pattern_name: "Admin self-deletion / last-admin lockout protection"
+source_project: "(operator's portfolio — security/QA scanner SaaS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from commit `e678a20` — fix(security): admin kendi hesabını silemez (system lockout koruması))"
+source_files:
+  - "(admin user-management endpoint protected against self-deletion + last-admin demotion in source commit)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-30"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source project fixed self-deletion specifically; AP-30 generalizes to last-admin demotion + role-uniqueness invariants (last billing-owner, last security-officer, last DPO).
+  - Emergency-recovery runbook prescription is Ulak generalization.
+upstream_fixes_pending: []
+```
+
+### IL-014: Security/QA scanner SaaS → AP-31 cache invalidation timing race
+
+```yaml
+id: IL-014
+pattern_name: "Cache invalidation timing race (invalidate-after-commit window)"
+source_project: "(operator's portfolio — security/QA scanner SaaS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from commit `dee34ba` — fix(sprint-12.A8 review): cache invalidation timing + audit log)"
+source_files:
+  - "(cache-invalidate code path that ran after DB commit; race window observable under concurrent writer/reader)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-31"
+  - "docs/runtime/rule-packs/async-python-fastapi.md §Anti-patterns specifically banned (cross-reference)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Three remediation strategies (invalidate-before-commit, version column, write-invalidate-write) presented as alternatives.
+  - Race-test prescription (concurrent reader/writer load test) is Ulak generalization.
+  - Async amplification note specifically connects to async-python-fastapi.md.
+upstream_fixes_pending: []
+```
+
+### IL-015: Security/QA scanner SaaS → async-python-fastapi rule-pack (full pack provenance)
+
+```yaml
+id: IL-015
+pattern_name: "Async FastAPI safety pack (consolidated technical contract)"
+source_project: "(operator's portfolio — Python 3.12 + FastAPI security/QA scanner SaaS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(production HEAD as of 2026-04-26; consolidated from B-002 + B-004 + Q-001 findings + AP-24/26/28/31)"
+source_files:
+  - "(entire async surface of source project: 119 routes, 16 router files, asyncpg/httpx adoption gaps)"
+target_files:
+  - "docs/runtime/rule-packs/async-python-fastapi.md (NEW — full pack)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Pack consolidates 5 anti-patterns (AP-24, AP-26, AP-28, AP-31 plus baseline AP-01/AP-07 references) into a single technical contract.
+  - Connection pool sizing heuristic (`(vCPU * 2) + 1`) is general FastAPI lore, not source-specific.
+  - Background task discipline (BackgroundTasks vs queue) reflects industry consensus, not unique source-project insight.
+  - This pack is the load-bearing addition for any async-Python project; v2.0.0 absorption pass #2 elevates it from operator knowledge to canonical pack.
+upstream_fixes_pending: []
+```
+
+### IL-016: Security/QA scanner SaaS → ai-generated-content-hygiene rule-pack (full pack provenance)
+
+```yaml
+id: IL-016
+pattern_name: "AI-generated content hygiene pack (consolidated detection + validation contract)"
+source_project: "(operator's portfolio — security/QA scanner SaaS with AI-assisted content pipeline)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from commit `e601aaf` + AP-29 + ongoing AI-era content discipline gap)"
+source_files:
+  - "docs/marketing/blog/*.md (5 blog posts cleaned of Gemini artefacts + JSON-LD repair)"
+  - "(per-locale marker lists synthesized from observed leak patterns)"
+target_files:
+  - "docs/runtime/rule-packs/ai-generated-content-hygiene.md (NEW — full pack)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1  # source commit is direct evidence of the artefact-leak phenomenon
+divergence_notes: |
+  - Per-locale conversational-marker lists (English + Turkish baseline; 9 other locales are extension points) are Ulak operator-knowledge synthesis.
+  - JSON-LD validator gate, Schema.org @type allowlist, and content-staleness scanner are Ulak-shipped CI templates.
+  - Provenance front-matter contract (ai_assisted, ai_tool, review_date, peer_reviewer) elevates editorial discipline from informal practice to ledger-verifiable.
+  - This pack is the most timely-novel addition in absorption pass #2 — AI-era content hygiene was not in any pack pre-v2.0.0.
+upstream_fixes_pending:
+  - id: UF-IL016-01
+    description: "Source project: install full validator chain (markers + JSON-LD + provenance); extend per-locale marker lists for 9 non-TR/EN locales"
+    severity: medium
+    scheduled_for: "(source project content-ops sprint)"
+```
+
 ## Canonical footer
 
-Authoritative as of Ulak OS **v2.0.0** (updated from v2.2.0 IL-001 baseline — note: that "v2.2.0" reference is from the abandoned pre-reset cycle; the current public line is v1.0.0-launch → v1.6.1 → v2.0.0). v2.0.0 adds IL-002..IL-006 from the 11-locale security/QA scanner SaaS pattern absorption pass on 2026-04-26.
+Authoritative as of Ulak OS **v2.0.0** (updated from v2.2.0 IL-001 baseline — note: that "v2.2.0" reference is from the abandoned pre-reset cycle; the current public line is v1.0.0-launch → v1.6.1 → v2.0.0). v2.0.0 absorption pass #1 (2026-04-26 morning) added IL-002..IL-006 from the 11-locale security/QA scanner SaaS i18n + privacy regime patterns. v2.0.0 absorption pass #2 (2026-04-26 evening) added IL-007..IL-016 from the same source project's async-FastAPI safety, doc-drift, zombie-router, hardcoded-UUID, cosmetic-coverage, AI-content artefact, admin-lockout, and cache-timing-race patterns plus 2 consolidated rule-packs (async-python-fastapi + ai-generated-content-hygiene).

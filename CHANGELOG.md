@@ -4,24 +4,43 @@ All notable **public releases** of Ulak OS. The pre-v1.0.0 internal development 
 
 ---
 
-## [2.0.0] — 2026-04-26 — Multi-locale + multi-jurisdiction maturity milestone
+## [2.0.0] — 2026-04-26 — Multi-locale + multi-jurisdiction + async-safety + AI-content-hygiene maturity milestone
 
 **Why v2.0**: First public absorption of cross-project patterns from a portfolio production SaaS into Ulak OS canonical packs. Ulak OS exits the v1.x "consolidation + cross-vendor parity" arc and enters the v2.x "pattern-absorption flywheel" arc — the runtime now ships rule-packs and anti-patterns derived from real production evidence rather than synthesized doctrine. Sufficiently load-bearing to warrant a major bump.
 
-### Added
+This release is **assembled across N absorption passes** as portfolio projects' Director runs surface absorbable patterns. Each pass stacks new IL ledger entries + canonical entries; v2.0.0 final tag ships when the operator declares the absorption window closed.
+
+### Added — Absorption pass #1 (2026-04-26 morning, 11-locale + multi-jurisdiction)
 
 - **`docs/runtime/rule-packs/multi-locale-eleven-rtl.md` (NEW, 98 lines)** — 11-locale governance pack covering LTR + RTL (Arabic) + CJK (Chinese / Japanese / Korean) script families, locale-detection precedence (URL > cookie > Accept-Language > IP-geo > default), lazy-load enforcement (no eager-bundle of all locales), bidi marks for mixed text, font-stack rules, IME composition handling, per-locale `Intl.*` formatting, hreflang + per-locale OG tags, and a surface-coverage gate (UI / email / push / legal / store / SEO / help / errors all required before a locale is "shipped"). Sibling-loads with `localization-ssot.md` and `turkish-locale.md`.
 - **`docs/runtime/rule-packs/kvkk-gdpr-compliance.md` (NEW, 117 lines)** — Multi-jurisdiction privacy regime pack with a canonical 11-row matrix (TR-KVKK / EU-GDPR / UK-DPA / US-CCPA-CPRA / JA-APPI / KR-PIPA / ZH-PIPL / RU-152-FZ / KSA-PDPL / UAE-PDPL / BR-LGPD), per-regime cookie consent rules, DSR endpoint contract (`/api/dsr/access|export|delete|rectify|restrict|portability|withdraw`), data retention YAML schema, cross-border transfer governance (SCCs + adequacy + PIPL security assessment + Russian data residency), DPO + representative requirements per jurisdiction, sub-processor chain discipline, breach notification SLAs, and 4 CI-blocking validators (`validate-privacy-notice-coverage.sh`, `validate-retention-config.sh`, `validate-dsr-endpoints.sh`, `validate-cookie-consent.sh`).
 - **`docs/runtime/anti-patterns.md` AP-21 — Locale-blind case conversion** — `String.toLowerCase()` / `.toUpperCase()` without locale arg breaks Turkish (combining-mark `i̇`, missing dotted-İ uppercase), German `ß`, Greek final-sigma. Lookup paths (login email match, dedupe, search) are the dangerous surface, not just display. Fix prescribed across JS / Python / Java-Kotlin / Postgres stacks.
 - **`docs/runtime/anti-patterns.md` AP-22 — Turkish slug collision + display leak** — Three-layer failure: information loss on Turkish-char fold, unresolved collision on `Şişli`/`Sisli`, slug-as-display-label leak. Fix: separate `display` / `search_key` / `slug` fields; collision suffix at insert time; never derive display from slug.
 - **`docs/runtime/anti-patterns.md` AP-23 — God i18n file** — Single `i18n.ts` >3000 LOC bundling all locales blocks lazy-load + tree-shake + translator workflow; merge conflicts pile up. Strangler Fig 4-step migration prescribed; trigger threshold >1500 LOC OR >4 locales bundled.
-- **`docs/governance/pattern-import-ledger.md` IL-002..IL-006** — Five new ledger entries with abstract source descriptors ("11-locale security/QA scanner SaaS"), T2 trust tier, divergence notes, and upstream-fix-pending tracking. Source-of-truth for the v2.0.0 pattern absorption pass.
+- **`docs/governance/pattern-import-ledger.md` IL-002..IL-006** — Five new ledger entries with abstract source descriptors ("11-locale security/QA scanner SaaS"), T2 trust tier, divergence notes, and upstream-fix-pending tracking.
+
+### Added — Absorption pass #2 (2026-04-26 evening, async-safety + AI-content-hygiene + 6 cross-cutting anti-patterns)
+
+Source: same portfolio project's 2026-04-24 director run (Composite C+ grade, 6 Critical findings) + 38 commits since 2026-04-18 covering 11-dil i18n ship, Stripe canlı altyapı, founding coupon program, admin self-lockout fix, blog AI-artefact cleanup.
+
+- **`docs/runtime/rule-packs/async-python-fastapi.md` (NEW, 98 lines)** — Async-Python safety pack: bans sync I/O in `async def` (psycopg2/requests/redis-py-sync/pymongo/boto3 → asyncpg/httpx/redis.asyncio/motor/aioboto3), `asyncpg.Pool` lifecycle via FastAPI `lifespan` context manager, `contextvars` over `threading.local`, BackgroundTasks discipline (fire-and-forget vs queue), `asyncio.to_thread` for CPU-bound work, timeouts on every external HTTP call, cancellation propagation on client disconnect, `StreamingResponse` for >1MB payloads, observability baseline (Sentry + Prometheus + OTel + structlog), 3 CI validators (`validate-no-sync-in-async.sh`, `validate-asyncpg-pool-lifecycle.sh`, `validate-cov-flag-actually-runs.sh`). Layers atop `python-fastapi.md`.
+- **`docs/runtime/rule-packs/ai-generated-content-hygiene.md` (NEW, 117 lines)** — AI-era content hygiene pack: per-locale conversational-artefact marker lists (TR + EN baseline + 9 extension-point locales), Schema.org JSON-LD validator gate (no hallucinated `@type`, all required fields, headline-vs-`<h1>` match), front-matter provenance contract (`ai_assisted`, `ai_tool`, `review_date`, `peer_reviewer` for high-stakes), AI-tool prompt-prefix templates forbidding conversational framing, per-locale tone guidelines, content-staleness scanner (quarterly `as of 202X` flag), 4 CI validators.
+- **`docs/runtime/anti-patterns.md` AP-24 — Sync DB / HTTP call inside `async def` handler** — Each sync call blocks the entire event loop, p99 spikes under load. Concrete observed: 68 sync `db._get_conn()` in async def. Fix prescribed per stack.
+- **`docs/runtime/anti-patterns.md` AP-25 — Spec / doc drift from disk reality** — CLAUDE.md claimed 14 routes, disk had 119 (8.5x). Decision drift compounds for new devs + AI copilots. Auto-regeneration + CI drift gate prescribed.
+- **`docs/runtime/anti-patterns.md` AP-26 — Zombie router / silent route override** — `include_router` order causes second router's handlers to be dead; cache-invalidation logic in dead path silently never runs ("cache sometimes doesn't refresh" symptom = wrong handler responding).
+- **`docs/runtime/anti-patterns.md` AP-27 — Hardcoded production UUIDs in migrations** — Migration step contained 3 production user UUIDs visible in every commit since; attacker target list. Fix: env-based seeding; rotate leaked UUIDs.
+- **`docs/runtime/anti-patterns.md` AP-28 — Cosmetic coverage gate** — `fail_under = 70` declared in pyproject; `pytest` invoked WITHOUT `--cov` flag; gate never runs. 9 modules / 6841 LOC / 0 tests with "coverage gate exists" feel-good signal. AP-03 false-green family.
+- **`docs/runtime/anti-patterns.md` AP-29 — AI-generated content artefacts shipped to production** — "Of course!" / "Here is your..." / "Tabii ki" / `[your X here]` placeholders + JSON-LD with hallucinated `@type` shipped to 5 production blog posts before detection. Cross-locale marker scan + JSON-LD validator + provenance front-matter prescribed.
+- **`docs/runtime/anti-patterns.md` AP-30 — Admin self-deletion / last-admin lockout** — Admin can delete own row OR last-admin can be demoted; zero-administrator state requires DB-direct recovery. Fix: self-action 403 + last-admin invariant check + audit log + emergency-recovery runbook.
+- **`docs/runtime/anti-patterns.md` AP-31 — Cache invalidation timing race** — Invalidate-after-commit window: parallel reader caches stale value between commit + invalidate, then invalidation arrives but cache was just rewritten with stale data. Three remediation strategies (invalidate-before-commit, version column, write-invalidate-write).
+- **`docs/governance/pattern-import-ledger.md` IL-007..IL-016** — Ten new ledger entries (8 anti-patterns + 2 rule-packs) with T1 trust tier (specialist file:line evidence), divergence notes, upstream-fix-pending tracking back to source project's Sprint 0/1/2/3 schedule.
 
 ### Changed
 
-- `prompts/pack.json` counts: `rule_packs` 9 → 11; `anti_pattern_numbered` 20 → 23; `updated` 2026-04-22 → 2026-04-26.
+- `prompts/pack.json` counts (cumulative across both passes): `rule_packs` 9 → 13; `anti_pattern_numbered` 20 → 31; `updated` 2026-04-22 → 2026-04-26.
 - `package.json` + `prompts/pack.json` version: 1.6.1 → 2.0.0.
-- `docs/governance/pattern-import-ledger.md` canonical footer: now references v2.0.0 baseline; clarifies that the prior "v2.2.0" footnote referred to the abandoned pre-reset cycle and the current public line is v1.0.0-launch → v1.6.1 → v2.0.0.
+- `docs/governance/pattern-import-ledger.md` canonical footer: now references v2.0.0 baseline; clarifies that the prior "v2.2.0" footnote referred to the abandoned pre-reset cycle and the current public line is v1.0.0-launch → v1.6.1 → v2.0.0; ledger now contains IL-001 baseline + IL-002..IL-016 from absorption passes #1 and #2.
+- `README.md` + `README.en.md` rule-pack list extended (11 → 13: + async-python-fastapi, + ai-generated-content-hygiene); anti-pattern note bumped to AP-01..AP-31.
 
 ### Pattern absorption methodology (process note for future v2.x releases)
 
