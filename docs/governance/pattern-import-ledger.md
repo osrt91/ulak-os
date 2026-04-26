@@ -553,6 +553,272 @@ upstream_fixes_pending:
     scheduled_for: "(source project content-ops sprint)"
 ```
 
+### IL-017: Next.js 16 + Supabase content/portfolio site → AP-32 schema validator in devDependencies
+
+```yaml
+id: IL-017
+pattern_name: "Schema validator (zod) in devDependencies → production runtime crash"
+source_project: "(operator's portfolio — Next.js 16 + self-hosted Supabase content/portfolio site with multi-locale i18n + OTP admin CMS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(production HEAD as of 2026-04-25; absorbed from did-you-know DYK-09)"
+source_files:
+  - "package.json:68 (zod listed under devDependencies)"
+  - "src/app/api/admin/[table]/route.ts:11 (runtime import of src/lib/schemas/*)"
+  - "src/lib/schemas/* (import type { ZodType } from 'zod' — runtime type checking)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-32"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source project has zod specifically; AP-32 generalizes to yup/valibot/ajv/joi/class-validator + non-validator runtime libs (date-fns, uuid, jsonwebtoken).
+  - CI gate prescription (`validate-prod-imports.sh` with --prod dry install) is Ulak generalization.
+  - Lint rule (banning runtime imports of devDependencies-listed packages) is Ulak prescription.
+upstream_fixes_pending:
+  - id: UF-IL017-01
+    description: "Source project: move zod to dependencies; install validate-prod-imports.sh CI gate"
+    severity: high
+    scheduled_for: "(source project Sprint 1)"
+```
+
+### IL-018: Next.js 16 + Supabase content/portfolio site → AP-33 type-escape hatch
+
+```yaml
+id: IL-018
+pattern_name: "Type-escape hatch (`as never` / `@ts-ignore`) in claimed type-strict codebase"
+source_project: "(operator's portfolio — Next.js 16 + self-hosted Supabase content/portfolio site)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-12)"
+source_files:
+  - "src/app/[locale]/page.tsx:276 (as never widening Profile prop)"
+  - "src/app/[locale]/layout.tsx:55 (as never widening Profile prop)"
+  - "tsconfig.json (strict: true) + eslint.config.mjs (no-explicit-any rule active)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-33"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source project has 2 `as never` casts; AP-33 generalizes to all type-escape hatches across TS/Python/Java/Kotlin.
+  - ESLint custom rule + grep gate prescriptions are Ulak generalizations.
+  - The `obj as never as TargetType` double-cast pattern is the most dangerous variant — explicitly named in AP-33.
+upstream_fixes_pending:
+  - id: UF-IL018-01
+    description: "Source project: replace 2 `as never` casts with `Pick<Profile, 'email' | 'social_links'>` prop typing"
+    severity: medium
+    scheduled_for: "(source project Sprint 1)"
+```
+
+### IL-019: Next.js 16 + Supabase content/portfolio site → AP-34 raw <a> in i18n app
+
+```yaml
+id: IL-019
+pattern_name: "Raw <a href> in i18n-routed app (locale-prefix loss + 307 redirect chain)"
+source_project: "(operator's portfolio — Next.js 16 + next-intl content/portfolio site)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-14)"
+source_files:
+  - "src/components/navbar.tsx:94-102 (raw <a href> for Home/Blog dock items)"
+  - "(privacy link in same file uses IntlLink — inconsistency only in dock items)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-34"
+  - "docs/runtime/rule-packs/i18n-routing-discipline.md (NEW — full pack)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source project uses next-intl; AP-34 generalizes to react-i18next + vue-i18n-routing + Astro astro-i18next.
+  - Allowed exceptions (canonical/alternate in <head>, external URLs) are Ulak prescription.
+  - Codemod (`scripts/codemod-a-to-intllink.sh`) is Ulak-shipped CI template.
+upstream_fixes_pending: []
+```
+
+### IL-020: Next.js 16 + Supabase content/portfolio site → AP-35 localized URL alias without metadata
+
+```yaml
+id: IL-020
+pattern_name: "Localized URL alias without metadata + sitemap reflection"
+source_project: "(operator's portfolio — Next.js 16 + next-intl + 11-locale content/portfolio site)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-15)"
+source_files:
+  - "src/app/[locale]/gizlilik/page.tsx (locale-aliased TR page lacks generateMetadata)"
+  - "i18n/routing.ts:10 (EN maps to /privacy alias; sitemap doesn't reflect)"
+  - "(no <link rel='canonical'> + no hreflang on alias chain)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-35"
+  - "docs/runtime/rule-packs/i18n-routing-discipline.md §Per-locale URL aliases"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source project has TR `/gizlilik` ↔ EN `/privacy` (KVKK-driven legal page); AP-35 generalizes to any locale-aliased path.
+  - Per-locale sitemap strategies (per-locale file vs single file with alternates) are Ulak prescription.
+  - CI gate (`validate-i18n-route-metadata.sh`) is Ulak-shipped template.
+upstream_fixes_pending:
+  - id: UF-IL020-01
+    description: "Source project: add generateMetadata to /gizlilik + /privacy pair; add to sitemap with hreflang alternates"
+    severity: medium
+    scheduled_for: "(source project Sprint 1)"
+```
+
+### IL-021: Next.js 16 + Supabase content/portfolio site → i18n-routing-discipline rule-pack (full pack provenance)
+
+```yaml
+id: IL-021
+pattern_name: "i18n routing + per-locale metadata + SEO SSOT pack (consolidated routing/URL/crawler contract)"
+source_project: "(operator's portfolio — Next.js 16 + next-intl + 11-locale content/portfolio site with self-hosted Supabase admin CMS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from director-run did-you-know DYK-14, DYK-15, DYK-17 cluster)"
+source_files:
+  - "src/components/navbar.tsx (locale-prefix discipline — per-link review)"
+  - "src/app/[locale]/{gizlilik,privacy}/page.tsx (locale-aliased URL pair)"
+  - "src/app/[locale]/blog/opengraph-image.tsx (OG generator — drift source)"
+  - "messages/{tr,en}.json (SEO message keys — should flow through SSOT)"
+  - "i18n/routing.ts (locale registry + alias map)"
+target_files:
+  - "docs/runtime/rule-packs/i18n-routing-discipline.md (NEW — full pack)"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Pack consolidates AP-34 + AP-35 + AP-37 into a single technical contract for i18n-routed apps.
+  - SEO SSOT pattern (`seo.ts` config object per route) is Ulak prescription; source project has the gap, not the fix.
+  - Redirect-chain length CI gate is Ulak generalization.
+  - Layers atop multi-locale-eleven-rtl.md (script-family) and localization-ssot.md (translation SSOT); does not replace either.
+upstream_fixes_pending: []
+```
+
+### IL-022: Next.js 16 + Supabase content/portfolio site → AP-36 cosmetic privacy ceremony
+
+```yaml
+id: IL-022
+pattern_name: "Cosmetic privacy ceremony (CSP whitelist + cookie banner without consumers)"
+source_project: "(operator's portfolio — Next.js 16 + self-hosted Supabase content/portfolio site)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-16)"
+source_files:
+  - "src/middleware.ts:69, 73 (CSP whitelists googletagmanager.com)"
+  - "(grep `gtag|posthog|umami|plausible` returns zero matches — no analytics rendered)"
+  - "(cookie consent banner gates ack consumed by no code)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-36"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Three disconnected decisions (CSP planned, banner cosmetic, no GA) generalized.
+  - CI gate (`validate-csp-origins-used.sh`) is Ulak prescription.
+  - Crosses AP-29 (AI-era ceremony detection) but distinct: AP-36 is privacy/legal ceremony; AP-29 is AI content-leak.
+upstream_fixes_pending:
+  - id: UF-IL022-01
+    description: "Source project: decide install GA + wire consent gating, OR remove banner + remove CSP entry"
+    severity: low
+    scheduled_for: "(source project Sprint 2)"
+```
+
+### IL-023: Next.js 16 + Supabase content/portfolio site → AP-37 OG/SEO description drift
+
+```yaml
+id: IL-023
+pattern_name: "OG / SEO description drift across multiple sources of truth"
+source_project: "(operator's portfolio — Next.js 16 + Supabase content/portfolio site)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-17)"
+source_files:
+  - "messages/*.json:30-31 (HTML meta description: 'thoughts on software development, technology and entrepreneurship')"
+  - "[locale]/blog/opengraph-image.tsx:121-124 (OG card description: 'thoughts on software development, life, and more')"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-37"
+  - "docs/runtime/rule-packs/i18n-routing-discipline.md §SEO single source of truth"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source has 2 sources (meta + OG); AP-37 generalizes to 4-source drift (meta + OG + JSON-LD + OG-image-text).
+  - SEO SSOT object pattern is Ulak prescription.
+  - Snapshot test pattern (assert pairwise text equality across SEO surfaces) is Ulak prescription.
+upstream_fixes_pending: []
+```
+
+### IL-024: Next.js 16 + Supabase content/portfolio site → AP-38 half-shipped feature
+
+```yaml
+id: IL-024
+pattern_name: "Half-shipped feature (admin captures, public renders nothing)"
+source_project: "(operator's portfolio — Next.js 16 + Supabase admin CMS)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-18)"
+source_files:
+  - "src/components/blog/blog-form.tsx:133-144 (admin tags input)"
+  - "src/types/database.ts:97 (DB schema includes tags column)"
+  - "src/components/blog/blog-form.tsx:279-281 (admin list table shows tags)"
+  - "(public blog list + detail + tag-landing pages render NO tags)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-38"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source has blog tags specifically; AP-38 generalizes to categories, featured-flag, sort-order, custom-slug, hero-image, related-posts.
+  - End-to-end smoke test prescription ("admin sets X → public surface shows X") is Ulak generalization.
+  - CI orphan-finder is variant of AP-14 dead-admin-CRUD CI gate.
+upstream_fixes_pending: []
+```
+
+### IL-025: Next.js 16 + Supabase content/portfolio site → AP-39 sensitive data in email subject
+
+```yaml
+id: IL-025
+pattern_name: "Sensitive data in email subject (lockscreen / preview leak)"
+source_project: "(operator's portfolio — Next.js 16 + Supabase OTP admin auth)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-21)"
+source_files:
+  - "src/app/api/admin/auth/request-code/route.ts:19 ('Admin giriş kodu: ${code}' as email subject)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-39"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source has admin OTP specifically; AP-39 generalizes to password-reset, magic-link, 2FA, account-recovery, payment-confirmation.
+  - Push notification rule (notification body excludes secret) is Ulak generalization.
+  - Mail-server log retention nuance is Ulak operator-knowledge expansion.
+upstream_fixes_pending:
+  - id: UF-IL025-01
+    description: "Source project: subject = 'Admin giriş kodu' (no code); body contains the code"
+    severity: medium
+    scheduled_for: "(source project Sprint 1 — quick fix)"
+```
+
+### IL-026: Next.js 16 + Supabase content/portfolio site → AP-40 admin recovery dependency loop
+
+```yaml
+id: IL-026
+pattern_name: "Admin recovery dependency loop (admin login depends on prod DB it operates on)"
+source_project: "(operator's portfolio — Next.js 16 + Supabase admin auth)"
+source_repo: "(abstract descriptor only)"
+source_commit: "(absorbed from did-you-know DYK-22)"
+source_files:
+  - "src/lib/auth.ts:107 (validateAdminSession non-blocking touch on Supabase)"
+  - "(if Supabase is down → session validation returns false → admin cannot log in to debug Supabase)"
+target_files:
+  - "docs/runtime/anti-patterns.md AP-40"
+imported_on: 2026-04-26
+imported_by: osrt91
+trust_tier: T1
+divergence_notes: |
+  - Source has Supabase-specific dependency; AP-40 generalizes to any ops surface that depends on the system it operates on (status pages on same infra, error trackers in same datacenter, secret managers behind failing auth).
+  - Break-glass admin path prescription (separate auth, IP allowlist, MFA, audit log) is Ulak generalization.
+  - Regression-test pattern (simulate DB outage, assert break-glass works) is Ulak prescription.
+upstream_fixes_pending:
+  - id: UF-IL026-01
+    description: "Source project: add break-glass admin path (env-credentialed, IP-allowlisted) + emergency runbook"
+    severity: high
+    scheduled_for: "(source project Sprint 2)"
+```
+
 ## Canonical footer
 
-Authoritative as of Ulak OS **v1.7.0** (updated from v2.2.0 IL-001 baseline — note: that "v2.2.0" reference is from the abandoned pre-reset cycle; the current public line is v1.0.0-launch → v1.6.1 → v1.7.0 → … → v2.0.0 final). v1.7.0 absorption pass #1 (2026-04-26 morning) added IL-002..IL-006 from the 11-locale security/QA scanner SaaS i18n + privacy regime patterns. v1.7.0 absorption pass #2 (2026-04-26 evening) added IL-007..IL-016 from the same source project's async-FastAPI safety, doc-drift, zombie-router, hardcoded-UUID, cosmetic-coverage, AI-content artefact, admin-lockout, and cache-timing-race patterns plus 2 consolidated rule-packs (async-python-fastapi + ai-generated-content-hygiene). Each subsequent portfolio project absorption bumps one minor (v1.8.0, v1.9.0, …) until v2.0.0 final milestone.
+Authoritative as of Ulak OS **v1.8.0** (updated from v2.2.0 IL-001 baseline — note: that "v2.2.0" reference is from the abandoned pre-reset cycle; the current public line is v1.0.0-launch → v1.6.1 → v1.7.0 → v1.8.0 → … → v2.0.0 final). v1.7.0 absorption pass #1 (2026-04-26 morning) added IL-002..IL-006 from the 11-locale security/QA scanner SaaS i18n + privacy regime patterns. v1.7.0 absorption pass #2 (2026-04-26 evening) added IL-007..IL-016 from the same source project's async-FastAPI safety, doc-drift, zombie-router, hardcoded-UUID, cosmetic-coverage, AI-content artefact, admin-lockout, and cache-timing-race patterns plus 2 consolidated rule-packs (async-python-fastapi + ai-generated-content-hygiene). v1.8.0 absorption (2026-04-26 late evening) added IL-017..IL-026 from a Next.js 16 + self-hosted Supabase content/portfolio site with multi-locale i18n + OTP admin CMS — 9 cross-cutting anti-patterns (devDeps-runtime crash, type-escape hatch, raw-anchor i18n leak, alias-without-metadata, cosmetic privacy ceremony, OG/SEO drift, half-shipped feature, sensitive-subject-leak, admin-recovery loop) plus 1 consolidated rule-pack (i18n-routing-discipline). Each subsequent portfolio project absorption bumps one minor (v1.9.0, v1.10.0, …) until v2.0.0 final milestone.

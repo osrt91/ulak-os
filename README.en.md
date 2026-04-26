@@ -220,10 +220,10 @@ Cross-platform validator chain. All-green = pack healthy.
 | **Skills** | 10 | [`.claude/skills/`](./.claude/skills/) — `saas-scaffolder`, `fourteen-dimension-audit`, `god-module-decomposition`, `multi-agent-orchestration`, `final-validation`, `pack-gap-completion`, `project-intake`, `research-currency`, `awesome-packs-index`, `mcp-governance-auto` |
 | **Agents** | 27 | [`.claude/agents/`](./.claude/agents/) — 19 specialists + 1 autonomous-program-director + 7 persona (admin, customer, bayi, developer, support, compliance, security-redteam) |
 | **Sector packs** | 15 | [`templates/sectors/`](./templates/sectors/) — admin-cms-hardening, ai-copilot, ai-relay-cost-control, container-k8s, ecommerce, education, enterprise-b2b, fintech, health-sensitive, marketplace, media-content, member-gated-community, pwa-desktop, regulated-saas, self-hosted-supabase |
-| **Rule packs** | 13 | [`docs/runtime/rule-packs/`](./docs/runtime/rule-packs/) — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo, flutter-ios-2026, multi-locale-eleven-rtl, kvkk-gdpr-compliance, async-python-fastapi, ai-generated-content-hygiene |
+| **Rule packs** | 14 | [`docs/runtime/rule-packs/`](./docs/runtime/rule-packs/) — typescript-nextjs, python-fastapi, docker-compose, api-security, turkish-locale, localization-ssot, llm-streaming-context-aware, react-native-expo, flutter-ios-2026, multi-locale-eleven-rtl, kvkk-gdpr-compliance, async-python-fastapi, ai-generated-content-hygiene, i18n-routing-discipline |
 | **Governance** | 23 | [`docs/governance/`](./docs/governance/) — product-surface-split, rule-pack-governance, secrets-rotation-policy, observability-baseline, pattern-import-ledger, settings-permissions-governance, lock-file-hygiene, ai-provider-allowlist, mcp-governance, memory-hygiene, prompt-supply-chain, artefact-write-authorization, etc. |
 | **Runtime** | 36 | [`docs/runtime/`](./docs/runtime/) — router, intent-router, program-phases (Phase 0-5), artefact-contract, context-budget, output-profiles, active-variable-contract, waves-pattern, live-probe-contract, dual-path-validation, persona-dispatch-pattern, runtime-constants, screen-redesign-template, etc. |
-| **Anti-patterns** | ~100 | 31 AP-NN (AP-01..AP-31 — v1.7.0 added AP-21..23 localization + AP-24..31 async-safety / spec-drift / zombie-router / AI-content / admin-lockout / cache-race layers) + classic (IDOR, BOLA, N+1, RLS asymmetry, dead code, etc.) |
+| **Anti-patterns** | ~100 | 40 AP-NN (AP-01..AP-40 — v1.7.0 added AP-21..23 localization + AP-24..31 async-safety/spec-drift/zombie-router/AI-content/admin-lockout/cache-race; v1.8.0 added AP-32..40 devDeps-prod-crash/type-escape-hatch/raw-anchor-i18n/i18n-route-metadata/cosmetic-privacy/OG-SEO-drift/half-shipped-feature/sensitive-subject-leak/admin-recovery-loop) + classic (IDOR, BOLA, N+1, RLS asymmetry, dead code, etc.) |
 | **Scaffolder** | 125 | [`templates/saas-starter/`](./templates/saas-starter/) — Next.js 16 + TS strict + Tailwind v4 + Supabase SSR + RLS + CI + tests + VPS hardening + 59-brand design reference |
 
 </details>
@@ -249,7 +249,7 @@ Cross-platform validator chain. All-green = pack healthy.
 <tr>
 <td>⚙️ <b>Govern</b></td>
 <td><code>@prompts/core/ulak-os-core-contract-2.0.0.md</code></td>
-<td>Import core contract into CLAUDE.md → 23 governance + 15 sector + 13 rule packs active per session</td>
+<td>Import core contract into CLAUDE.md → 23 governance + 15 sector + 14 rule packs active per session</td>
 </tr>
 <tr>
 <td>🏗️ <b>Scaffold</b></td>
@@ -411,6 +411,6 @@ gh pr create                                     # 3) open PR, template guides y
 
 <br>
 
-<sub>Authoritative as of Ulak OS <b>v1.7.0</b> · Build metadata: <a href="./prompts/pack.json"><code>prompts/pack.json</code></a> · Core contract: <a href="./prompts/core/ulak-os-core-contract-2.0.0.md"><code>ulak-os-core-contract-2.0.0.md</code></a></sub>
+<sub>Authoritative as of Ulak OS <b>v1.8.0</b> · Build metadata: <a href="./prompts/pack.json"><code>prompts/pack.json</code></a> · Core contract: <a href="./prompts/core/ulak-os-core-contract-2.0.0.md"><code>ulak-os-core-contract-2.0.0.md</code></a></sub>
 
 </div>
