@@ -1,28 +1,28 @@
-# Sample Validation Plan
+﻿# Sample Validation Plan
 
-**Purpose**: Worked example of a well-formed `validation-plan.md` with §1–§7 sections, including the MANDATORY `§6 — Live probes (read-only)` surface that Phase 4.5 of `docs/runtime/program-phases.md` consumes.
+**Purpose**: Worked example of a well-formed `validation-plan.md` with Â§1â€“Â§7 sections, including the MANDATORY `Â§6 â€” Live probes (read-only)` surface that Phase 4.5 of `docs/runtime/program-phases.md` consumes.
 
-This sample is modeled on a mid-sized SaaS project with customer + admin + partner surfaces, a Supabase backend, and a Hostinger VPS deploy. Adapt the sections to the scope of your run.
+This sample is modeled on a mid-sized SaaS project with customer + admin + partner surfaces, a Supabase backend, and a [eski-vps] VPS deploy. Adapt the sections to the scope of your run.
 
 **Canonical-as-of-version**: Ulak OS v2.1.3. When the validation-plan schema evolves, this sample is updated or deprecated. See `docs/runtime/validation-result-schema.md` for the machine-readable schema this plan fills.
 
 ---
 
-## §1 — Engineering gates
+## Â§1 â€” Engineering gates
 
-Run during Phase 5 §5c. Each gate has a pass criterion and a blocking-or-warning classification.
+Run during Phase 5 Â§5c. Each gate has a pass criterion and a blocking-or-warning classification.
 
 | Gate | Command | Passes when | Classification |
 |---|---|---|---|
 | build | `npm run build` (or equivalent) | exit 0, no new warnings above baseline | blocking |
-| lint | `npm run lint` / `ruff check` | 0 errors; warnings ≤ baseline + 5 | blocking |
+| lint | `npm run lint` / `ruff check` | 0 errors; warnings â‰¤ baseline + 5 | blocking |
 | typecheck | `tsc --noEmit` / `mypy --strict` | 0 errors | blocking |
-| unit tests | `npm test` / `pytest tests/unit` | all pass; coverage ≥ 70% | blocking |
+| unit tests | `npm test` / `pytest tests/unit` | all pass; coverage â‰¥ 70% | blocking |
 | integration tests | `npm run test:integration` / `pytest tests/integration` | all pass; DB fixtures cleaned | blocking |
 | e2e tests | `npx playwright test` | critical flows green; flake rate < 2% | warning |
 | contract tests | `npm run test:contract` | schema diff vs. OpenAPI is zero | blocking on breaking changes |
-| visual regression | `npm run test:visual` | diff ≤ threshold on all checked views | warning |
-| accessibility | `npx axe-core` on key pages | 0 serious issues; moderate ≤ baseline | blocking on serious |
+| visual regression | `npm run test:visual` | diff â‰¤ threshold on all checked views | warning |
+| accessibility | `npx axe-core` on key pages | 0 serious issues; moderate â‰¤ baseline | blocking on serious |
 | security regression | `npm audit --audit-level=high` + custom rules | 0 high/critical unfixed | blocking |
 | localization | `scripts/validate-i18n.sh` | every locale has every key; no orphaned keys | warning |
 | release checks | `scripts/release-readiness.sh` | store metadata complete; links resolve | blocking |
@@ -30,57 +30,57 @@ Run during Phase 5 §5c. Each gate has a pass criterion and a blocking-or-warnin
 
 ---
 
-## §2 — Surfaces checked
+## Â§2 â€” Surfaces checked
 
 Flat enumerable list of every surface that must be exercised during validation.
 
-- `/customer/**` — all routes rendered without error, auth required
-- `/admin/**` — all routes rendered without error, admin role required
-- `/reseller/**` (or `/partner/**`) — all routes, plan-capability required
-- Public API endpoints — OpenAPI spec resolves, each endpoint returns expected shape
-- Store listing URLs — App Store, Play Store (if mobile), web landing
-- Deep links — share links, password-reset links, OAuth redirects
-- Webhooks — provider signatures verified, idempotent retries handled
+- `/customer/**` â€” all routes rendered without error, auth required
+- `/admin/**` â€” all routes rendered without error, admin role required
+- `/reseller/**` (or `/partner/**`) â€” all routes, plan-capability required
+- Public API endpoints â€” OpenAPI spec resolves, each endpoint returns expected shape
+- Store listing URLs â€” App Store, Play Store (if mobile), web landing
+- Deep links â€” share links, password-reset links, OAuth redirects
+- Webhooks â€” provider signatures verified, idempotent retries handled
 
 ---
 
-## §3 — Documentation coherence
+## Â§3 â€” Documentation coherence
 
-Run during Phase 5 §5c as structural gates (not behavioral).
+Run during Phase 5 Â§5c as structural gates (not behavioral).
 
-- `phase_numbering_consistent` — no file uses a phase number outside 0–5 or 4.5
-- `office_roster_imported` — CLAUDE.md (or core contract) imports `office-roster.md` if specialist dispatch is used
-- `rule_pack_unit_present` — if the stack has a published rule pack, `.claude/rules/<stack>.md` exists OR `active-variables.yaml` records why it wasn't loaded
-- `persona_dispatch_accurate` — `docs/runtime/persona-dispatch-pattern.md` reflects which persona agents are actually shipped
-- `cross_refs_resolve` — every `docs/` `@`-import and markdown link targets an existing file
+- `phase_numbering_consistent` â€” no file uses a phase number outside 0â€“5 or 4.5
+- `office_roster_imported` â€” CLAUDE.md (or core contract) imports `office-roster.md` if specialist dispatch is used
+- `rule_pack_unit_present` â€” if the stack has a published rule pack, `.claude/rules/<stack>.md` exists OR `active-variables.yaml` records why it wasn't loaded
+- `persona_dispatch_accurate` â€” `docs/runtime/persona-dispatch-pattern.md` reflects which persona agents are actually shipped
+- `cross_refs_resolve` â€” every `docs/` `@`-import and markdown link targets an existing file
 
 ---
 
-## §4 — Specialist dispatch verification
+## Â§4 â€” Specialist dispatch verification
 
 Phase 2 artefacts (`evidence-register.md`, `deep-scan-report.md`) must prove depth.
 
-- `eight_specialists_dispatched` — or the project-appropriate subset (≥4 in a single parallel batch)
-- `inventory_file_line_citations` — Phase 1 inventory has file:line citations on the majority of claims
-- `did_you_know_non_trivial` — Phase 3 surfaces findings the user did not ask about
-- `open_questions_resolved` — every `TODO-DIRECTOR:` marker has a decision recorded in target-state.md
+- `eight_specialists_dispatched` â€” or the project-appropriate subset (â‰¥4 in a single parallel batch)
+- `inventory_file_line_citations` â€” Phase 1 inventory has file:line citations on the majority of claims
+- `did_you_know_non_trivial` â€” Phase 3 surfaces findings the user did not ask about
+- `open_questions_resolved` â€” every `TODO-DIRECTOR:` marker has a decision recorded in target-state.md
 
 ---
 
-## §5 — Audit-gate status
+## Â§5 â€” Audit-gate status
 
 Meta-gates that verify the audit protocol itself was followed.
 
-- `all_phase_4_artefacts_present` — analysis-findings + target-state + execution-roadmap + validation-plan + pack-gap-register
-- `all_phase_5_artefacts_present` — validation-result.yaml (or embedded block) + manager-verdict.md
-- `evidence_trust_tiers_assigned` — every finding in evidence-register.md has T1–T7
-- `rule_collision_recorded` — any rule that contradicts default behavior is logged in rule-collision-matrix.md
+- `all_phase_4_artefacts_present` â€” analysis-findings + target-state + execution-roadmap + validation-plan + pack-gap-register
+- `all_phase_5_artefacts_present` â€” validation-result.yaml (or embedded block) + manager-verdict.md
+- `evidence_trust_tiers_assigned` â€” every finding in evidence-register.md has T1â€“T7
+- `rule_collision_recorded` â€” any rule that contradicts default behavior is logged in rule-collision-matrix.md
 
 ---
 
-## §6 — Live probes (read-only)
+## Â§6 â€” Live probes (read-only)
 
-This section is consumed by **Phase 4.5** (`docs/runtime/live-probe-contract.md`). Every probe here is read-only by default. Destructive probes are not allowed; destructive actions are scheduled in §5b execution with a separate approval path.
+This section is consumed by **Phase 4.5** (`docs/runtime/live-probe-contract.md`). Every probe here is read-only by default. Destructive probes are not allowed; destructive actions are scheduled in Â§5b execution with a separate approval path.
 
 **Probe format**:
 
@@ -152,11 +152,11 @@ This section is consumed by **Phase 4.5** (`docs/runtime/live-probe-contract.md`
  credential_requirement: "Read-only Postgres role for app_logs"
 ```
 
-**Pre-check mapping** — every destructive item in execution-roadmap.md must have a matching `pre_check: [LP-xx]` entry pointing to a probe above.
+**Pre-check mapping** â€” every destructive item in execution-roadmap.md must have a matching `pre_check: [LP-xx]` entry pointing to a probe above.
 
 ---
 
-## §7 — Rollback readiness
+## Â§7 â€” Rollback readiness
 
 Every execution wave must declare its rollback path. The validation plan aggregates them.
 
@@ -165,7 +165,7 @@ rollback:
  wave_1:
  approach: "git revert + redeploy from tagged baseline v2.1.2"
  blast_radius: "docs only; no runtime behavior change"
- verification: "run §1 lint + typecheck + build after revert"
+ verification: "run Â§1 lint + typecheck + build after revert"
  wave_2:
  approach: "delete newly-created governance files; revert core-contract imports"
  blast_radius: "safe; nothing depends on them yet"
@@ -175,18 +175,18 @@ rollback:
  approach: |
  Pack-surface changes: revert per agent/command/skill file.
  Version bump: DO NOT untag v2.1.3 once tagged; instead publish v2.1.4 with fixes.
- blast_radius: "ecosystem — dependent projects may pin to v2.1.3"
+ blast_radius: "ecosystem â€” dependent projects may pin to v2.1.3"
 ```
 
 ---
 
 ## Integration
 
-- `docs/runtime/validation-result-schema.md` — machine-readable output this plan drives
-- `docs/runtime/live-probe-contract.md` — §6 probe execution protocol
-- `docs/runtime/program-phases.md` — Phase 4.5 (live probes) + Phase 5 §5c (validation gates)
-- `docs/runtime/anti-patterns.md` — AP-* codes referenced in probe failure actions
-- `docs/governance/finding-schema.md` — NF-* finding shape when a probe discovers new issues
+- `docs/runtime/validation-result-schema.md` â€” machine-readable output this plan drives
+- `docs/runtime/live-probe-contract.md` â€” Â§6 probe execution protocol
+- `docs/runtime/program-phases.md` â€” Phase 4.5 (live probes) + Phase 5 Â§5c (validation gates)
+- `docs/runtime/anti-patterns.md` â€” AP-* codes referenced in probe failure actions
+- `docs/governance/finding-schema.md` â€” NF-* finding shape when a probe discovers new issues
 
 ## Canonical footer
 

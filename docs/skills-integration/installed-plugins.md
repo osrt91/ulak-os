@@ -1,8 +1,8 @@
-# Yüklü Plugin ve Skill Ekosistemi
+﻿# YÃ¼klÃ¼ Plugin ve Skill Ekosistemi
 
-Türkçe | [English](installed-plugins.en.md)
+TÃ¼rkÃ§e | [English](installed-plugins.en.md)
 
-Bu doküman, Ulak OS ile birlikte kullanılabilecek yüklü plugin ve skill'leri listeler.
+Bu dokÃ¼man, Ulak OS ile birlikte kullanÄ±labilecek yÃ¼klÃ¼ plugin ve skill'leri listeler.
 
 ## Marketplace'ler
 
@@ -11,33 +11,33 @@ Bu doküman, Ulak OS ile birlikte kullanılabilecek yüklü plugin ve skill'leri
 | claude-plugins-official | Anthropic resmi plugin deposu |
 | superpowers-marketplace | obra/superpowers topluluk marketplace |
 
-## Yüklü Pluginler
+## YÃ¼klÃ¼ Pluginler
 
 ### Superpowers (v5.0.7)
-Ana workflow skill paketi. Ulak OS artefakt zinciriyle eşleştirmesi için bkz: [superpowers-mapping.md](superpowers-mapping.md)
+Ana workflow skill paketi. Ulak OS artefakt zinciriyle eÅŸleÅŸtirmesi iÃ§in bkz: [superpowers-mapping.md](superpowers-mapping.md)
 
 ### context7
-Kütüphane/framework dokümantasyonunu çeker. API syntax, config, versiyon migration, CLI kullanımı için web aramasından daha güvenilir.
+KÃ¼tÃ¼phane/framework dokÃ¼mantasyonunu Ã§eker. API syntax, config, versiyon migration, CLI kullanÄ±mÄ± iÃ§in web aramasÄ±ndan daha gÃ¼venilir.
 
 ### code-review
-Pull request kod review skill'i. `superpowers:requesting-code-review` ve `superpowers:receiving-code-review` ile birlikte çalışır.
+Pull request kod review skill'i. `superpowers:requesting-code-review` ve `superpowers:receiving-code-review` ile birlikte Ã§alÄ±ÅŸÄ±r.
 
 ### frontend-design
-Üretim kalitesinde frontend arayüz tasarımı. Generic AI estetiğinden kaçınan, yaratıcı ve cilalanmış kod üretir.
+Ãœretim kalitesinde frontend arayÃ¼z tasarÄ±mÄ±. Generic AI estetiÄŸinden kaÃ§Ä±nan, yaratÄ±cÄ± ve cilalanmÄ±ÅŸ kod Ã¼retir.
 
 ### typescript-lsp (v1.0.0)
-TypeScript Language Server Protocol entegrasyonu. Tip kontrolü, otomatik tamamlama ve refactoring desteği.
+TypeScript Language Server Protocol entegrasyonu. Tip kontrolÃ¼, otomatik tamamlama ve refactoring desteÄŸi.
 
 ### skill-creator
-Yeni skill oluşturma, mevcut skill'leri düzenleme ve performans ölçümü. Skill evals ve benchmark desteği.
+Yeni skill oluÅŸturma, mevcut skill'leri dÃ¼zenleme ve performans Ã¶lÃ§Ã¼mÃ¼. Skill evals ve benchmark desteÄŸi.
 
 ### claude-md-management (v1.0.0)
-CLAUDE.md dosyalarını denetleme ve iyileştirme. Kalite raporu üretir, şablona göre günceller.
+CLAUDE.md dosyalarÄ±nÄ± denetleme ve iyileÅŸtirme. Kalite raporu Ã¼retir, ÅŸablona gÃ¶re gÃ¼nceller.
 
 ### supabase
-Supabase entegrasyonu. Veritabanı, auth, storage ve edge function yönetimi.
+Supabase entegrasyonu. VeritabanÄ±, auth, storage ve edge function yÃ¶netimi.
 
-## Ortak Kullanım Stack'i
+## Ortak KullanÄ±m Stack'i
 
 Projelerde tekrar eden teknoloji deseni:
 
@@ -51,18 +51,18 @@ Projelerde tekrar eden teknoloji deseni:
 | Animation | Framer Motion |
 | Test | Playwright E2E, Vitest |
 | Deploy | PM2, Docker, Traefik |
-| MCP | hostinger-mcp (Hostinger API) |
-| Mobile | Capacitor / Expo (proje bazlı) |
+| MCP | [removed-mcp] ([eski-vps] API) |
+| Mobile | Capacitor / Expo (proje bazlÄ±) |
 
-## Plugin ↔ Ulak OS Eşleştirmesi
+## Plugin â†” Ulak OS EÅŸleÅŸtirmesi
 
-| Plugin | Ulak OS kullanımı |
+| Plugin | Ulak OS kullanÄ±mÄ± |
 |--------|-------------------|
-| superpowers | Artefakt zinciri workflow'u (brainstorming → plan → execute → validate) |
-| context7 | `research-notes` artefaktı için güncel dokümantasyon çekme |
-| code-review | `validation-plan` artefaktı sonrası kod kalite kontrolü |
+| superpowers | Artefakt zinciri workflow'u (brainstorming â†’ plan â†’ execute â†’ validate) |
+| context7 | `research-notes` artefaktÄ± iÃ§in gÃ¼ncel dokÃ¼mantasyon Ã§ekme |
+| code-review | `validation-plan` artefaktÄ± sonrasÄ± kod kalite kontrolÃ¼ |
 | frontend-design | `/frontend-war-room` komutuyla birlikte UI implementasyonu |
-| typescript-lsp | `ulak validate` CLI komutunda tip kontrolü desteği |
-| skill-creator | Yeni Ulak OS native skill'leri oluşturma ve test etme |
-| claude-md-management | Vendor adapter dosyalarını (CLAUDE.md, AGENTS.md) güncel tutma |
-| supabase | Supabase kullanan projelerde veritabanı artefaktları |
+| typescript-lsp | `ulak validate` CLI komutunda tip kontrolÃ¼ desteÄŸi |
+| skill-creator | Yeni Ulak OS native skill'leri oluÅŸturma ve test etme |
+| claude-md-management | Vendor adapter dosyalarÄ±nÄ± (CLAUDE.md, AGENTS.md) gÃ¼ncel tutma |
+| supabase | Supabase kullanan projelerde veritabanÄ± artefaktlarÄ± |

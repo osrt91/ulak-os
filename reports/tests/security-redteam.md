@@ -1,4 +1,4 @@
-# Security Red Team Report — pre-v1.0.0-public-GA
+﻿# Security Red Team Report â€” pre-v1.0.0-public-GA
 
 **Target:** Ulak OS (https://github.com/osrt91/ulak-os, v2.4.0 HEAD, public GA candidate)
 **Persona:** security-redteam (adversarial lens, no execution against live systems)
@@ -31,63 +31,63 @@ The hook surface, templates, and governance docs are otherwise well-written; the
 
 ### A. Install script injection
 
-**scripts/install.sh — CRITICAL**: run() at lines 50-56 uses eval on strings that embed environment variables ULAK_BRANCH, ULAK_REPO_URL, and ULAK_HOME via single-quote interpolation. A caller-controlled variable containing a single quote breaks out of the single-quoted literal and injects arbitrary shell, producing RCE under the victim shell. Single-quote escaping is not applied; the variables come directly from the environment (install.sh:22-24).
+**scripts/install.sh â€” CRITICAL**: run() at lines 50-56 uses eval on strings that embed environment variables ULAK_BRANCH, ULAK_REPO_URL, and ULAK_HOME via single-quote interpolation. A caller-controlled variable containing a single quote breaks out of the single-quoted literal and injects arbitrary shell, producing RCE under the victim shell. Single-quote escaping is not applied; the variables come directly from the environment (install.sh:22-24).
 
-**scripts/install.sh — MEDIUM**: accepts --dry-run but no signature/hash verification of the cloned repo. Combined with the README one-liner, any compromise of the GitHub account, a stolen commit signing key, or a malicious branch reference silently executes on every new victim.
+**scripts/install.sh â€” MEDIUM**: accepts --dry-run but no signature/hash verification of the cloned repo. Combined with the README one-liner, any compromise of the GitHub account, a stolen commit signing key, or a malicious branch reference silently executes on every new victim.
 
-**scripts/install.ps1 — LOW**: writes ulak.cmd that hardcodes -ExecutionPolicy Bypass when dispatching to ulak.ps1 (line 147). Defensible for an installer the user explicitly ran, but it normalizes the anti-pattern on the target.
+**scripts/install.ps1 â€” LOW**: writes ulak.cmd that hardcodes -ExecutionPolicy Bypass when dispatching to ulak.ps1 (line 147). Defensible for an installer the user explicitly ran, but it normalizes the anti-pattern on the target.
 
-**bin/ulak — LOW**: cmd_init takes positional arg as a directory path without traversal validation (bin/ulak:73, 77, 105). ulak init ~/.ssh would append a governance block to ~/.ssh/CLAUDE.md — not dangerous alone, but brittle.
+**bin/ulak â€” LOW**: cmd_init takes positional arg as a directory path without traversal validation (bin/ulak:73, 77, 105). ulak init ~/.ssh would append a governance block to ~/.ssh/CLAUDE.md â€” not dangerous alone, but brittle.
 
 
 ### B. Hook surface
 
-**.claude/settings.json — MEDIUM**: disableSkillShellExecution: false (line 61) plus Bash(find *) allows arbitrary -exec execution (find /tmp -exec sh -c to run curl piped to sh). BFLA-vulnerable allowlist: authorizes the tool family without constraining dangerous flags.
+**.claude/settings.json â€” MEDIUM**: disableSkillShellExecution: false (line 61) plus Bash(find *) allows arbitrary -exec execution (find /tmp -exec sh -c to run curl piped to sh). BFLA-vulnerable allowlist: authorizes the tool family without constraining dangerous flags.
 
-**.claude/settings.json — MEDIUM**: Read(./.env) deny list uses relative paths. Transitive agents that cd into subdirs bypass the relative match. Prefer absolute or glob denies (Read(**/.env)).
+**.claude/settings.json â€” MEDIUM**: Read(./.env) deny list uses relative paths. Transitive agents that cd into subdirs bypass the relative match. Prefer absolute or glob denies (Read(**/.env)).
 
-**templates/saas-starter/.claude/settings.json.template — HIGH**: allows Bash(docker compose:*) alongside Edit(**) + Write(**) with shell execution enabled. A command like "docker compose run --rm -v /:/host ubuntu cat /host/etc/shadow" produces host-file read — classic container escape via bind mount. Every scaffolded project inherits the surface. Write deny only covers ./.env and ./.env.local; apps/x/.env.local still writable, contradicting AP-19 prevention in accompanying docs.
+**templates/saas-starter/.claude/settings.json.template â€” HIGH**: allows Bash(docker compose:*) alongside Edit(**) + Write(**) with shell execution enabled. A command like "docker compose run --rm -v /:/host ubuntu cat /host/etc/shadow" produces host-file read â€” classic container escape via bind mount. Every scaffolded project inherits the surface. Write deny only covers ./.env and ./.env.local; apps/x/.env.local still writable, contradicting AP-19 prevention in accompanying docs.
 
-### C. Git history secrets — CRITICAL
+### C. Git history secrets â€” CRITICAL
 
 Commit 4f2f5cf (tag v2.1.4, Apr 2026) still contains:
 - Resend API key: re_J... (full 35-char key)
 - Cloudflare API token: cfk_... (36-char token)
-- VPS IPv4: 72.61.178.25
+- VPS IPv4: [REDACTED_VPS_IP]
 
 Redaction commit d1d05d6 self-documents the leak but tag v2.1.4 remains reachable via git show on that path, and from GitHub web UI at the tagged commit. The commit message confirms the keys were published to origin/main in v2.1.4 tag.
 
 Blast radius: Resend key grants outbound-mail send as the owner (phishing as the brand); Cloudflare token scope unknown (prefix-only leak per commit note; consumers should assume full). Operator stated rotate Resend immediately but with v2.1.4 tag intact the window never closed.
 
-No secret found in HEAD via grep for AKIA, sk-ant-, ghp_, xoxb-, BEGIN RSA/OPENSSH/PRIVATE, Bearer tokens, JWT-like strings. Only history leak is the v2.1.4 artefact. settings.local.json historical commit 5616234 shows a low-privilege allow list (WebFetch + MCP query-docs) — minimal blast radius from that leak.
+No secret found in HEAD via grep for AKIA, sk-ant-, ghp_, xoxb-, BEGIN RSA/OPENSSH/PRIVATE, Bearer tokens, JWT-like strings. Only history leak is the v2.1.4 artefact. settings.local.json historical commit 5616234 shows a low-privilege allow list (WebFetch + MCP query-docs) â€” minimal blast radius from that leak.
 
 ### D. Example artefact credentials
 
-docs/examples/*.md and reports/current/*.md scanned for AKIA..., sk-ant-..., ghp_..., Bearer..., -----BEGIN — zero matches. Examples use abstract placeholders. .gitleaks.toml at HEAD is clean. .env / .env.local files do not exist in the repo — good.
+docs/examples/*.md and reports/current/*.md scanned for AKIA..., sk-ant-..., ghp_..., Bearer..., -----BEGIN â€” zero matches. Examples use abstract placeholders. .gitleaks.toml at HEAD is clean. .env / .env.local files do not exist in the repo â€” good.
 
 ### E. Scaffolder template safety
 
-**HIGH — RLS tenant isolation hole** in templates/saas-starter/supabase/migrations/00002_rls_policies.sql.template:63-82. role_admin_write and role_admin_update policies check only role in (admin) with no tenant_id = public.user_role_assignments.tenant_id constraint. An admin of tenant A can INSERT/UPDATE role assignments for users in tenant B — horizontal privilege escalation across tenants. The audit_log audit_admin_read policy (line 89-95) correctly scopes by tenant_id; the user-role policies regress from that pattern.
+**HIGH â€” RLS tenant isolation hole** in templates/saas-starter/supabase/migrations/00002_rls_policies.sql.template:63-82. role_admin_write and role_admin_update policies check only role in (admin) with no tenant_id = public.user_role_assignments.tenant_id constraint. An admin of tenant A can INSERT/UPDATE role assignments for users in tenant B â€” horizontal privilege escalation across tenants. The audit_log audit_admin_read policy (line 89-95) correctly scopes by tenant_id; the user-role policies regress from that pattern.
 
-**MEDIUM — middleware public-prefix gap** at templates/saas-starter/middleware.ts.template:41-44. PUBLIC_PREFIXES includes /, and the matcher config on line 61-63 excludes api/public entirely. Net: /api/public/* never hits auth. If a future contributor adds /api/public/debug or /api/public/admin-op, there is no gate.
+**MEDIUM â€” middleware public-prefix gap** at templates/saas-starter/middleware.ts.template:41-44. PUBLIC_PREFIXES includes /, and the matcher config on line 61-63 excludes api/public entirely. Net: /api/public/* never hits auth. If a future contributor adds /api/public/debug or /api/public/admin-op, there is no gate.
 
-**MEDIUM — Service role client singleton** in lib/supabase/admin.ts.template:19 stores a module-scoped _admin client. In a serverless runtime with module reuse across tenants (Vercel/Cloudflare Workers), persistent state is fine for stateless service role, but a future change adding user context would leak cross-request.
+**MEDIUM â€” Service role client singleton** in lib/supabase/admin.ts.template:19 stores a module-scoped _admin client. In a serverless runtime with module reuse across tenants (Vercel/Cloudflare Workers), persistent state is fine for stateless service role, but a future change adding user context would leak cross-request.
 
-**MEDIUM — deploy rollback race** in templates/saas-starter/infrastructure/deploy.sh.template:62-83. $PREVIOUS_COMMIT captured before git fetch + git checkout $COMMIT; rollback leaves stale .next/ in place. $COMMIT unvalidated. Defense-in-depth: validate against strict regex.
+**MEDIUM â€” deploy rollback race** in templates/saas-starter/infrastructure/deploy.sh.template:62-83. $PREVIOUS_COMMIT captured before git fetch + git checkout $COMMIT; rollback leaves stale .next/ in place. $COMMIT unvalidated. Defense-in-depth: validate against strict regex.
 
-**LOW — kale-kapisi.sh.template sshd_config sed rewriting**: multiple sed calls are brittle against non-default sshd_config. sshd -t (line 64) mitigates crash risk, not policy correctness.
+**LOW â€” kale-kapisi.sh.template sshd_config sed rewriting**: multiple sed calls are brittle against non-default sshd_config. sshd -t (line 64) mitigates crash risk, not policy correctness.
 
-**LOW — install-hooks.sh.template bypass**: grep for preflight-bypass marker on last commit message (line 22) is an unkeyed honor-system token. Any committer who knows the string bypasses preflight.
+**LOW â€” install-hooks.sh.template bypass**: grep for preflight-bypass marker on last commit message (line 22) is an unkeyed honor-system token. Any committer who knows the string bypasses preflight.
 
 ### F. Governance gaps
 
-**MEDIUM — no key-rotation rehearsal evidence**: secrets-rotation-policy.md specifies cadence but there is no reports/current/secret-rotation-log.md committed showing a completed rotation.
+**MEDIUM â€” no key-rotation rehearsal evidence**: secrets-rotation-policy.md specifies cadence but there is no reports/current/secret-rotation-log.md committed showing a completed rotation.
 
-**MEDIUM — scripts/check-secret-rotation-due.sh does not exist**: secrets-rotation-policy.md:104 promises this CI check. ls scripts/ shows no such file. Policy text is ahead of implementation — false-green risk.
+**MEDIUM â€” scripts/check-secret-rotation-due.sh does not exist**: secrets-rotation-policy.md:104 promises this CI check. ls scripts/ shows no such file. Policy text is ahead of implementation â€” false-green risk.
 
-**LOW — MCP allowlist enforced at doc level only**: mcp-governance.md relies on release-readiness-auditor. No load-time check in .claude/settings.json prevents MCP activation.
+**LOW â€” MCP allowlist enforced at doc level only**: mcp-governance.md relies on release-readiness-auditor. No load-time check in .claude/settings.json prevents MCP activation.
 
-**LOW — hook governance bypass token undocumented**: hook-governance.md does not define a break-glass procedure to temporarily disable a hook.
+**LOW â€” hook governance bypass token undocumented**: hook-governance.md does not define a break-glass procedure to temporarily disable a hook.
 
 
 ### G. Did-you-know adversarial findings
@@ -100,7 +100,7 @@ docs/examples/*.md and reports/current/*.md scanned for AKIA..., sk-ant-..., ghp
 
 **DY-SEC-04**: .gitignore covers .env and .env.* but apps/*/.env.local pattern only in the template gitignore. Partial adopters can track apps/foo/.env.local. AP-19 anti-pattern vulnerability surface.
 
-**DY-SEC-05**: .claude/logs/*.log rotated by SessionStart hook. Current hook at line 34 does NOT include tool arguments — good. A future contributor adding CLAUDE_TOOL_INPUT for debug would land secrets in a local log file.
+**DY-SEC-05**: .claude/logs/*.log rotated by SessionStart hook. Current hook at line 34 does NOT include tool arguments â€” good. A future contributor adding CLAUDE_TOOL_INPUT for debug would land secrets in a local log file.
 
 **DY-SEC-06**: fetch-design-references.sh curl writes attacker-controlled markdown to disk at line 111. An attacker who compromises upstream VoltAgent/awesome-design-md gets prompt-injection into every downstream Claude session that reads the design reference.
 
@@ -171,20 +171,20 @@ docs/examples/*.md and reports/current/*.md scanned for AKIA..., sk-ant-..., ghp
 
 ---
 
-## Exploit PoC sketches — top 3
+## Exploit PoC sketches â€” top 3
 
-### PoC 1 (SEC-B-01) — Extract leaked secrets from public tag
+### PoC 1 (SEC-B-01) â€” Extract leaked secrets from public tag
 
     git clone https://github.com/osrt91/ulak-os.git
     cd ulak-os
     git show 4f2f5cf:.gitleaks.toml | grep -Eo "re_[A-Za-z0-9_]{30,}|cfk_[A-Za-z0-9]{30,}"
     # returns the two burned keys
 
-### PoC 2 (SEC-B-02) — Inject via ULAK_BRANCH into install.sh eval
+### PoC 2 (SEC-B-02) â€” Inject via ULAK_BRANCH into install.sh eval
 
 Attacker crafts an env var ULAK_BRANCH containing a single quote followed by shell commands. When run() calls eval on the git clone line that interpolates ULAK_BRANCH inside single quotes, the eval splits on semicolons and runs the attacker commands as the victim uid. Net: arbitrary RCE from any shell one-liner the victim is tricked into running.
 
-### PoC 3 (SEC-B-03) — Cross-tenant admin escalation
+### PoC 3 (SEC-B-03) â€” Cross-tenant admin escalation
 
     -- As admin of tenant A, signed in with Supabase JWT
     insert into public.user_role_assignments
@@ -200,9 +200,9 @@ Attacker crafts an env var ULAK_BRANCH containing a single quote followed by she
 
 MUST close before v1.0.0 public GA:
 
-- SEC-B-01 — rotate Resend + Cloudflare keys; decide history rewrite vs burned-key acceptance
-- SEC-B-02 — remove eval from scripts/install.sh; add arg validation
-- SEC-B-03 — fix RLS cross-tenant hole in scaffolder template
+- SEC-B-01 â€” rotate Resend + Cloudflare keys; decide history rewrite vs burned-key acceptance
+- SEC-B-02 â€” remove eval from scripts/install.sh; add arg validation
+- SEC-B-03 â€” fix RLS cross-tenant hole in scaffolder template
 
 Publishing v1.0.0 while SEC-B-02 is live means the signature-free install oneliner (SEC-B-05) is an amplifier: a single account takeover gives an attacker a ready-made RCE primitive through every new clone.
 
@@ -210,10 +210,10 @@ Publishing v1.0.0 while SEC-B-02 is live means the signature-free install onelin
 
 ## Non-persona cross-cuts (overlap with security-hardening-lead)
 
-- Secrets rotation — security-hardening-lead owns the policy catalog; red-team observes policy-vs-implementation drift (SEC-B-11). Consensus.
-- Hook surface hardening — security-hardening-lead lists hook governance; red-team shows concrete exploit paths (SEC-B-07, SEC-B-04).
-- Install script — red-team owns SEC-B-02 and SEC-B-05.
-- RLS template — red-team scans policy logic correctness per-table (SEC-B-03).
+- Secrets rotation â€” security-hardening-lead owns the policy catalog; red-team observes policy-vs-implementation drift (SEC-B-11). Consensus.
+- Hook surface hardening â€” security-hardening-lead lists hook governance; red-team shows concrete exploit paths (SEC-B-07, SEC-B-04).
+- Install script â€” red-team owns SEC-B-02 and SEC-B-05.
+- RLS template â€” red-team scans policy logic correctness per-table (SEC-B-03).
 
 Where both personas flag the same area with different angles, escalate the combined finding.
 
